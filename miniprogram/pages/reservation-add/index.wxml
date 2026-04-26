@@ -43,23 +43,32 @@
     <theme-card theme="{{theme}}">
       <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">房间</view>
 
-      <view class="exclusive-row">
+      <view class="form-item-custom">
         <text class="form-label" style="color: {{theme.textSecondary || 'rgba(245,240,232,0.65)'}};">包场</text>
-        <switch
-          checked="{{isExclusive}}"
-          bindchange="toggleExclusive"
-          color="{{theme.accentColor || '#C9A96E'}}"
-        />
+        <view class="pill-selector">
+          <view class="pill {{exclusiveType === 'none' ? 'pill-active' : ''}}"
+                data-value="none" bindtap="selectExclusive"
+                style="{{exclusiveType === 'none' ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}">不包场</view>
+          <view class="pill {{exclusiveType === 'noon' ? 'pill-active' : ''}}"
+                data-value="noon" bindtap="selectExclusive"
+                style="{{exclusiveType === 'noon' ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}">午包场</view>
+          <view class="pill {{exclusiveType === 'night' ? 'pill-active' : ''}}"
+                data-value="night" bindtap="selectExclusive"
+                style="{{exclusiveType === 'night' ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}">晚包场</view>
+          <view class="pill {{exclusiveType === 'full' ? 'pill-active' : ''}}"
+                data-value="full" bindtap="selectExclusive"
+                style="{{exclusiveType === 'full' ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}">全体包场</view>
+        </view>
       </view>
 
-      <view class="pill-selector room-selector {{isExclusive ? 'room-disabled' : ''}}">
+      <view class="pill-selector room-selector {{exclusiveType !== 'none' ? 'room-disabled' : ''}}" wx:if="{{exclusiveType === 'none'}}">
         <view
-          class="pill {{room === item.value && !isExclusive ? 'pill-active' : ''}}"
+          class="pill {{room === item.value ? 'pill-active' : ''}}"
           wx:for="{{roomOptions}}"
           wx:key="value"
           data-value="{{item.value}}"
           bindtap="selectRoom"
-          style="{{room === item.value && !isExclusive ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
+          style="{{room === item.value ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
         >
           {{item.label}}
         </view>
@@ -144,25 +153,10 @@
   </scroll-view>
 
   <!-- Fixed Bottom Bar -->
-  <view class="bottom-bar" style="background: {{theme.elevatedColor || '#252540'}}; border-top: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}};">
+  <view class="bottom-bar">
     <view class="bottom-bar-inner {{isEdit ? 'two-btns' : 'single-btn'}}">
-      <theme-btn
-        wx:if="{{isEdit}}"
-        theme="{{theme}}"
-        text="删除"
-        type="danger"
-        size="xs"
-        bind:tap="onDelete"
-      />
-      <theme-btn
-        theme="{{theme}}"
-        text="{{isEdit ? '保存修改' : '创建预约'}}"
-        type="primary"
-        size="xs"
-        block="{{!isEdit}}"
-        loading="{{submitting}}"
-        bind:tap="onSubmit"
-      />
+      <view wx:if="{{isEdit}}" class="bar-btn bar-btn-danger" bindtap="onDelete">删除</view>
+      <view class="bar-btn bar-btn-primary" bindtap="onSubmit">{{isEdit ? '保存修改' : '创建预约'}}</view>
     </view>
     <view class="safe-bottom-bar"></view>
   </view>
