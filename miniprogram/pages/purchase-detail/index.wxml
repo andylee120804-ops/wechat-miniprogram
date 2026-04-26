@@ -64,8 +64,8 @@
   <!-- Fixed Bottom Action Bar -->
   <view class="bottom-bar" wx:if="{{!loading && purchase}}">
     <view class="bottom-bar-inner">
-      <theme-btn wx:if="{{canDelete}}" theme="{{theme}}" type="danger" text="删除" size="normal" bind:tap="onDelete" />
-      <theme-btn wx:if="{{canEdit}}" theme="{{theme}}" type="primary" text="编辑" size="normal" bind:tap="onEdit" />
+      <theme-btn wx:if="{{canDelete}}" theme="{{theme}}" type="danger" text="删除" size="xs" bind:tap="onDelete" />
+      <theme-btn wx:if="{{canEdit}}" theme="{{theme}}" type="primary" text="编辑" size="xs" bind:tap="onEdit" />
     </view>
   </view>
 

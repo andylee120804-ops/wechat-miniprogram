@@ -34,7 +34,7 @@
         </view>
         <view class="detail-row">
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">时段</text>
-          <text class="detail-value" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{reservation.time}}</text>
+          <text class="detail-value" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{reservation.time || '未设置'}}</text>
         </view>
         <view class="detail-row">
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">房间</text>
@@ -65,8 +65,8 @@
 
     <!-- Action Bar - only for non-cancelled -->
     <view class="action-bar safe-bottom" wx:if="{{reservation.status !== 'cancelled'}}">
-      <theme-btn theme="{{theme}}" type="primary" text="编辑" bind:tap="onEdit" />
-      <theme-btn theme="{{theme}}" type="danger" text="取消预约" bind:tap="onCancel" />
+      <theme-btn theme="{{theme}}" type="primary" text="编辑" size="xs" bind:tap="onEdit" />
+      <theme-btn theme="{{theme}}" type="danger" text="取消预约" size="xs" bind:tap="onCancel" />
     </view>
 
     <!-- Cancel Modal -->

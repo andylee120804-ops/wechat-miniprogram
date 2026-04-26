@@ -57,8 +57,8 @@
 
     <!-- Action Bar -->
     <view class="action-bar safe-bottom">
-      <theme-btn theme="{{theme}}" type="outline" text="编辑" bind:tap="onEdit" />
-      <theme-btn theme="{{theme}}" type="danger" text="删除" bind:tap="onDelete" />
+      <theme-btn theme="{{theme}}" type="outline" text="编辑" size="xs" bind:tap="onEdit" />
+      <theme-btn theme="{{theme}}" type="danger" text="删除" size="xs" bind:tap="onDelete" />
     </view>
 
     <!-- Delete Modal -->

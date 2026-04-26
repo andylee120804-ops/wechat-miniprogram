@@ -19,6 +19,11 @@
   font-size: 26rpx;
 }
 
+.xs {
+  padding: 14rpx 28rpx;
+  font-size: 24rpx;
+}
+
 .large {
   padding: 24rpx 48rpx;
   font-size: 34rpx;

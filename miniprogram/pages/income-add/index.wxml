@@ -70,7 +70,7 @@
   <!-- Fixed Bottom Bar -->
   <view class="bottom-bar safe-bottom">
     <view class="bottom-bar-inner single-btn">
-      <theme-btn theme="{{theme}}" type="primary" text="{{isEdit ? '保存修改' : '记录收入'}}" loading="{{submitting}}" bind:tap="onSubmit" />
+      <theme-btn theme="{{theme}}" type="primary" text="{{isEdit ? '保存修改' : '记录收入'}}" size="xs" loading="{{submitting}}" bind:tap="onSubmit" />
     </view>
   </view>
 </view>

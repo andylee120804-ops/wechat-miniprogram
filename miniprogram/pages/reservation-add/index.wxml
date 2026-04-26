@@ -151,14 +151,14 @@
         theme="{{theme}}"
         text="删除"
         type="danger"
-        size="normal"
+        size="xs"
         bind:tap="onDelete"
       />
       <theme-btn
         theme="{{theme}}"
         text="{{isEdit ? '保存修改' : '创建预约'}}"
         type="primary"
-        size="normal"
+        size="xs"
         block="{{!isEdit}}"
         loading="{{submitting}}"
         bind:tap="onSubmit"

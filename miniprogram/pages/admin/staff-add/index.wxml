@@ -57,8 +57,8 @@
   <!-- Bottom Bar -->
   <view class="bottom-bar safe-bottom" style="position: fixed; left: 0rpx; top: 1555rpx">
     <view class="bottom-bar-inner {{isEdit ? 'two-btns' : 'single-btn'}}">
-      <theme-btn wx:if="{{isEdit}}" theme="{{theme}}" type="danger" text="删除员工" bind:tap="onDelete" />
-      <theme-btn style="width: 369rpx; display: block; box-sizing: border-box; height: 77rpx" theme="{{theme}}" type="primary" text="{{isEdit ? '保存修改' : '添加员工'}}" loading="{{submitting}}" bind:tap="onSubmit" />
+      <theme-btn wx:if="{{isEdit}}" theme="{{theme}}" type="danger" text="删除员工" size="xs" bind:tap="onDelete" />
+      <theme-btn theme="{{theme}}" type="primary" text="{{isEdit ? '保存修改' : '添加员工'}}" size="xs" loading="{{submitting}}" bind:tap="onSubmit" />
     </view>
   </view>
 

@@ -8,7 +8,7 @@
     </view>
   </view>
   <!-- Calendar Section -->
-  <view class="calendar-section" style="padding-top: {{statusBarHeight + 44 + 12}}px;">
+  <view class="calendar-section" style="padding-top: {{statusBarHeight + 44 + 12}}px; width: 750rpx; display: block; box-sizing: border-box">
     <calendar
       theme="{{theme}}"
       year="{{currentYear}}"
@@ -21,7 +21,7 @@
   </view>
 
   <!-- Selected Date Label -->
-  <view class="date-label">
+  <view class="date-label" style="height: 87rpx; display: flex; box-sizing: border-box">
     <text class="date-text" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{selectedDate}}</text>
     <text class="date-count" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">{{reservations.length}}个预约</text>
   </view>

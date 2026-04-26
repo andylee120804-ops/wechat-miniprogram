@@ -31,8 +31,8 @@
 .bottom-bar-inner {
   display: flex;
   align-items: center;
-  padding: 20rpx 32rpx;
-  gap: 16rpx;
+  padding: 16rpx 24rpx;
+  gap: 12rpx;
 }
 
 /* Single button - center aligned */
@@ -45,13 +45,14 @@
   justify-content: space-between;
 }
 
-/* Two buttons: child theme-btn takes full width */
+/* Two buttons: child theme-btn takes flex space, max 46% */
 .bottom-bar-inner.two-btns > .theme-btn {
   flex: 1;
   min-width: 0;
-  max-width: 48%;
+  max-width: 46%;
   box-sizing: border-box;
   overflow: hidden;
+  padding: 14rpx 20rpx !important;
 }
 
 /* Two buttons: ensure text doesn't overflow */
