@@ -1,0 +1,53 @@
+<view class="income-add-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 140rpx;">
+  <view style="padding: 32rpx;">
+    <!-- Income Type -->
+    <theme-card theme="{{theme}}" padding="32rpx">
+      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 20rpx;">收入类型</text>
+      <view class="type-grid">
+        <view class="type-pill {{type === item.value ? 'active' : ''}}" wx:for="{{typeOptions}}" wx:key="value" data-value="{{item.value}}" bindtap="selectType" style="{{type === item.value ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+          <text style="font-size: 28rpx; font-weight: 600;">{{item.label}}</text>
+        </view>
+      </view>
+    </theme-card>
+
+    <!-- Reservation Link -->
+    <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;">
+      <view class="toggle-row">
+        <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600;">关联预约</text>
+        <switch checked="{{!noReservation}}" bindchange="toggleNoReservation" color="{{theme.accentColor || '#C9A96E'}}" />
+      </view>
+
+      <block wx:if="{{!noReservation}}">
+        <view class="reservation-list" wx:if="{{recentReservations.length > 0}}">
+          <view class="res-item {{reservationId === item._id ? 'selected' : ''}}" wx:for="{{recentReservations}}" wx:key="_id" data-res="{{item}}" bindtap="onReservationSelect" style="{{reservationId === item._id ? 'border-color:' + (theme.accentColor || '#C9A96E') + ';background:rgba(201,169,110,0.08);' : ''}}">
+            <view class="res-info">
+              <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 600;">{{item.customerName}}</text>
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; margin-left: 12rpx;">{{item.roomName || item.room}} · {{item.guestCount}}人</text>
+            </view>
+            <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 26rpx;">¥{{(item.standard || 0) * (item.guestCount || 0)}}</text>
+          </view>
+        </view>
+        <text wx:else style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; display: block; margin-top: 16rpx;">暂无可关联的预约</text>
+      </block>
+    </theme-card>
+
+    <!-- Amount -->
+    <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;">
+      <theme-form-item theme="{{theme}}" label="金额">
+        <input class="amount-input" type="digit" placeholder="请输入金额" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{amount}}" bindinput="onAmountInput" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 36rpx; font-weight: 700; font-family: 'DIN Alternate', monospace; height: 48rpx;" />
+      </theme-form-item>
+    </theme-card>
+
+    <!-- Remark -->
+    <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;">
+      <theme-form-item theme="{{theme}}" label="备注">
+        <textarea class="remark-input" placeholder="请输入备注(选填)" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{remark}}" bindinput="onRemarkInput" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; min-height: 120rpx; width: 100%;" />
+      </theme-form-item>
+    </theme-card>
+  </view>
+
+  <!-- Fixed Bottom Bar -->
+  <view class="bottom-bar safe-bottom">
+    <theme-btn theme="{{theme}}" type="primary" text="{{isEdit ? '保存修改' : '记录收入'}}" block="{{true}}" loading="{{submitting}}" bind:tap="onSubmit" />
+  </view>
+</view>

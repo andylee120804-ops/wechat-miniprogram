@@ -1,0 +1,11 @@
+<view class="stat-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border-radius: 24rpx; padding: 24rpx; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}};">
+  <view class="stat-label" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{label}}</view>
+  <view class="stat-value-row">
+    <text class="stat-prefix" wx:if="{{showPrefix}}" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">{{prefix}}</text>
+    <text class="stat-value" style="color: {{trend === 'up' ? (theme.statusSuccess || '#4ADE80') : (trend === 'down' ? (theme.statusDanger || '#F87171') : (theme.textPrimary || '#F0F0F5'))}}; font-size: 44rpx; font-weight: 700; font-family: 'DIN Alternate', 'SF Mono', monospace; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{value}}</text>
+  </view>
+  <view class="stat-change" wx:if="{{change !== 0}}">
+    <text class="change-arrow {{trend}}">{{trend === 'up' ? '↑' : trend === 'down' ? '↓' : '-'}}</text>
+    <text class="change-value" style="color: {{trend === 'up' ? (theme.statusSuccess || '#4ADE80') : (trend === 'down' ? (theme.statusDanger || '#F87171') : (theme.textMuted || '#5C5C72'))}};">{{Math.abs(change)}}%</text>
+  </view>
+</view>

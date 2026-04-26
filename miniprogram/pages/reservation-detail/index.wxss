@@ -1,0 +1,73 @@
+.detail-page {
+  min-height: 100vh;
+}
+
+.status-hero {
+  padding: 48rpx 32rpx;
+  border-bottom-left-radius: 32rpx;
+  border-bottom-right-radius: 32rpx;
+}
+
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.customer-name {
+  word-break: break-all;
+  text-align: center;
+}
+
+.hero-meta {
+  margin-top: 12rpx;
+}
+
+.detail-card {
+  padding: 0 32rpx;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid rgba(255,255,255,0.04);
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  font-size: 26rpx;
+  flex-shrink: 0;
+  margin-right: 16rpx;
+}
+
+.detail-value {
+  font-size: 28rpx;
+  text-align: right;
+}
+
+.action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(15,15,26,0.95);
+  backdrop-filter: blur(20rpx);
+  padding: 16rpx 32rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 0;
+  border-top: 1rpx solid rgba(255,255,255,0.06);
+  z-index: 100;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+}

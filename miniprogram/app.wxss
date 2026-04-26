@@ -1,0 +1,37 @@
+@import 'styles/mixins.wxss';
+
+page {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+  font-size: 30rpx;
+  line-height: 1.6;
+  color: #F0F0F5;
+  background-color: #0F0F1A;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Global page transition */
+page { animation: pageFadeIn 0.3s ease-out; }
+@keyframes pageFadeIn { from { opacity: 0; transform: translateY(20rpx); } to { opacity: 1; transform: translateY(0); } }
+
+/* Stagger animation classes for list items */
+.stagger-item { opacity: 0; transform: translateY(30rpx); animation: staggerIn 0.4s ease-out forwards; }
+@keyframes staggerIn { to { opacity: 1; transform: translateY(0); } }
+
+/* Safe area */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Scrollbar hiding */
+::-webkit-scrollbar { display: none; width: 0; height: 0; color: transparent; }
+
+/* Global button reset */
+button::after { border: none; }
+
+/* Loading overlay */
+.loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); z-index: 9999; }
+
+/* Haptic press effect */
+.press-scale:active { transform: scale(0.97); transition: transform 0.1s ease; }
+
+/* Glass morphism base */
+.glass { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }

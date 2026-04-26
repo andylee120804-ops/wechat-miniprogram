@@ -1,0 +1,156 @@
+<view class="home-page" style="background: {{theme.surface || '#1A1A2E'}};">
+
+  <!-- Loading skeleton -->
+  <skeleton wx:if="{{loading}}" theme="{{theme}}" type="home" />
+
+  <block wx:else>
+
+    <!-- Premium Header -->
+    <view class="home-header" style="padding-top: env(safe-area-inset-top);">
+      <view class="header-accent"></view>
+      <text class="header-title" style="color: {{theme.textPrimary || '#F0F0F5'}}; display: block;">听澜轩</text>
+      <view class="header-date-row">
+        <view class="header-date-dot" style="background: {{theme.accentColor || '#C9A96E'}};"></view>
+        <text class="header-date" style="color: {{theme.textSecondary || '#9A9AB0'}};">今日 {{todayDate}}</text>
+      </view>
+      <!-- Announcement Marquee -->
+      <view wx:if="{{latestAnnouncement}}" class="announcement-marquee" bindtap="onAnnouncementTap">
+        <view class="marquee-icon">📢</view>
+        <view class="marquee-content">
+          <view class="marquee-text">{{latestAnnouncement.title}}</view>
+        </view>
+        <view class="marquee-arrow">›</view>
+      </view>
+    </view>
+
+    <!-- Main Content -->
+    <view class="home-content">
+
+      <!-- Block 1: 今日预约 (Hero Section) -->
+      <view class="section-block section-today">
+        <view class="section-header">
+          <text class="section-title" style="color: {{theme.accentColor || '#C9A96E'}};">今日预约</text>
+          <text class="section-badge">{{lunchReservations.length + dinnerReservations.length}} 组</text>
+        </view>
+
+        <!-- Lunch -->
+        <view class="time-section" wx:if="{{lunchReservations.length > 0 || dinnerReservations.length > 0}}">
+          <view class="time-label">
+            <text class="time-label-icon">🍽</text>
+            <text class="time-label-text lunch">午餐</text>
+          </view>
+          <view wx:for="{{lunchReservations}}" wx:key="_id" class="res-card" bindtap="onReservationTap" data-id="{{item._id}}">
+            <view class="res-card-main">
+              <view class="res-card-left">
+                <text class="res-card-room" style="color: {{theme.accentColor || '#C9A96E'}};">{{item.room === 'big' ? '大包厢' : '小包厢'}}</text>
+                <text class="res-card-price" style="color: {{theme.textMuted || '#5C5C72'}};">¥{{item.standard || 300}}/人</text>
+              </view>
+              <text class="res-card-customer" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{item.customerName}}</text>
+            </view>
+            <view class="res-card-meta">
+              <text class="res-card-guests" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.guestCount}}人</text>
+            </view>
+            <view wx:if="{{item.remark}}" class="res-card-remark" style="color: {{theme.textMuted || '#5C5C72'}};">📝 {{item.remark}}</view>
+          </view>
+        </view>
+
+        <!-- Dinner -->
+        <view class="time-section" wx:if="{{dinnerReservations.length > 0}}">
+          <view class="time-label">
+            <text class="time-label-icon">🌙</text>
+            <text class="time-label-text dinner">晚餐</text>
+          </view>
+          <view wx:for="{{dinnerReservations}}" wx:key="_id" class="res-card" bindtap="onReservationTap" data-id="{{item._id}}">
+            <view class="res-card-main">
+              <view class="res-card-left">
+                <text class="res-card-room" style="color: {{theme.accentColor || '#C9A96E'}};">{{item.room === 'big' ? '大包厢' : '小包厢'}}</text>
+                <text class="res-card-price" style="color: {{theme.textMuted || '#5C5C72'}};">¥{{item.standard || 300}}/人</text>
+              </view>
+              <text class="res-card-customer" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{item.customerName}}</text>
+            </view>
+            <view class="res-card-meta">
+              <text class="res-card-guests" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.guestCount}}人</text>
+            </view>
+            <view wx:if="{{item.remark}}" class="res-card-remark" style="color: {{theme.textMuted || '#5C5C72'}};">📝 {{item.remark}}</view>
+          </view>
+        </view>
+
+        <!-- Empty state -->
+        <view wx:if="{{lunchReservations.length === 0 && dinnerReservations.length === 0}}" class="empty-state">
+          <text class="empty-state-text" style="color: {{theme.textMuted || '#5C5C72'}};">今日暂无预约</text>
+        </view>
+      </view>
+
+      <!-- Block 2: 明日预约 -->
+      <view class="section-block section-tomorrow">
+        <view class="section-header">
+          <text class="section-title">明日预约</text>
+          <text wx:if="{{tomorrowReservations.length > 0}}" class="section-badge" style="background: rgba(255,255,255,0.08); color: {{theme.textSecondary || '#9A9AB0'}};">{{tomorrowReservations.length}} 组</text>
+        </view>
+
+        <block wx:if="{{tomorrowReservations.length > 0}}">
+          <view wx:for="{{tomorrowPreview}}" wx:key="index" class="tomorrow-item" bindtap="onReservationTap" data-id="{{item._id}}">
+            <view>
+              <view class="tomorrow-time" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.time === '中午' ? '午餐' : '晚餐'}}</view>
+              <view class="tomorrow-customer" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{item.customerName}}</view>
+            </view>
+            <view class="tomorrow-right">
+              <view class="tomorrow-room">{{item.room === 'big' ? '大包厢' : '小包厢'}}</view>
+              <view class="tomorrow-price" style="color: {{theme.textMuted || '#5C5C72'}};">¥{{item.standard || 300}}/人</view>
+            </view>
+          </view>
+          <view wx:if="{{tomorrowReservations.length > 3}}" class="tomorrow-more">
+            还有 {{tomorrowReservations.length - 3}} 组...
+          </view>
+        </block>
+        <view wx:else class="empty-state">
+          <text class="empty-state-text" style="color: {{theme.textMuted || '#5C5C72'}};">无</text>
+        </view>
+      </view>
+
+      <!-- Block 3: 今日收支 (boss only) -->
+      <view wx:if="{{showSummary}}" class="section-block section-summary">
+        <view class="section-header" style="margin-bottom: 20rpx;">
+          <text class="section-title" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">今日收支</text>
+        </view>
+        <view class="summary-row">
+          <view class="summary-item">
+            <text class="summary-value" style="color: {{theme.statusSuccess || '#4ADE80'}};">¥{{todayIncome}}</text>
+            <text class="summary-label" style="color: {{theme.textMuted || '#5C5C72'}};">收入</text>
+          </view>
+          <view class="summary-divider"></view>
+          <view class="summary-item">
+            <text class="summary-value" style="color: {{theme.statusWarning || '#FBBF24'}};">¥{{todayExpense}}</text>
+            <text class="summary-label" style="color: {{theme.textMuted || '#5C5C72'}};">支出</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- Block 4: 快捷操作 -->
+      <view class="section-block section-actions">
+        <view class="section-header" style="margin-bottom: 20rpx;">
+          <text class="section-title" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">快捷操作</text>
+        </view>
+        <view class="actions-grid">
+          <view wx:if="{{canAddReservation}}" class="action-item reservation" bindtap="onAddReservation">
+            <text class="action-icon">📅</text>
+            <text class="action-text">预约</text>
+          </view>
+          <view wx:if="{{canAddPurchase}}" class="action-item purchase" bindtap="onAddPurchase">
+            <text class="action-icon">🛒</text>
+            <text class="action-text">采购</text>
+          </view>
+          <view wx:if="{{canAddIncome}}" class="action-item income" bindtap="onAddIncome">
+            <text class="action-icon">💰</text>
+            <text class="action-text">收入</text>
+          </view>
+        </view>
+      </view>
+
+    </view>
+
+    <!-- Bottom spacing -->
+    <view class="bottom-spacer"></view>
+
+  </block>
+</view>

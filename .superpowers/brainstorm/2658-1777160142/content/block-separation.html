@@ -1,0 +1,150 @@
+<h2>首页区块分割方式</h2>
+<p class="subtitle">哪个方案更能突出今日预约、清晰分割区块？</p>
+
+<div class="split">
+  <!-- Option A: Divider lines -->
+  <div class="mockup" data-choice="a" onclick="toggleSelect(this)">
+    <div class="mockup-header">A: 分割线 + 标题加重</div>
+    <div class="mockup-body" style="background:#0F0F1A;color:#F0F0F5;font-size:13px;padding:16px;min-height:500px;">
+      <!-- Header -->
+      <div style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:16px;">
+        <div style="font-size:20px;font-weight:700;">听澜轩</div>
+        <div style="font-size:12px;color:#5C5C72;margin-top:2px;">今日 2026-04-26</div>
+      </div>
+
+      <!-- Block 1: 今日预约 - LARGE -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:18px;font-weight:700;margin-bottom:12px;color:#C9A96E;">今日预约</div>
+
+        <div style="margin-bottom:10px;">
+          <span style="background:rgba(251,191,36,0.15);color:#FBBF24;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:600;">🍽 午餐</span>
+        </div>
+        <div style="background:rgba(26,26,46,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:#9A9AB0;font-size:13px;">大包厢 · 6人</span>
+            <span style="color:#F0F0F5;font-size:16px;font-weight:600;">张先生</span>
+          </div>
+          <div style="margin-top:6px;padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:6px;">
+            <span style="color:#5C5C72;font-size:11px;">📝 纪念日布置</span>
+          </div>
+        </div>
+        <div style="background:rgba(26,26,46,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:#9A9AB0;font-size:13px;">小包厢 · 2人</span>
+            <span style="color:#F0F0F5;font-size:16px;font-weight:600;">李女士</span>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;margin-bottom:10px;">
+          <span style="background:rgba(139,92,246,0.15);color:#A78BFA;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:600;">🌙 晚餐</span>
+        </div>
+        <div style="background:rgba(26,26,46,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:#9A9AB0;font-size:13px;">大包厢 · 8人</span>
+            <span style="color:#F0F0F5;font-size:16px;font-weight:600;">王总</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div style="height:1px;background:rgba(255,255,255,0.08);margin:4px 0 16px;"></div>
+
+      <!-- Block 2: 明日预约 -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:18px;font-weight:700;margin-bottom:10px;color:#F0F0F5;">明日预约</div>
+        <div style="background:rgba(26,26,46,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
+          <div style="color:#9A9AB0;font-size:12px;">共 3 组</div>
+          <div style="color:#F0F0E8;font-size:12px;margin-top:6px;">午餐: 张总(大包厢)</div>
+          <div style="color:#F0F0E8;font-size:12px;">晚餐: 李总(小包厢)</div>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div style="height:1px;background:rgba(255,255,255,0.08);margin:4px 0 16px;"></div>
+
+      <!-- Block 3: 收支 -->
+      <div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:10px;color:#F0F0F5;">今日收支</div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;background:rgba(26,26,46,0.85);border-radius:10px;padding:14px;text-align:center;">
+            <div style="color:#4ADE80;font-size:20px;font-weight:700;">¥1280</div>
+            <div style="color:#5C5C72;font-size:11px;margin-top:4px;">收入</div>
+          </div>
+          <div style="flex:1;background:rgba(26,26,46,0.85);border-radius:10px;padding:14px;text-align:center;">
+            <div style="color:#FBBF24;font-size:20px;font-weight:700;">¥560</div>
+            <div style="color:#5C5C72;font-size:11px;margin-top:4px;">支出</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: Card containers per block -->
+  <div class="mockup" data-choice="b" onclick="toggleSelect(this)">
+    <div class="mockup-header">B: 区块卡片化 + 强调色块标题</div>
+    <div class="mockup-body" style="background:#0F0F1A;color:#F0F0F5;font-size:13px;padding:16px;min-height:500px;">
+      <!-- Header -->
+      <div style="padding:12px 0;margin-bottom:16px;">
+        <div style="font-size:20px;font-weight:700;">听澜轩</div>
+        <div style="font-size:12px;color:#5C5C72;margin-top:2px;">今日 2026-04-26</div>
+      </div>
+
+      <!-- Block 1: 今日预约 - HIGHLIGHTED with accent border -->
+      <div style="background:rgba(201,169,110,0.06);border-left:3px solid #C9A96E;border-radius:0 10px 10px 0;padding:16px;margin-bottom:16px;">
+        <div style="font-size:18px;font-weight:700;margin-bottom:12px;color:#C9A96E;">今日预约</div>
+
+        <div style="margin-bottom:10px;">
+          <span style="background:rgba(251,191,36,0.15);color:#FBBF24;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:600;">🍽 午餐</span>
+        </div>
+        <div style="background:rgba(26,26,46,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:#9A9AB0;font-size:13px;">大包厢 · 6人</span>
+            <span style="color:#F0F0F5;font-size:16px;font-weight:600;">张先生</span>
+          </div>
+          <div style="margin-top:6px;padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:6px;">
+            <span style="color:#5C5C72;font-size:11px;">📝 纪念日布置</span>
+          </div>
+        </div>
+        <div style="background:rgba(26,26,46,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:#9A9AB0;font-size:13px;">小包厢 · 2人</span>
+            <span style="color:#F0F0F5;font-size:16px;font-weight:600;">李女士</span>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;margin-bottom:10px;">
+          <span style="background:rgba(139,92,246,0.15);color:#A78BFA;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:600;">🌙 晚餐</span>
+        </div>
+        <div style="background:rgba(26,26,46,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:#9A9AB0;font-size:13px;">大包厢 · 8人</span>
+            <span style="color:#F0F0F5;font-size:16px;font-weight:600;">王总</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Block 2: 明日预约 -->
+      <div style="background:rgba(26,26,46,0.5);border-radius:10px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:16px;font-weight:600;margin-bottom:10px;color:#9A9AB0;">明日预约</div>
+        <div style="color:#F0F0E8;font-size:12px;">午餐: 张总(大包厢)</div>
+        <div style="color:#F0F0E8;font-size:12px;margin-top:4px;">晚餐: 李总(小包厢)</div>
+      </div>
+
+      <!-- Block 3: 收支 -->
+      <div style="background:rgba(26,26,46,0.5);border-radius:10px;padding:16px;">
+        <div style="font-size:16px;font-weight:600;margin-bottom:10px;color:#9A9AB0;">今日收支</div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;text-align:center;">
+            <div style="color:#4ADE80;font-size:20px;font-weight:700;">¥1280</div>
+            <div style="color:#5C5C72;font-size:11px;margin-top:4px;">收入</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,0.08);"></div>
+          <div style="flex:1;text-align:center;">
+            <div style="color:#FBBF24;font-size:20px;font-weight:700;">¥560</div>
+            <div style="color:#5C5C72;font-size:11px;margin-top:4px;">支出</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

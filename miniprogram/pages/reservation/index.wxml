@@ -1,0 +1,143 @@
+<view class="page" style="background: {{theme.surfaceColor || '#1A1A2E'}}; min-height: 100vh;">
+  <!-- Calendar Section -->
+  <view class="calendar-section">
+    <calendar
+      theme="{{theme}}"
+      year="{{currentYear}}"
+      month="{{currentMonth}}"
+      markDates="{{markDates}}"
+      selectedDate="{{selectedDate}}"
+      bind:daytap="onDayTap"
+      bind:monthchange="onMonthChange"
+    />
+  </view>
+
+  <!-- Selected Date Label -->
+  <view class="date-label">
+    <text class="date-text" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{selectedDate}}</text>
+    <text class="date-count" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">{{reservations.length}}个预约</text>
+  </view>
+
+  <!-- Loading Skeleton -->
+  <view class="list-section" wx:if="{{loading}}">
+    <skeleton theme="{{theme}}" type="list" count="{{3}}" />
+  </view>
+
+  <!-- Reservation List -->
+  <view class="list-section" wx:elif="{{reservations.length > 0}}">
+    <!-- Exclusive Group -->
+    <block wx:if="{{groupedReservations.exclusive.length > 0}}">
+      <view class="room-group">
+        <view class="room-pill" style="background: {{theme.tagCompletedBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.tagCompletedText || '#C9A96E'}};">
+          包场
+        </view>
+        <view class="reservation-cards">
+          <view
+            class="reservation-card {{item.status === 'cancelled' ? 'cancelled' : ''}}"
+            wx:for="{{groupedReservations.exclusive}}"
+            wx:key="_id"
+            data-id="{{item._id}}"
+            bindtap="onReservationTap"
+            style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};"
+          >
+            <view class="card-top">
+              <view class="time-pill" style="background: {{item.status === 'cancelled' ? 'rgba(150,150,170,0.3)' : theme.accentColor || '#C9A96E'}}; color: {{item.status === 'cancelled' ? '#9A9AB0' : theme.textInverse || '#0F0F1A'}};">
+                {{item.time}}
+              </view>
+              <theme-badge theme="{{theme}}" status="{{item.status}}" type="status" text="{{item.statusText}}" size="sm" />
+            </view>
+            <view class="card-info">
+              <text class="customer-name" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textPrimary || '#F5F0E8'}}; {{item.status === 'cancelled' ? 'text-decoration: line-through;' : ''}}">{{item.customerName}}</text>
+              <view class="card-meta">
+                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{item.guestCount}}人</text>
+                <text class="meta-divider" style="color: {{theme.divider || 'rgba(255,255,255,0.08)'}};">|</text>
+                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">¥{{item.standard}}/人</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- Big Room Group -->
+    <block wx:if="{{groupedReservations.big.length > 0}}">
+      <view class="room-group">
+        <view class="room-pill" style="background: {{theme.tagReservedBg || 'rgba(96,165,250,0.15)'}}; color: {{theme.tagReservedText || '#60A5FA'}};">
+          大包厢
+        </view>
+        <view class="reservation-cards">
+          <view
+            class="reservation-card {{item.status === 'cancelled' ? 'cancelled' : ''}}"
+            wx:for="{{groupedReservations.big}}"
+            wx:key="_id"
+            data-id="{{item._id}}"
+            bindtap="onReservationTap"
+            style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};"
+          >
+            <view class="card-top">
+              <view class="time-pill" style="background: {{item.status === 'cancelled' ? 'rgba(150,150,170,0.3)' : theme.accentColor || '#C9A96E'}}; color: {{item.status === 'cancelled' ? '#9A9AB0' : theme.textInverse || '#0F0F1A'}};">
+                {{item.time}}
+              </view>
+              <theme-badge theme="{{theme}}" status="{{item.status}}" type="status" text="{{item.statusText}}" size="sm" />
+            </view>
+            <view class="card-info">
+              <text class="customer-name" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textPrimary || '#F5F0E8'}}; {{item.status === 'cancelled' ? 'text-decoration: line-through;' : ''}}">{{item.customerName}}</text>
+              <view class="card-meta">
+                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{item.guestCount}}人</text>
+                <text class="meta-divider" style="color: {{theme.divider || 'rgba(255,255,255,0.08)'}};">|</text>
+                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">¥{{item.standard}}/人</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- Small Room Group -->
+    <block wx:if="{{groupedReservations.small.length > 0}}">
+      <view class="room-group">
+        <view class="room-pill" style="background: {{theme.tagConfirmedBg || 'rgba(74,222,128,0.15)'}}; color: {{theme.tagConfirmedText || '#4ADE80'}};">
+          小包厢
+        </view>
+        <view class="reservation-cards">
+          <view
+            class="reservation-card {{item.status === 'cancelled' ? 'cancelled' : ''}}"
+            wx:for="{{groupedReservations.small}}"
+            wx:key="_id"
+            data-id="{{item._id}}"
+            bindtap="onReservationTap"
+            style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};"
+          >
+            <view class="card-top">
+              <view class="time-pill" style="background: {{item.status === 'cancelled' ? 'rgba(150,150,170,0.3)' : theme.accentColor || '#C9A96E'}}; color: {{item.status === 'cancelled' ? '#9A9AB0' : theme.textInverse || '#0F0F1A'}};">
+                {{item.time}}
+              </view>
+              <theme-badge theme="{{theme}}" status="{{item.status}}" type="status" text="{{item.statusText}}" size="sm" />
+            </view>
+            <view class="card-info">
+              <text class="customer-name" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textPrimary || '#F5F0E8'}}; {{item.status === 'cancelled' ? 'text-decoration: line-through;' : ''}}">{{item.customerName}}</text>
+              <view class="card-meta">
+                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{item.guestCount}}人</text>
+                <text class="meta-divider" style="color: {{theme.divider || 'rgba(255,255,255,0.08)'}};">|</text>
+                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">¥{{item.standard}}/人</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <!-- Empty State -->
+  <view class="list-section" wx:else>
+    <empty-state theme="{{theme}}" type="no-reservation" title="暂无预约" description="该日暂无预约记录" />
+  </view>
+
+  <!-- FAB Button -->
+  <view class="fab" bindtap="onAddReservation" style="background: {{theme.gradientFab || 'linear-gradient(135deg, #C9A96E, #D4B87A)'}}; box-shadow: {{theme.shadowLg || '0 16rpx 48rpx rgba(0,0,0,0.36)'}};">
+    <text class="fab-icon">+</text>
+  </view>
+
+  <!-- Bottom safe area -->
+  <view class="safe-bottom"></view>
+</view>

@@ -1,0 +1,11 @@
+{
+  "usingComponents": {
+    "theme-card": "/components/theme-card/index",
+    "theme-badge": "/components/theme-badge/index",
+    "theme-btn": "/components/theme-btn/index",
+    "theme-modal": "/components/theme-modal/index",
+    "skeleton": "/components/skeleton/index",
+    "empty-state": "/components/empty-state/index"
+  },
+  "navigationStyle": "custom"
+}

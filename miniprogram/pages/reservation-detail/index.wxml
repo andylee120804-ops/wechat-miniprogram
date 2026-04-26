@@ -1,0 +1,73 @@
+<view class="detail-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx;">
+  <block wx:if="{{!loading && reservation}}">
+    <!-- Status Hero - grey for cancelled -->
+    <view class="status-hero" style="background: {{reservation.status === 'cancelled' ? 'linear-gradient(135deg, rgba(150,150,170,0.15), rgba(100,100,110,0.05))' : 'linear-gradient(135deg, rgba(201,169,110,0.2), rgba(201,169,110,0.05))'}};">
+      <view class="hero-content">
+        <!-- Status indicator - clear display -->
+        <view style="display: inline-flex; align-items: center; background: {{reservation.status === 'cancelled' ? 'rgba(248,113,113,0.2)' : 'rgba(74,222,128,0.2)'}}; padding: 8rpx 20rpx; border-radius: 100rpx; margin-bottom: 12rpx;">
+          <view style="width: 12rpx; height: 12rpx; border-radius: 50%; background: {{reservation.status === 'cancelled' ? '#F87171' : '#4ADE80'}}; margin-right: 8rpx;"></view>
+          <text style="color: {{reservation.status === 'cancelled' ? '#F87171' : '#4ADE80'}}; font-size: 24rpx; font-weight: 600;">{{reservation.status === 'cancelled' ? '已取消' : '正常'}}</text>
+        </view>
+        <text class="customer-name" style="color: {{reservation.status === 'cancelled' ? theme.textMuted || '#5C5C72' : theme.textPrimary || '#F0F0F5'}}; margin-top: 16rpx; font-size: 40rpx; font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; {{reservation.status === 'cancelled' ? 'text-decoration: line-through;' : ''}}">{{reservation.customerName}}</text>
+        <view class="hero-meta">
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 28rpx;">{{getRoomName(reservation.room)}}{{reservation.isExclusive ? '(包场)' : ''}} · {{reservation.time}} · {{reservation.guestCount}}人</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Detail Card -->
+    <view style="padding: 32rpx;">
+      <theme-card theme="{{theme}}" padding="32rpx">
+        <view class="detail-row">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">预约日期</text>
+          <text class="detail-value" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{formatDate(reservation.date)}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">时段</text>
+          <text class="detail-value" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{reservation.time}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">房间</text>
+          <text class="detail-value" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{getRoomName(reservation.room)}}{{reservation.isExclusive ? ' (包场)' : ''}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">人数</text>
+          <text class="detail-value" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{reservation.guestCount}}人</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">人均餐标</text>
+          <text class="detail-value" style="color: {{theme.accentColor || '#C9A96E'}}; font-weight: 600;">¥{{reservation.standard}}</text>
+        </view>
+        <view class="detail-row" wx:if="{{reservation.phone}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">联系电话</text>
+          <text class="detail-value" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{reservation.phone}}</text>
+        </view>
+        <view class="detail-row" wx:if="{{reservation.remark}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">备注</text>
+          <text class="detail-value" style="color: {{theme.textPrimary || '#F0F0F5'}}; flex: 1; text-align: right;">{{reservation.remark}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">创建人</text>
+          <text class="detail-value" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{reservation.createdByName}}</text>
+        </view>
+      </theme-card>
+    </view>
+
+    <!-- Action Bar - only for non-cancelled -->
+    <view class="action-bar safe-bottom" wx:if="{{reservation.status !== 'cancelled'}}">
+      <theme-btn theme="{{theme}}" type="primary" text="编辑" bind:tap="onEdit" style="flex: 1; margin-right: 12rpx;" />
+      <theme-btn theme="{{theme}}" type="danger" text="取消预约" bind:tap="onCancel" style="flex: 1;" />
+    </view>
+
+    <!-- Cancel Modal -->
+    <theme-modal theme="{{theme}}" visible="{{showCancelModal}}" title="取消预约" confirmText="确认取消" cancelText="返回" position="center" bind:confirm="onConfirmCancel" bind:close="onCloseCancel">
+      <view style="padding: 16rpx 0;">
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">确定要取消此预约吗？取消后无法恢复。</text>
+      </view>
+    </theme-modal>
+  </block>
+
+  <view wx:if="{{loading}}" class="loading-state">
+    <text style="color: {{theme.textMuted || '#5C5C72'}};">加载中...</text>
+  </view>
+</view>

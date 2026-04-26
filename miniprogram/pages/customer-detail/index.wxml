@@ -1,0 +1,45 @@
+<view class="customer-detail-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 32rpx;">
+  <!-- Header -->
+  <view class="profile-header" style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}}; padding: 48rpx 32rpx;">
+    <view class="avatar" style="background: {{theme.accentBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.accentColor || '#C9A96E'}}; width: 120rpx; height: 120rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 56rpx; font-weight: 700; margin: 0 auto 24rpx;">
+      {{customerName.substr(0, 1)}}
+    </view>
+    <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 40rpx; font-weight: 700; display: block; text-align: center;">{{customerName}}</text>
+  </view>
+
+  <!-- Stats Row -->
+  <view class="stats-row" style="padding: 0 32rpx; margin-top: -32rpx;">
+    <view class="stat-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 24rpx; padding: 28rpx; flex: 1; text-align: center;">
+      <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 800; font-family: 'DIN Alternate', monospace; display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{totalVisits}}</text>
+      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; margin-top: 8rpx; display: block;">来访次数</text>
+    </view>
+    <view class="stat-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 24rpx; padding: 28rpx; flex: 1; text-align: center; margin: 0 12rpx;">
+      <text style="color: {{theme.amountPositive || '#4ADE80'}}; font-size: 30rpx; font-weight: 800; font-family: 'DIN Alternate', monospace; display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">¥{{totalSpending}}</text>
+      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; margin-top: 8rpx; display: block;">累计消费</text>
+    </view>
+    <view class="stat-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 24rpx; padding: 28rpx; flex: 1; text-align: center;">
+      <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 700; display: block;">{{preferredRoom}}</text>
+      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; margin-top: 8rpx; display: block;">偏好房间</text>
+    </view>
+  </view>
+
+  <!-- Visit History -->
+  <view style="padding: 32rpx;">
+    <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 32rpx; font-weight: 600; display: block; margin-bottom: 20rpx;">来访记录</text>
+
+    <skeleton wx:if="{{loading}}" theme="{{theme}}" type="list" count="5" />
+
+    <view wx:else>
+      <view class="timeline-item" wx:for="{{visitHistory}}" wx:key="_id" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; padding: 24rpx; margin-bottom: 16rpx;">
+        <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rpx;">
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 600;">{{formatDate(item.date)}}</text>
+          <theme-badge theme="{{theme}}" status="{{item.status}}" type="status" text="{{item.status === 'reserved' ? '已预约' : item.status === 'confirmed' ? '已确认' : item.status === 'completed' ? '已完成' : '已取消'}}" size="sm" />
+        </view>
+        <view style="display: flex; align-items: center; gap: 24rpx;">
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">{{item.roomName || item.room}} · {{item.time}} · {{item.guestCount}}人</text>
+          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 26rpx;">¥{{(item.standard || 0) * (item.guestCount || 0)}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

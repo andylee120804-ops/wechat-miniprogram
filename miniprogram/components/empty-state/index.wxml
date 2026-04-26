@@ -1,0 +1,8 @@
+<view class="empty-state">
+  <view class="empty-icon">{{icon}}</view>
+  <text class="empty-title" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{title || defaultTitle}}</text>
+  <text class="empty-desc" wx:if="{{description}}" style="color: {{theme.textMuted || '#5C5C72'}};">{{description}}</text>
+  <view class="empty-action" wx:if="{{actionText}}">
+    <theme-btn theme="{{theme}}" text="{{actionText}}" type="primary" size="small" bind:tap="onAction" />
+  </view>
+</view>

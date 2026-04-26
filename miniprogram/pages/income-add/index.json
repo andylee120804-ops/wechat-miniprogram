@@ -1,0 +1,9 @@
+{
+  "usingComponents": {
+    "theme-card": "/components/theme-card/index",
+    "theme-form-item": "/components/theme-form-item/index",
+    "theme-btn": "/components/theme-btn/index",
+    "theme-modal": "/components/theme-modal/index",
+    "theme-badge": "/components/theme-badge/index"
+  }
+}

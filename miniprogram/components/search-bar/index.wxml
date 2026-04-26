@@ -1,0 +1,5 @@
+<view class="search-bar" style="background: {{theme.elevated || '#252540'}}; border-radius: 24rpx; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}};">
+  <view class="search-icon">🔍</view>
+  <input class="search-input" placeholder="{{placeholder}}" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" value="{{innerValue}}" bindinput="onInput" bindfocus="onFocus" bindblur="onBlur" confirm-type="search" style="color: {{theme.textPrimary || '#F0F0F5'}};" />
+  <view class="search-clear" wx:if="{{innerValue}}" bindtap="onClear">✕</view>
+</view>

@@ -1,0 +1,14 @@
+<view class="theme-modal {{visible ? 'visible' : ''}} {{position}}" wx:if="{{visible}}">
+  <view class="modal-mask {{blur ? 'blur' : ''}}" bindtap="onMaskTap"></view>
+  <view class="modal-container {{position}}" style="background: {{theme.elevated || '#252540'}}; border-radius: {{position === 'bottom' ? '32rpx 32rpx 0 0' : '24rpx'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}};">
+    <view class="modal-handle" wx:if="{{position === 'bottom'}}"></view>
+    <view class="modal-title" wx:if="{{title}}" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{title}}</view>
+    <view class="modal-body">
+      <slot></slot>
+    </view>
+    <view class="modal-footer">
+      <view class="modal-btn cancel" wx:if="{{showCancel}}" bindtap="onCancel" style="color: {{theme.textSecondary || '#9A9AB0'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.1)'}};">{{cancelText}}</view>
+      <view class="modal-btn confirm" bindtap="onConfirm" style="background: {{theme.buttonGradient || 'linear-gradient(135deg, #C9A96E, #E8D5A8)'}}; color: {{theme.textInverse || '#0F0F1A'}};">{{confirmText}}</view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,75 @@
+{
+  "pages": [
+    "pages/login/index",
+    "pages/index/index",
+    "pages/reservation/index",
+    "pages/reservation-add/index",
+    "pages/reservation-detail/index",
+    "pages/purchase/index",
+    "pages/purchase-add/index",
+    "pages/purchase-detail/index",
+    "pages/income/index",
+    "pages/income-add/index",
+    "pages/income-detail/index",
+    "pages/clockin/index",
+    "pages/me/index",
+    "pages/search/index",
+    "pages/customer/index",
+    "pages/customer-detail/index",
+    "pages/insights/index",
+    "pages/announcements/index",
+    "pages/admin/dashboard/index",
+    "pages/admin/staff/index",
+    "pages/admin/staff-add/index",
+    "pages/admin/expense/index",
+    "pages/admin/logs/index",
+    "pages/admin/attendance/index",
+    "pages/admin/attendance-detail/index"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#0F0F1A",
+    "navigationBarTitleText": "听澜轩",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "color": "#666680",
+    "selectedColor": "#C9A96E",
+    "backgroundColor": "#0F0F1A",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "assets/icons/home.png",
+        "selectedIconPath": "assets/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/reservation/index",
+        "text": "预约",
+        "iconPath": "assets/icons/calendar.png",
+        "selectedIconPath": "assets/icons/calendar-active.png"
+      },
+      {
+        "pagePath": "pages/purchase/index",
+        "text": "采购",
+        "iconPath": "assets/icons/purchase.png",
+        "selectedIconPath": "assets/icons/purchase-active.png"
+      },
+      {
+        "pagePath": "pages/income/index",
+        "text": "收入",
+        "iconPath": "assets/icons/income.png",
+        "selectedIconPath": "assets/icons/income-active.png"
+      },
+      {
+        "pagePath": "pages/me/index",
+        "text": "我的",
+        "iconPath": "assets/icons/me.png",
+        "selectedIconPath": "assets/icons/me-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

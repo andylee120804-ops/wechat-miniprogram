@@ -1,0 +1,95 @@
+<view class="me-page" style="background: {{theme.surfaceColor || '#1A1A2E'}}; min-height: 100vh;">
+  <!-- Profile Hero -->
+  <view class="profile-hero" style="background: {{theme.gradientHeader || 'linear-gradient(135deg, #1A1A2E, #252540)'}};">
+    <view class="hero-decor">
+      <view class="hero-circle hero-circle-1" style="background: {{theme.accentColor || '#C9A96E'}}; opacity: 0.06;"></view>
+      <view class="hero-circle hero-circle-2" style="background: {{theme.accentColor || '#C9A96E'}}; opacity: 0.04;"></view>
+    </view>
+
+    <glass-card theme="{{theme}}" blur="20" opacity="0.06" padding="40rpx 32rpx" class="hero-card">
+      <view class="profile-row">
+        <!-- Avatar -->
+        <view class="avatar-circle" style="background: {{theme.gradientAvatar || 'linear-gradient(135deg, #C9A96E, #8B6F3A)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
+          <text class="avatar-char" style="color: {{theme.textInverse || '#0F0F1A'}};">{{userInfo.name ? userInfo.name[0] : '?'}}</text>
+        </view>
+        <!-- Info -->
+        <view class="profile-info flex-1">
+          <text class="profile-name text-title1" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{userInfo.name || '未登录'}}</text>
+          <view class="profile-role-row mt-xs">
+            <theme-badge theme="{{theme}}" status="{{userInfo.role}}" type="role" text="{{roleName}}" size="sm" wx:if="{{userInfo.role}}" />
+          </view>
+        </view>
+      </view>
+    </glass-card>
+  </view>
+
+  <!-- Menu Groups -->
+  <view class="menu-section px-lg mt-xl">
+    <!-- Management Group -->
+    <view class="menu-group" wx:if="{{managementGroup.length > 0}}">
+      <text class="menu-group-title text-overline" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">管理</text>
+      <view class="menu-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx; overflow: hidden; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};">
+        <view class="menu-item flex-row flex-between" wx:for="{{managementGroup}}" wx:key="key"
+          data-key="{{item.key}}" bindtap="onMenuTap"
+          style="border-bottom: {{index < managementGroup.length - 1 ? '1rpx solid ' + (theme.divider || 'rgba(255,255,255,0.08)') : 'none'}};">
+          <view class="menu-item-left flex-row">
+            <text class="menu-icon">{{item.icon}}</text>
+            <text class="menu-text text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.text}}</text>
+          </view>
+          <text class="menu-arrow" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">›</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Feature Group -->
+    <view class="menu-group mt-lg" wx:if="{{featureGroup.length > 0}}">
+      <text class="menu-group-title text-overline" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">功能</text>
+      <view class="menu-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx; overflow: hidden; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};">
+        <view class="menu-item flex-row flex-between" wx:for="{{featureGroup}}" wx:key="key"
+          data-key="{{item.key}}" bindtap="onMenuTap"
+          style="border-bottom: {{index < featureGroup.length - 1 ? '1rpx solid ' + (theme.divider || 'rgba(255,255,255,0.08)') : 'none'}};">
+          <view class="menu-item-left flex-row">
+            <text class="menu-icon">{{item.icon}}</text>
+            <text class="menu-text text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.text}}</text>
+          </view>
+          <text class="menu-arrow" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">›</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Settings Group -->
+    <view class="menu-group mt-lg" wx:if="{{settingsGroup.length > 0}}">
+      <text class="menu-group-title text-overline" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">设置</text>
+      <view class="menu-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx; overflow: hidden; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};">
+        <view class="menu-item flex-row flex-between" wx:for="{{settingsGroup}}" wx:key="key"
+          data-key="{{item.key}}" bindtap="onMenuTap"
+          style="border-bottom: {{index < settingsGroup.length - 1 ? '1rpx solid ' + (theme.divider || 'rgba(255,255,255,0.08)') : 'none'}};">
+          <view class="menu-item-left flex-row">
+            <text class="menu-icon">{{item.icon}}</text>
+            <text class="menu-text text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.text}}</text>
+          </view>
+          <text class="menu-arrow" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">›</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Logout Button -->
+  <view class="logout-section" wx:if="{{userInfo}}">
+    <view bindtap="onLogout" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; padding: 28rpx 48rpx; text-align: center; margin: 0 32rpx;">
+      <text style="color: {{theme.statusDanger || '#F87171'}}; font-size: 28rpx; font-weight: 500;">退出登录</text>
+    </view>
+  </view>
+
+  <!-- Bottom safe area -->
+  <view class="safe-bottom"></view>
+
+  <!-- Theme Switcher Overlay -->
+  <theme-switcher
+    wx:if="{{showThemeSwitcher}}"
+    theme="{{theme}}"
+    themeId="{{currentThemeId}}"
+    bind:change="onThemeChange"
+    bind:close="onThemeClose"
+  />
+</view>

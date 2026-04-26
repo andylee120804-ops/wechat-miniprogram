@@ -1,0 +1,66 @@
+<view class="announcements-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx;">
+  <!-- Header -->
+  <view style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}}; padding: 32rpx;">
+    <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 36rpx; font-weight: 700; display: block;">公告通知</text>
+  </view>
+
+  <!-- Skeleton -->
+  <skeleton wx:if="{{loading}}" theme="{{theme}}" type="list" count="3" />
+
+  <!-- Announcement List -->
+  <view wx:else style="padding: 24rpx 32rpx;">
+    <view class="ann-item stagger-item" wx:for="{{announcements}}" wx:key="_id" bindtap="onAnnouncementTap" data-id="{{item._id}}" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 24rpx; padding: 28rpx; margin-bottom: 16rpx;">
+      <view class="ann-header">
+        <view style="display: flex; align-items: center; gap: 12rpx; flex: 1;">
+          <view wx:if="{{isUnread(item)}}" style="width: 16rpx; height: 16rpx; background: {{theme.statusDanger || '#F87171'}}; border-radius: 50%; flex-shrink: 0;"></view>
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600; flex: 1;">{{item.title}}</text>
+        </view>
+        <view style="display: flex; align-items: center; gap: 12rpx;">
+          <theme-badge theme="{{theme}}" status="{{item.priority}}" type="role" text="{{item.priority === 'urgent' ? '紧急' : item.priority === 'important' ? '重要' : '普通'}}" size="sm" />
+          <text wx:if="{{isAdmin}}" style="color: {{theme.statusDanger || '#F87171'}}; font-size: 24rpx;" data-id="{{item._id}}" catchtap="onDeleteAnnouncement">删除</text>
+        </view>
+      </view>
+
+      <view class="ann-meta" style="margin-top: 12rpx;">
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.createdByName}} · {{formatDateTime(item.createdAt)}}</text>
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; margin-left: 16rpx;">{{item.readBy.length}}人已读</text>
+      </view>
+
+      <view wx:if="{{expandedId === item._id}}" style="margin-top: 20rpx; padding-top: 20rpx; border-top: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.04)'}};">
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx; line-height: 1.8;">{{item.content}}</text>
+      </view>
+      <view wx:else style="margin-top: 12rpx;">
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;">{{item.content}}</text>
+      </view>
+    </view>
+
+    <empty-state wx:if="{{announcements.length === 0}}" theme="{{theme}}" type="no-data" title="暂无公告" description="暂无任何公告通知" />
+  </view>
+
+  <!-- FAB for Admin -->
+  <view wx:if="{{isAdmin}}" class="fab" bindtap="onAddAnnouncement" style="background: {{theme.buttonGradient || 'linear-gradient(135deg, #C9A96E, #E8D5A8)'}}; box-shadow: {{theme.shadowLg || '0 8rpx 32rpx rgba(201,169,110,0.3)'}};">
+    <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 48rpx; font-weight: 300; line-height: 1;">+</text>
+  </view>
+
+  <!-- Create Modal -->
+  <theme-modal theme="{{theme}}" visible="{{showCreateModal}}" title="发布公告" confirmText="发布" cancelText="取消" bind:confirm="onSaveAnnouncement" bind:close="onCloseModal" position="center">
+    <view style="padding: 8rpx 0;">
+      <view style="margin-bottom: 24rpx;">
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; display: block; margin-bottom: 12rpx;">标题</text>
+        <input class="modal-input" placeholder="公告标题" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{createTitle}}" bindinput="onTitleInput" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.1)'}}; border-radius: 12rpx; padding: 16rpx 20rpx; color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx;" />
+      </view>
+      <view style="margin-bottom: 24rpx;">
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; display: block; margin-bottom: 12rpx;">内容</text>
+        <textarea class="modal-textarea" placeholder="公告内容" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{createContent}}" bindinput="onContentInput" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.1)'}}; border-radius: 12rpx; padding: 16rpx 20rpx; color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; width: 100%; min-height: 200rpx; resize: none;" />
+      </view>
+      <view>
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; display: block; margin-bottom: 12rpx;">优先级</text>
+        <view style="display: flex; gap: 12rpx;">
+          <view class="priority-pill {{createPriority === 'normal' ? 'active' : ''}}" data-priority="normal" bindtap="onPriorityChange" style="{{createPriority === 'normal' ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}} padding: 10rpx 24rpx; border-radius: 999rpx; font-size: 26rpx;">普通</view>
+          <view class="priority-pill {{createPriority === 'important' ? 'active' : ''}}" data-priority="important" bindtap="onPriorityChange" style="{{createPriority === 'important' ? 'background:' + (theme.statusWarning || '#FBBF24') + ';color:#000;' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}} padding: 10rpx 24rpx; border-radius: 999rpx; font-size: 26rpx;">重要</view>
+          <view class="priority-pill {{createPriority === 'urgent' ? 'active' : ''}}" data-priority="urgent" bindtap="onPriorityChange" style="{{createPriority === 'urgent' ? 'background:' + (theme.statusDanger || '#F87171') + ';color:#fff;' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}} padding: 10rpx 24rpx; border-radius: 999rpx; font-size: 26rpx;">紧急</view>
+        </view>
+      </view>
+    </view>
+  </theme-modal>
+</view>

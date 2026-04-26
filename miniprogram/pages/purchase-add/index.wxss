@@ -1,0 +1,130 @@
+@import '../../styles/mixins.wxss';
+
+.page {
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Navigation Bar */
+.nav-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.nav-bar-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: 88rpx;
+  padding: 0 24rpx;
+}
+
+.nav-back {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-back-icon {
+  font-size: 44rpx;
+  font-weight: 300;
+}
+
+.nav-title {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.nav-action {
+  min-width: 64rpx;
+}
+
+/* Page Content */
+.page-content {
+  padding-top: calc(var(--status-bar-height, 44px) + 88rpx + 32rpx);
+}
+
+/* Form Input */
+.form-input {
+  width: 100%;
+  height: 80rpx;
+  padding: 0 24rpx;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  background: transparent;
+}
+
+/* Amount Input */
+.amount-input-wrapper {
+  align-items: center;
+  padding: 0 24rpx;
+  height: 88rpx;
+}
+
+.amount-prefix {
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+
+.amount-input {
+  flex: 1;
+  height: 88rpx;
+  font-size: 36rpx;
+  font-weight: 600;
+  font-family: 'DIN Alternate', 'SF Mono', -apple-system, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Category Pills */
+.category-pills {
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
+
+.category-pill {
+  padding: 12rpx 28rpx;
+  border-radius: 32rpx;
+  transition: all 0.2s ease;
+}
+
+.category-pill:active {
+  transform: scale(0.95);
+}
+
+.pill-text {
+  font-size: 26rpx;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Date Display */
+.date-display {
+  cursor: pointer;
+}
+
+/* Remark Input */
+.remark-input {
+  width: 100%;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+/* Bottom Bar */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+}
+
+.bottom-bar-inner {
+  align-items: center;
+  gap: 16rpx;
+}

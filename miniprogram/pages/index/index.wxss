@@ -1,0 +1,429 @@
+.home-page {
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Header */
+.home-header {
+  padding: 0 32rpx 40rpx;
+  position: relative;
+}
+
+.home-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 32rpx;
+  right: 32rpx;
+  height: 1rpx;
+  background: linear-gradient(90deg, transparent, rgba(201,169,110,0.3), transparent);
+}
+
+.header-accent {
+  width: 48rpx;
+  height: 4rpx;
+  background: linear-gradient(90deg, #C9A96E, #E8D5A3);
+  border-radius: 2rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 0 12rpx rgba(201,169,110,0.4);
+}
+
+.header-title {
+  font-size: 52rpx;
+  font-weight: 800;
+  letter-spacing: 6rpx;
+  text-shadow: 0 2rpx 20rpx rgba(201,169,110,0.2);
+}
+
+.header-date-row {
+  display: flex;
+  align-items: center;
+  margin-top: 16rpx;
+}
+
+.header-date-dot {
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  margin-right: 12rpx;
+  box-shadow: 0 0 8rpx currentColor;
+}
+
+.header-date {
+  font-size: 26rpx;
+  letter-spacing: 2rpx;
+}
+
+/* Announcement Marquee */
+.announcement-marquee {
+  display: flex;
+  align-items: center;
+  margin-top: 20rpx;
+  padding: 16rpx 20rpx;
+  background: linear-gradient(90deg, rgba(201,169,110,0.12) 0%, rgba(201,169,110,0.06) 100%);
+  border: 1rpx solid rgba(201,169,110,0.2);
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+.announcement-marquee:active {
+  background: linear-gradient(90deg, rgba(201,169,110,0.18) 0%, rgba(201,169,110,0.1) 100%);
+}
+
+.marquee-icon {
+  font-size: 26rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.marquee-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.marquee-text {
+  font-size: 26rpx;
+  color: #C9A96E;
+  white-space: nowrap;
+  animation: marquee 8s linear infinite;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.marquee-arrow {
+  font-size: 32rpx;
+  color: rgba(201,169,110,0.5);
+  margin-left: 12rpx;
+  flex-shrink: 0;
+}
+
+/* Content */
+.home-content {
+  padding: 32rpx 24rpx;
+}
+
+/* Section spacing */
+.section-block {
+  margin-bottom: 32rpx;
+}
+
+/* Section: 今日预约 */
+.section-today {
+  position: relative;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  background: linear-gradient(145deg, rgba(201,169,110,0.08) 0%, rgba(201,169,110,0.03) 100%);
+  border: 1rpx solid rgba(201,169,110,0.15);
+}
+
+.section-today::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80rpx;
+  background: linear-gradient(180deg, rgba(201,169,110,0.06) 0%, transparent 100%);
+  border-radius: 24rpx 24rpx 0 0;
+  pointer-events: none;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+}
+
+.section-badge {
+  font-size: 22rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 100rpx;
+  background: rgba(201,169,110,0.15);
+  color: #C9A96E;
+}
+
+/* Time section within today */
+.time-section {
+  margin-bottom: 24rpx;
+}
+
+.time-section:last-child {
+  margin-bottom: 0;
+}
+
+.time-label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14rpx;
+}
+
+.time-label-icon {
+  font-size: 26rpx;
+  margin-right: 10rpx;
+}
+
+.time-label-text {
+  font-size: 24rpx;
+  font-weight: 600;
+  padding: 6rpx 14rpx;
+  border-radius: 8rpx;
+}
+
+.time-label-text.lunch {
+  background: rgba(251,191,36,0.12);
+  color: #FBBF24;
+}
+
+.time-label-text.dinner {
+  background: rgba(139,92,246,0.12);
+  color: #A78BFA;
+}
+
+/* Reservation card */
+.res-card {
+  background: rgba(20,20,35,0.6);
+  border: 1rpx solid rgba(255,255,255,0.06);
+  border-radius: 16rpx;
+  padding: 22rpx 24rpx;
+  margin-bottom: 12rpx;
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+}
+
+.res-card:last-child {
+  margin-bottom: 0;
+}
+
+.res-card:active {
+  transform: scale(0.98);
+  background: rgba(30,30,50,0.8);
+}
+
+.res-card-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.res-card-left {
+  flex: 1;
+}
+
+.res-card-room {
+  font-size: 30rpx;
+  font-weight: 700;
+  margin-bottom: 6rpx;
+}
+
+.res-card-price {
+  font-size: 22rpx;
+  margin-left: 14rpx;
+  opacity: 0.7;
+}
+
+.res-card-customer {
+  font-size: 28rpx;
+  text-align: right;
+}
+
+.res-card-meta {
+  display: flex;
+  align-items: center;
+  margin-top: 10rpx;
+}
+
+.res-card-guests {
+  font-size: 22rpx;
+  opacity: 0.6;
+}
+
+.res-card-remark {
+  margin-top: 12rpx;
+  padding: 12rpx 16rpx;
+  background: rgba(255,255,255,0.03);
+  border-radius: 10rpx;
+  font-size: 22rpx;
+  opacity: 0.7;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 40rpx 20rpx;
+}
+
+.empty-state-text {
+  font-size: 26rpx;
+  opacity: 0.5;
+}
+
+/* Section: 明日预约 */
+.section-tomorrow {
+  background: rgba(26,26,46,0.4);
+  border: 1rpx solid rgba(255,255,255,0.05);
+  border-radius: 20rpx;
+  padding: 24rpx;
+}
+
+.section-tomorrow .section-title {
+  color: rgba(240,240,245,0.7);
+  font-size: 26rpx;
+}
+
+.tomorrow-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid rgba(255,255,255,0.05);
+}
+
+.tomorrow-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.tomorrow-item:first-child {
+  padding-top: 4rpx;
+}
+
+.tomorrow-time {
+  font-size: 24rpx;
+  color: rgba(240,240,245,0.5);
+  margin-bottom: 4rpx;
+}
+
+.tomorrow-customer {
+  font-size: 26rpx;
+  font-weight: 500;
+}
+
+.tomorrow-right {
+  text-align: right;
+}
+
+.tomorrow-room {
+  font-size: 24rpx;
+  color: #C9A96E;
+  font-weight: 600;
+}
+
+.tomorrow-price {
+  font-size: 22rpx;
+  opacity: 0.5;
+  margin-top: 4rpx;
+}
+
+.tomorrow-more {
+  text-align: center;
+  padding-top: 12rpx;
+  font-size: 22rpx;
+  opacity: 0.4;
+}
+
+/* Section: 今日收支 */
+.section-summary {
+  background: linear-gradient(145deg, rgba(26,26,46,0.6) 0%, rgba(20,20,35,0.4) 100%);
+  border: 1rpx solid rgba(255,255,255,0.06);
+  border-radius: 20rpx;
+  padding: 24rpx;
+}
+
+.summary-row {
+  display: flex;
+  align-items: center;
+}
+
+.summary-item {
+  flex: 1;
+  text-align: center;
+}
+
+.summary-divider {
+  width: 1rpx;
+  height: 50rpx;
+  background: rgba(255,255,255,0.08);
+}
+
+.summary-value {
+  font-size: 38rpx;
+  font-weight: 700;
+  font-family: 'DIN Alternate', 'SF Pro Display', sans-serif;
+}
+
+.summary-label {
+  font-size: 22rpx;
+  opacity: 0.5;
+  margin-top: 6rpx;
+}
+
+/* Section: 快捷操作 */
+.section-actions {
+  background: rgba(26,26,46,0.4);
+  border: 1rpx solid rgba(255,255,255,0.05);
+  border-radius: 20rpx;
+  padding: 24rpx;
+}
+
+.actions-grid {
+  display: flex;
+  gap: 16rpx;
+}
+
+.action-item {
+  flex: 1;
+  text-align: center;
+  padding: 28rpx 16rpx;
+  border-radius: 16rpx;
+  background: rgba(255,255,255,0.02);
+  border: 1rpx solid rgba(255,255,255,0.05);
+  transition: all 0.2s ease;
+}
+
+.action-item:active {
+  transform: scale(0.96);
+  background: rgba(255,255,255,0.05);
+}
+
+.action-icon {
+  font-size: 40rpx;
+  margin-bottom: 12rpx;
+  display: block;
+}
+
+.action-text {
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.action-item.reservation .action-text {
+  color: #C9A96E;
+}
+
+.action-item.purchase .action-text {
+  color: #60A5FA;
+}
+
+.action-item.income .action-text {
+  color: #4ADE80;
+}
+
+/* Bottom spacing */
+.bottom-spacer {
+  height: 120rpx;
+}

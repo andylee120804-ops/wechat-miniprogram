@@ -1,0 +1,27 @@
+.filter-chips {
+  white-space: nowrap;
+  padding: 0 0 16rpx;
+}
+
+.chip {
+  display: inline-flex;
+  padding: 12rpx 24rpx;
+  border-radius: 999rpx;
+  margin-right: 12rpx;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.chip.active {
+  font-weight: 600;
+}
+
+.chip-name {
+  font-size: 26rpx;
+}
+
+.chip-count {
+  font-size: 22rpx;
+  margin-left: 4rpx;
+  opacity: 0.7;
+}

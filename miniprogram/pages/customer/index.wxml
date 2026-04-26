@@ -1,0 +1,51 @@
+<view class="customer-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx;">
+  <!-- Header -->
+  <view style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}}; padding: 32rpx;">
+    <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 36rpx; font-weight: 700; display: block; margin-bottom: 8rpx;">客户管理</text>
+    <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">共 {{filteredCustomers.length}} 位客户</text>
+  </view>
+
+  <view style="padding: 24rpx 32rpx;">
+    <search-bar theme="{{theme}}" placeholder="搜索客户名称" value="{{searchKeyword}}" bind:search="onSearch" />
+  </view>
+
+  <!-- Sort Pills -->
+  <view class="sort-bar" style="padding: 0 32rpx 16rpx;">
+    <view class="sort-pill {{sortBy === 'visits' ? 'active' : ''}}" data-sort="visits" bindtap="onSortChange" style="{{sortBy === 'visits' ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+      来访次数
+    </view>
+    <view class="sort-pill {{sortBy === 'spending' ? 'active' : ''}}" data-sort="spending" bindtap="onSortChange" style="{{sortBy === 'spending' ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+      消费总额
+    </view>
+  </view>
+
+  <!-- Skeleton -->
+  <skeleton wx:if="{{loading}}" theme="{{theme}}" type="list" count="5" />
+
+  <!-- Customer List -->
+  <view wx:else>
+    <view class="customer-item stagger-item" wx:for="{{filteredCustomers}}" wx:key="name" bindtap="onCustomerTap" data-name="{{item.name}}" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 24rpx; margin: 0 32rpx 16rpx; padding: 28rpx;">
+      <view class="customer-header">
+        <view class="customer-avatar" style="background: {{theme.accentBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.accentColor || '#C9A96E'}}; width: 80rpx; height: 80rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36rpx; font-weight: 700; margin-right: 20rpx;">
+          {{item.name.substr(0, 1)}}
+        </view>
+        <view class="customer-info" style="flex: 1;">
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 32rpx; font-weight: 600; display: block;">{{item.name}}</text>
+          <view style="display: flex; align-items: center; gap: 16rpx; margin-top: 8rpx;">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.preferredRoom || '未知房间'}}</text>
+          </view>
+        </view>
+        <view class="customer-stats" style="text-align: right;">
+          <theme-badge theme="{{theme}}" status="visits" type="role" text="{{item.visits}}次" size="sm" />
+          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx; font-weight: 700; font-family: 'DIN Alternate', monospace; display: block; margin-top: 8rpx;">¥{{formatAmount(item.totalAmount || 0)}}</text>
+        </view>
+      </view>
+      <view class="customer-footer" style="margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.04)'}}; display: flex; justify-content: space-between;">
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">最近: {{formatDate(item.lastVisit)}}</text>
+        <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 24rpx;">查看详情 ›</text>
+      </view>
+    </view>
+
+    <empty-state wx:if="{{filteredCustomers.length === 0}}" theme="{{theme}}" type="no-data" title="暂无客户数据" description="客户信息将在您创建预约后自动生成" />
+  </view>
+</view>

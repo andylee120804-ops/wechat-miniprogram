@@ -1,0 +1,148 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.form-scroll {
+  flex: 1;
+  padding: 24rpx 24rpx 0;
+}
+
+/* Section Title */
+.section-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  margin-bottom: 24rpx;
+  letter-spacing: 1rpx;
+}
+
+/* Pill Selector */
+.pill-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 12rpx;
+}
+
+.pill {
+  padding: 12rpx 32rpx;
+  border-radius: 100rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  transition: all 0.25s ease;
+  text-align: center;
+}
+
+.pill-active {
+  transform: scale(1.05);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.15);
+}
+
+/* Room selector disabled state */
+.room-selector.room-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.room-selector {
+  transition: opacity 0.3s ease;
+}
+
+/* Exclusive Row */
+.exclusive-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+/* Standard selector */
+.standard-selector .pill {
+  min-width: 140rpx;
+  text-align: center;
+}
+
+/* Form Custom Item */
+.form-item-custom {
+  margin-bottom: 20rpx;
+}
+
+/* Form Label */
+.form-label {
+  font-size: 26rpx;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+/* Form Input */
+.form-input {
+  font-size: 28rpx;
+  padding: 8rpx 0;
+  width: 100%;
+  background: transparent;
+}
+
+.form-textarea {
+  font-size: 28rpx;
+  padding: 8rpx 0;
+  width: 100%;
+  min-height: 80rpx;
+  background: transparent;
+}
+
+/* Picker Value */
+.picker-value {
+  font-size: 28rpx;
+  padding: 8rpx 0;
+}
+
+/* Error Text */
+.error-text {
+  font-size: 22rpx;
+  margin-top: 8rpx;
+  display: block;
+}
+
+/* Bottom Spacer */
+.bottom-spacer {
+  height: 180rpx;
+}
+
+/* Fixed Bottom Bar */
+.bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.bottom-bar-inner {
+  display: flex;
+  justify-content: center;
+  padding: 20rpx 24rpx;
+}
+
+.bottom-bar-inner.single-btn {
+  justify-content: center;
+}
+
+.bottom-bar-inner.two-btns {
+  justify-content: space-between;
+}
+
+.bottom-bar-inner.two-btns .btn {
+  flex: 1;
+  max-width: 48%;
+}
+
+.bottom-btn-center {
+  display: flex;
+  justify-content: center;
+}
+
+.safe-bottom-bar {
+  height: env(safe-area-inset-bottom);
+}

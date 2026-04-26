@@ -1,0 +1,12 @@
+<view class="theme-form-item {{error ? 'has-error' : ''}}">
+  <view class="form-label-row">
+    <text class="form-label" style="color: {{error ? (theme.statusDanger || '#F87171') : (theme.textSecondary || '#9A9AB0')}};">{{label}}</text>
+    <text class="form-required" wx:if="{{required}}" style="color: {{theme.statusDanger || '#F87171'}};">*</text>
+  </view>
+  <view class="form-content" style="border-bottom: 2rpx solid {{error ? (theme.statusDanger || '#F87171') : (theme.border || 'rgba(255,255,255,0.06)')}};">
+    <slot></slot>
+  </view>
+  <view class="form-error" wx:if="{{error}}" style="color: {{theme.statusDanger || '#F87171'}};">
+    {{error}}
+  </view>
+</view>

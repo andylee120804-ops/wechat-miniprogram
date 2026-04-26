@@ -1,0 +1,100 @@
+@import '../../styles/mixins.wxss';
+
+.page {
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Navigation Bar */
+.nav-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.nav-bar-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: 88rpx;
+  padding: 0 24rpx;
+}
+
+.nav-back {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-back-icon {
+  font-size: 44rpx;
+  font-weight: 300;
+}
+
+.nav-title {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.nav-action {
+  min-width: 64rpx;
+}
+
+/* Page Content */
+.page-content {
+  padding-top: calc(var(--status-bar-height, 44px) + 88rpx + 32rpx);
+}
+
+/* Hero Section */
+.hero-section {
+  overflow: hidden;
+}
+
+.hero-amount {
+  line-height: 1.2;
+}
+
+.hero-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Detail Rows */
+.detail-row {
+  align-items: center;
+}
+
+.detail-label {
+  flex-shrink: 0;
+}
+
+.detail-value {
+  flex: 1;
+  text-align: right;
+  margin-left: 32rpx;
+}
+
+/* Loading */
+.loading-container {
+  min-height: 60vh;
+}
+
+/* Bottom Bar */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+}
+
+.bottom-bar-inner {
+  align-items: center;
+  gap: 16rpx;
+}

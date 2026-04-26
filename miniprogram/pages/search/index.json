@@ -1,0 +1,8 @@
+{
+  "usingComponents": {
+    "search-bar": "/components/search-bar/index",
+    "theme-badge": "/components/theme-badge/index",
+    "theme-card": "/components/theme-card/index",
+    "empty-state": "/components/empty-state/index"
+  }
+}

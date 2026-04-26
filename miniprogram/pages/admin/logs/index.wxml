@@ -1,0 +1,97 @@
+<view class="page" style="background: {{theme.surfaceColor || '#1A1A2E'}};">
+  <!-- Custom Navigation Bar -->
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-bar-content">
+      <view class="nav-back" bindtap="onBack">
+        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}};">&#x2039;</text>
+      </view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">操作日志</text>
+      <view class="nav-action"></view>
+    </view>
+  </view>
+
+  <!-- Filter Section -->
+  <view class="filter-section" style="background: {{theme.elevatedColor || '#252540'}}; padding-top: calc(var(--status-bar-height, 44px) + 88rpx);">
+    <!-- Type Filter Chips -->
+    <view class="filter-chips-wrap px-lg pt-md">
+      <scroll-view class="chips-scroll" scroll-x="true" enhanced="true" show-scrollbar="{{false}}">
+        <view class="chips-row flex-row">
+          <view class="filter-chip {{logType === item.id ? 'chip-active' : ''}}"
+            wx:for="{{logTypeOptions}}" wx:key="id"
+            data-type="{{item.id}}" bindtap="onTypeTap"
+            style="background: {{logType === item.id ? (theme.accentColor || '#C9A96E') : (theme.glassBg || 'rgba(255,255,255,0.06)')}}; color: {{logType === item.id ? (theme.textInverse || '#0F0F1A') : (theme.textSecondary || '#9A9AB0')}}; border: 1rpx solid {{logType === item.id ? (theme.accentColor || '#C9A96E') : (theme.borderColor || 'rgba(255,255,255,0.10)')}};">
+            <text class="chip-text">{{item.name}}</text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- Date Filters -->
+    <view class="date-filters flex-row px-lg py-md" style="gap: 16rpx;">
+      <view class="date-field flex-1 flex-row flex-between" style="background: {{theme.glassBg || 'rgba(255,255,255,0.06)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 16rpx 20rpx;">
+        <text class="text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">开始</text>
+        <picker mode="date" value="{{startDate}}" bindchange="onStartDateChange">
+          <text class="text-bodySmall font-mono" style="color: {{startDate ? (theme.textPrimary || '#F5F0E8') : (theme.textMuted || '#5C5C72')}};">{{startDate || '选择日期'}}</text>
+        </picker>
+      </view>
+      <view class="date-field flex-1 flex-row flex-between" style="background: {{theme.glassBg || 'rgba(255,255,255,0.06)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 16rpx 20rpx;">
+        <text class="text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">结束</text>
+        <picker mode="date" value="{{endDate}}" bindchange="onEndDateChange">
+          <text class="text-bodySmall font-mono" style="color: {{endDate ? (theme.textPrimary || '#F5F0E8') : (theme.textMuted || '#5C5C72')}};">{{endDate || '选择日期'}}</text>
+        </picker>
+      </view>
+      <view class="query-btn" bindtap="onQuery"
+        style="background: {{theme.accentColor || '#C9A96E'}}; border-radius: 12rpx; padding: 16rpx 24rpx;">
+        <text class="text-bodySmall" style="color: {{theme.textInverse || '#0F0F1A'}}; font-weight: 600;">查询</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Log List -->
+  <view class="log-list px-lg mt-md" wx:if="{{!loading}}">
+    <view class="log-card stagger-item mb-md"
+      wx:for="{{logs}}" wx:key="_id"
+      style="animation-delay: {{index * 50}}ms; background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};">
+      <view class="log-inner p-lg">
+        <!-- Header: type badge + timestamp -->
+        <view class="log-header flex-row flex-between">
+          <theme-badge theme="{{theme}}" status="{{item.type}}" type="log" text="{{item.typeName}}" size="sm" />
+          <text class="text-caption font-mono" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.formattedTime}}</text>
+        </view>
+        <!-- Operator & Detail -->
+        <view class="log-body mt-sm">
+          <view class="log-operator flex-row" wx:if="{{item.operator}}">
+            <text class="text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">操作人: </text>
+            <text class="text-bodySmall ml-xs" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.operator}}</text>
+          </view>
+          <!-- Parsed Details -->
+          <view class="log-details mt-xs" wx:if="{{item.parsedDetails.length > 0}}">
+            <view class="detail-row flex-row" wx:for="{{item.parsedDetails}}" wx:for-item="detail" wx:key="key">
+              <text class="detail-key text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">{{detail.key}}:</text>
+              <text class="detail-value text-caption ml-xs ellipsis flex-1" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{detail.value}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- Load More -->
+    <view class="load-more py-lg" wx:if="{{hasMore && logs.length > 0}}" bindtap="loadMore">
+      <text class="text-bodySmall text-center" style="color: {{theme.accentColor || '#C9A96E'}};">加载更多</text>
+    </view>
+    <view class="no-more py-lg" wx:if="{{!hasMore && logs.length > 0}}">
+      <text class="text-caption text-center" style="color: {{theme.textMuted || '#5C5C72'}};">没有更多了</text>
+    </view>
+
+    <!-- Empty State -->
+    <empty-state wx:if="{{logs.length === 0}}" theme="{{theme}}" type="no-data" title="暂无操作日志" description="当前筛选条件下没有日志记录" />
+  </view>
+
+  <!-- Skeleton Loading -->
+  <view class="px-lg mt-md" wx:if="{{loading}}">
+    <skeleton theme="{{theme}}" type="card" count="5" />
+  </view>
+
+  <!-- Bottom Spacer -->
+  <view style="height: 40rpx;"></view>
+</view>

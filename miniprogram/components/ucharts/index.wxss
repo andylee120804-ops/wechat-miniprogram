@@ -1,0 +1,9 @@
+.ucharts-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.ucharts-canvas {
+  width: 100%;
+  height: 100%;
+}

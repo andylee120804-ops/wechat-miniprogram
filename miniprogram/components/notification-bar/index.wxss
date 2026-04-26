@@ -1,0 +1,27 @@
+.notification-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 16rpx 24rpx;
+  border-radius: 16rpx;
+  margin-bottom: 16rpx;
+  font-size: 26rpx;
+}
+
+.notification-icon {
+  margin-right: 12rpx;
+}
+
+.notification-text {
+  flex: 1;
+}
+
+.notification-close {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  font-size: 24rpx;
+}

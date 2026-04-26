@@ -1,0 +1,194 @@
+@import '../../styles/mixins.wxss';
+
+.clockin-page {
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Status Hero */
+.status-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80rpx 48rpx 48rpx;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Status Indicator */
+.status-indicator-wrap {
+  margin-bottom: 24rpx;
+}
+
+.status-indicator {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s ease;
+}
+
+.status-indicator.active {
+  box-shadow: 0 0 40rpx rgba(74, 222, 128, 0.25);
+}
+
+.status-dot {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 12rpx;
+}
+
+/* Pulse animation for not-yet-clocked */
+.status-indicator.pulse {
+  animation: indicatorPulse 2s ease-in-out infinite;
+}
+
+@keyframes indicatorPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+/* Status Text */
+.status-label {
+  font-weight: 600;
+}
+
+/* Time Row */
+.time-row {
+  align-items: center;
+  gap: 32rpx;
+}
+
+.time-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.time-label {
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.time-value {
+  font-weight: 700;
+}
+
+.time-divider {
+  width: 1rpx;
+  height: 48rpx;
+  margin-top: 24rpx;
+}
+
+/* Clock Button */
+.clock-btn-section {
+  display: flex;
+  justify-content: center;
+}
+
+.clock-btn {
+  width: 400rpx;
+  height: 120rpx;
+  border-radius: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+
+.clock-btn:active {
+  transform: scale(0.96);
+}
+
+.clock-btn-text {
+  font-weight: 700;
+  letter-spacing: 4rpx;
+}
+
+/* Pulse for clock button */
+.pulse-btn {
+  animation: btnPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes btnPulse {
+  0%, 100% { box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.28); transform: scale(1); }
+  50% { box-shadow: 0 12rpx 40rpx rgba(201, 169, 110, 0.35); transform: scale(1.03); }
+}
+
+/* Location Card */
+.location-card {
+  overflow: hidden;
+}
+
+.location-inner {
+  align-items: center;
+  gap: 12rpx;
+}
+
+.location-icon {
+  font-size: 32rpx;
+}
+
+.location-text {
+  line-height: 1.4;
+}
+
+/* Records Section */
+.records-section {
+  padding-bottom: 32rpx;
+}
+
+.section-title {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.records-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.record-item {
+  align-items: center;
+}
+
+.record-item:active {
+  opacity: 0.85;
+}
+
+.record-left {
+  flex: 1;
+}
+
+.record-date {
+  font-weight: 500;
+  display: block;
+}
+
+.record-times {
+  align-items: center;
+}
+
+.record-badge {
+  display: inline-flex;
+}
+
+.record-separator {
+  font-size: 24rpx;
+}
+
+.record-right {
+  flex-shrink: 0;
+}
+
+.record-late {
+  margin-top: 4rpx;
+}
+
+/* Safe bottom */
+.safe-bottom {
+  height: env(safe-area-inset-bottom);
+}

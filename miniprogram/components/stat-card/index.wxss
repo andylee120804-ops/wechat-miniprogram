@@ -1,0 +1,41 @@
+.stat-card {
+  position: relative;
+}
+
+.stat-label {
+  margin-bottom: 8rpx;
+}
+
+.stat-value-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.stat-prefix {
+  margin-right: 4rpx;
+}
+
+.stat-value {
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-change {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+}
+
+.change-arrow {
+  margin-right: 4rpx;
+  font-size: 24rpx;
+}
+
+.change-value {
+  font-size: 24rpx;
+}

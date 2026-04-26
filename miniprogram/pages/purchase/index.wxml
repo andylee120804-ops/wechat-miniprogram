@@ -1,0 +1,85 @@
+<view class="page" style="background: {{theme.surfaceColor || '#1A1A2E'}};">
+  <!-- Custom Navigation Bar -->
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-bar-content">
+      <view class="nav-back" bindtap="onBack">
+        <text class="nav-back-icon">‹</text>
+      </view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">采购管理</text>
+      <view class="nav-action" wx:if="{{theme.accentColor}}">
+        <text style="color: {{theme.textMuted || '#5C5C72'}};">{{monthLabel}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Sticky Filter Bar -->
+  <view class="filter-bar" style="background: {{theme.surfaceColor || '#1A1A2E'}};">
+    <!-- Month Picker -->
+    <view class="month-picker flex-row flex-between">
+      <view class="month-arrow" bindtap="onMonthPrev" style="color: {{theme.textSecondary || '#9A9AB0'}};">‹</view>
+      <view class="month-label text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{monthStr}}</view>
+      <view class="month-arrow" bindtap="onMonthNext" style="color: {{theme.textSecondary || '#9A9AB0'}};">›</view>
+    </view>
+    <!-- Category Filter Chips -->
+    <filter-chips theme="{{theme}}" items="{{categories}}" activeId="{{activeCategory}}" bind:change="onCategoryChange" />
+    <!-- Search Bar -->
+    <view class="search-wrapper px-md">
+      <search-bar theme="{{theme}}" placeholder="搜索采购项..." value="{{searchKeyword}}" bind:search="onSearch" bind:clear="onSearchClear" />
+    </view>
+  </view>
+
+  <!-- Monthly Summary Card -->
+  <view class="summary-card mx-lg mt-md" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
+    <view class="summary-inner p-lg">
+      <text class="text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">本月采购总额</text>
+      <view class="summary-amount-row flex-row flex-between mt-xs">
+        <text class="text-display font-mono" style="color: {{theme.amountNegative || '#F87171'}};">¥{{totalAmount.toFixed ? totalAmount.toFixed(2) : '0.00'}}</text>
+        <view class="summary-count px-sm py-2xs" style="background: {{theme.amountNegativeBg || 'rgba(248,113,113,0.10)'}}; border-radius: 12rpx;">
+          <text class="text-bodySmall" style="color: {{theme.amountNegative || '#F87171'}};">{{totalCount}}笔</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Purchase List -->
+  <view class="purchase-list px-lg mt-md" wx:if="{{!loading}}">
+    <view class="purchase-card stagger-item mx-xs mb-md {{index > 0 ? 'mt-md' : ''}}"
+      wx:for="{{filteredPurchases}}" wx:key="_id"
+      style="animation-delay: {{index * 60}}ms; background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};"
+      data-id="{{item._id}}" bindtap="onItemTap">
+      <view class="card-inner p-lg">
+        <view class="card-header flex-row flex-between">
+          <view class="card-title-row flex-row flex-1">
+            <text class="card-item-name text-title3 ellipsis flex-1" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.item}}</text>
+          </view>
+          <text class="card-amount font-mono text-title2" style="color: {{theme.amountNegative || '#F87171'}};">-¥{{item.formattedAmount}}</text>
+        </view>
+        <view class="card-meta flex-row mt-sm">
+          <theme-badge theme="{{theme}}" status="{{item.category}}" type="category" text="{{item.categoryName}}" size="sm" />
+          <text class="card-date text-caption ml-sm" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.formattedDate}}</text>
+        </view>
+        <view class="card-footer flex-row flex-between mt-sm" wx:if="{{item.purchaseByName || item.remark}}">
+          <text class="card-buyer text-bodySmall" wx:if="{{item.purchaseByName}}" style="color: {{theme.textSecondary || '#9A9AB0'}};">采购人: {{item.purchaseByName}}</text>
+          <text class="card-remark text-caption ellipsis" wx:if="{{item.remark}}" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.remark}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Empty State -->
+    <empty-state wx:if="{{filteredPurchases.length === 0}}" theme="{{theme}}" type="no-purchase" title="暂无采购记录" description="点击下方按钮添加采购记录" actionText="添加采购" bind:action="onAddPurchase" />
+  </view>
+
+  <!-- Skeleton Loading -->
+  <view class="px-lg mt-md" wx:if="{{loading}}">
+    <skeleton theme="{{theme}}" type="card" count="4" />
+  </view>
+
+  <!-- FAB -->
+  <view class="fab press-scale" bindtap="onAddPurchase"
+    style="background: {{theme.gradientFab || 'linear-gradient(135deg, #C9A96E 0%, #D4B87A 100%)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
+    <text class="fab-icon" style="color: {{theme.textInverse || '#0F0F1A'}};">+</text>
+  </view>
+
+  <!-- Bottom Spacer -->
+  <view class="safe-bottom" style="height: 120rpx;"></view>
+</view>

@@ -1,0 +1,166 @@
+@import '../../styles/mixins.wxss';
+
+.page {
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Navigation Bar */
+.nav-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.nav-bar-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: 88rpx;
+  padding: 0 24rpx;
+}
+
+.nav-back {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-back-icon {
+  font-size: 44rpx;
+  font-weight: 300;
+}
+
+.nav-title {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.nav-action {
+  min-width: 64rpx;
+}
+
+/* Filter Bar */
+.filter-bar {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  padding-top: calc(var(--status-bar-height, 44px) + 88rpx);
+}
+
+.month-picker {
+  padding: 16rpx 32rpx;
+  align-items: center;
+}
+
+.month-arrow {
+  font-size: 40rpx;
+  font-weight: 300;
+  padding: 8rpx 16rpx;
+}
+
+.month-label {
+  font-weight: 500;
+}
+
+.search-wrapper {
+  padding-bottom: 16rpx;
+}
+
+/* Summary Card */
+.summary-card {
+  border-radius: 20rpx;
+  overflow: hidden;
+}
+
+.summary-inner {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-amount-row {
+  align-items: flex-end;
+}
+
+.summary-count {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Purchase List */
+.purchase-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.purchase-card {
+  border-radius: 16rpx;
+  overflow: hidden;
+  transition: transform 0.15s ease;
+}
+
+.purchase-card:active {
+  transform: scale(0.98);
+}
+
+.card-inner {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  align-items: center;
+}
+
+.card-item-name {
+  max-width: 400rpx;
+}
+
+.card-amount {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+
+.card-meta {
+  align-items: center;
+}
+
+.card-footer {
+  align-items: center;
+}
+
+.card-remark {
+  max-width: 360rpx;
+}
+
+/* FAB */
+.fab {
+  position: fixed;
+  right: 40rpx;
+  bottom: 120rpx;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+}
+
+.fab-icon {
+  font-size: 56rpx;
+  font-weight: 300;
+  line-height: 1;
+}
+
+/* Stagger animation overrides for card list */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(30rpx);
+  animation: staggerIn 0.4s ease-out forwards;
+}

@@ -1,0 +1,75 @@
+.income-add-page {
+  min-height: 100vh;
+}
+
+.type-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.type-pill {
+  padding: 12rpx 28rpx;
+  border-radius: 999rpx;
+  transition: all 0.2s ease;
+  border: 2rpx solid transparent;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reservation-list {
+  margin-top: 20rpx;
+}
+
+.res-item {
+  padding: 20rpx;
+  border-radius: 16rpx;
+  border: 2rpx solid rgba(255,255,255,0.06);
+  margin-bottom: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.res-item:active {
+  transform: scale(0.98);
+}
+
+.res-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.amount-input {
+  width: 100%;
+}
+
+.remark-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 0;
+  background: transparent;
+}
+
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(15,15,26,0.95);
+  backdrop-filter: blur(20rpx);
+  padding: 16rpx 32rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  border-top: 1rpx solid rgba(255,255,255,0.06);
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+}

@@ -1,0 +1,4 @@
+<view class="theme-card {{noMargin ? 'no-margin' : ''}} {{glass ? 'glass-mode' : ''}} {{animate ? 'card-animate' : ''}}" style="background: {{glass ? 'rgba(255,255,255,' + (theme.glassOpacity || 0.06) + ')' : (theme.cardBg || 'rgba(26,26,46,0.85)')}}; {{glass ? 'backdrop-filter: blur(' + blur + 'px); -webkit-backdrop-filter: blur(' + blur + 'px);' : ''}} border: 1rpx solid {{glass ? (theme.glass || 'rgba(255,255,255,0.1)') : (theme.border || 'rgba(255,255,255,0.06)')}}; border-radius: 24rpx; padding: {{padding}}; {{noMargin ? '' : 'margin-bottom: 24rpx;'}} box-shadow: {{theme.shadowMd || '0 4rpx 16rpx rgba(0,0,0,0.08)'}};">
+  <slot name="header"></slot>
+  <slot></slot>
+</view>

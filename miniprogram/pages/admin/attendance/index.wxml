@@ -1,0 +1,62 @@
+<view class="attendance-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 32rpx;">
+  <!-- Header -->
+  <view class="month-header" style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}}; padding: 32rpx;">
+    <view class="month-nav">
+      <view class="nav-arrow" bindtap="prevMonth">‹</view>
+      <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 32rpx; font-weight: 600; min-width: 160rpx; text-align: center;">{{currentMonth}}</text>
+      <view class="nav-arrow" bindtap="nextMonth">›</view>
+    </view>
+  </view>
+
+  <skeleton wx:if="{{loading}}" theme="{{theme}}" type="list" count="3" />
+
+  <view wx:else style="padding: 24rpx 32rpx;">
+    <view class="staff-card stagger-item" wx:for="{{staffAttendance}}" wx:key="_id" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 24rpx; margin-bottom: 16rpx; overflow: hidden;">
+      <!-- Staff Header (tappable) -->
+      <view class="staff-header" bindtap="onStaffTap" data-id="{{item._id}}" data-name="{{item.name}}">
+        <view style="display: flex; align-items: center; flex: 1;">
+          <view style="background: {{theme.accentBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.accentColor || '#C9A96E'}}; width: 72rpx; height: 72rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: 700; margin-right: 16rpx; flex-shrink: 0;">
+            {{item.name.substr(0, 1)}}
+          </view>
+          <view>
+            <view style="display: flex; align-items: center; gap: 12rpx; margin-bottom: 4rpx;">
+              <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600;">{{item.name}}</text>
+              <theme-badge theme="{{theme}}" status="{{item.role}}" type="role" text="{{item.roleName}}" size="sm" />
+            </view>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">点击查看详情 ›</text>
+          </view>
+        </view>
+        <view class="toggle-btn" bindtap="toggleExpand" data-index="{{index}}">
+          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx;">{{item.expanded ? '收起' : '展开'}}</text>
+        </view>
+      </view>
+
+      <!-- Stats Row -->
+      <view class="stats-row" style="display: flex; border-top: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.04)'}}; padding: 20rpx 24rpx; gap: 32rpx;">
+        <view style="flex: 1; text-align: center;">
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 36rpx; font-weight: 700; display: block;">{{item.days}}</text>
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">出勤天</text>
+        </view>
+        <view style="flex: 1; text-align: center;">
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 36rpx; font-weight: 700; display: block;">{{item.hours}}h</text>
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">总工时</text>
+        </view>
+        <view style="flex: 1; text-align: center;">
+          <text style="color: {{item.lates > 0 ? (theme.statusDanger || '#F87171') : (theme.textPrimary || '#F0F0F5')}}; font-size: 36rpx; font-weight: 700; display: block;">{{item.lates}}</text>
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">迟到</text>
+        </view>
+      </view>
+
+      <!-- Expanded Records -->
+      <view wx:if="{{item.expanded}}" style="border-top: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.04)'}}; padding: 20rpx 24rpx; max-height: 400rpx; overflow-y: auto;">
+        <view class="record-row" wx:for="{{item.records}}" wx:key="dateStr" style="display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.03)'}};">
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; width: 140rpx; flex-shrink: 0;">{{item.dateStr}}</text>
+          <text style="color: {{theme.statusSuccess || '#4ADE80'}}; font-size: 26rpx; width: 80rpx; flex-shrink: 0;">{{item.clockInTimeStr}}</text>
+          <text style="color: {{theme.statusWarning || '#FBBF24'}}; font-size: 26rpx; width: 80rpx; flex-shrink: 0;">{{item.clockOutTimeStr}}</text>
+          <text style="color: {{item.isLate ? (theme.statusDanger || '#F87171') : (theme.textMuted || '#5C5C72')}}; font-size: 26rpx; flex: 1; text-align: right;">{{item.duration}}</text>
+        </view>
+        <text wx:if="{{item.records.length === 0}}" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; display: block; text-align: center; padding: 20rpx 0;">本月暂无打卡记录</text>
+      </view>
+    </view>
+  </view>
+</view>

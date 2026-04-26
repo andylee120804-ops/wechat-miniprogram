@@ -1,0 +1,152 @@
+.page {
+  padding-bottom: 120rpx;
+}
+
+/* Calendar Section - takes ~55% viewport */
+.calendar-section {
+  padding: 24rpx 24rpx 0;
+}
+
+/* Date Label */
+.date-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 32rpx 8rpx;
+}
+
+.date-text {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.date-count {
+  font-size: 24rpx;
+}
+
+/* List Section */
+.list-section {
+  padding: 0 24rpx;
+}
+
+/* Room Group */
+.room-group {
+  margin-bottom: 24rpx;
+}
+
+.room-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8rpx 24rpx;
+  border-radius: 100rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
+
+/* Reservation Cards */
+.reservation-cards {
+  padding-left: 8rpx;
+}
+
+.reservation-card {
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  transition: transform 0.2s ease;
+}
+
+.reservation-card:active {
+  transform: scale(0.98);
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.time-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6rpx 20rpx;
+  border-radius: 100rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.customer-name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.meta-item {
+  font-size: 24rpx;
+}
+
+.meta-divider {
+  font-size: 20rpx;
+  opacity: 0.5;
+}
+
+/* Cancelled reservation - grey + strikethrough */
+.reservation-card.cancelled {
+  opacity: 0.6;
+}
+
+.reservation-card.cancelled .customer-name {
+  text-decoration: line-through;
+  color: #5C5C72 !important;
+}
+
+.reservation-card.cancelled .meta-item {
+  color: #5C5C72 !important;
+}
+
+.reservation-card.cancelled .time-pill {
+  background: rgba(150,150,170,0.15) !important;
+  color: #9A9AB0 !important;
+}
+
+/* FAB Button */
+.fab {
+  position: fixed;
+  right: 40rpx;
+  bottom: 120rpx;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: transform 0.2s ease;
+}
+
+.fab:active {
+  transform: scale(0.92);
+}
+
+.fab-icon {
+  font-size: 52rpx;
+  font-weight: 300;
+  line-height: 1;
+}
+
+/* Bottom safe area */
+.safe-bottom {
+  height: env(safe-area-inset-bottom);
+}

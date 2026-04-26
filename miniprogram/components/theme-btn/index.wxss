@@ -1,0 +1,62 @@
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  font-weight: 600;
+  transition: all 0.2s;
+  border: none;
+  padding: 20rpx 40rpx;
+  font-size: 30rpx;
+}
+
+.normal {
+  /* default size, uses .theme-btn values */
+}
+
+.small {
+  padding: 12rpx 24rpx;
+  font-size: 26rpx;
+}
+
+.large {
+  padding: 24rpx 48rpx;
+  font-size: 34rpx;
+}
+
+.block {
+  width: 100%;
+}
+
+.disabled {
+  opacity: 0.5;
+}
+
+.btn-press {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+.btn-loading {
+  width: 32rpx;
+  height: 32rpx;
+  border: 3rpx solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: 12rpx;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.btn-icon {
+  margin-right: 8rpx;
+}
+
+.btn-no-border::after {
+  border: none;
+}

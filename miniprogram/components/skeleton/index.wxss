@@ -1,0 +1,55 @@
+.skeleton-container {
+  width: 100%;
+}
+
+.shimmer {
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+.skeleton-line {
+  height: 28rpx;
+  border-radius: 8rpx;
+  margin-bottom: 16rpx;
+}
+
+.short {
+  width: 40%;
+}
+
+.medium {
+  width: 60%;
+}
+
+.long {
+  width: 80%;
+}
+
+.full {
+  width: 95%;
+}
+
+.skeleton-card {
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.skeleton-stats-row {
+  display: flex;
+  flex-direction: row;
+  gap: 16rpx;
+}
+
+.skeleton-stat-card {
+  flex: 1;
+  padding: 24rpx;
+}
+
+.skeleton-detail {
+  padding: 32rpx;
+}

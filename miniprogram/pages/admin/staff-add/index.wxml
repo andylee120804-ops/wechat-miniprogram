@@ -1,0 +1,58 @@
+<view class="staff-add-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 140rpx;">
+  <view style="padding: 32rpx;">
+    <!-- Basic Info -->
+    <theme-card theme="{{theme}}" padding="32rpx">
+      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 20rpx;">基本信息</text>
+      <theme-form-item theme="{{theme}}" label="姓名" required="true">
+        <input placeholder="请输入姓名" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{name}}" bindinput="onNameInput" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; height: 48rpx;" />
+      </theme-form-item>
+      <theme-form-item theme="{{theme}}" label="微信号" required="true">
+        <input placeholder="请输入微信号" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{wechatId}}" bindinput="onWechatIdInput" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; height: 48rpx;" />
+      </theme-form-item>
+      <theme-form-item theme="{{theme}}" label="手机号">
+        <input type="number" placeholder="请输入手机号" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{phone}}" bindinput="onPhoneInput" maxlength="11" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; height: 48rpx;" />
+      </theme-form-item>
+      <theme-form-item theme="{{theme}}" label="月工资">
+        <input type="digit" placeholder="请输入月工资" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{salary}}" bindinput="onSalaryInput" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; height: 48rpx;" />
+      </theme-form-item>
+    </theme-card>
+
+    <!-- Role -->
+    <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;">
+      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 20rpx;">角色</text>
+      <view class="role-grid">
+        <view class="role-pill {{role === item.value ? 'active' : ''}}" wx:for="{{roleOptions}}" wx:key="value" data-value="{{item.value}}" bindtap="onRoleChange" style="{{role === item.value ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+          {{item.label}}
+        </view>
+      </view>
+    </theme-card>
+
+    <!-- Permissions -->
+    <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;" wx:if="{{role !== 'boss'}}">
+      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 20rpx;">权限配置</text>
+      <view class="perm-module" wx:for="{{moduleOptions}}" wx:key="key" style="background: {{theme.elevated || '#252540'}}; border-radius: 16rpx; padding: 20rpx; margin-bottom: 16rpx;">
+        <view class="perm-module-header">
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 600; flex: 1;">{{item.name}}</text>
+          <view class="select-all-btn" data-module="{{item.key}}" bindtap="onModuleSelectAll" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 24rpx;">全选</view>
+        </view>
+        <view class="perm-actions" style="margin-top: 16rpx; display: flex; flex-wrap: wrap; gap: 12rpx;">
+          <view class="perm-action {{permissions[item.key][action] ? 'active' : ''}}" wx:for="{{item.actions}}" wx:key="action" data-module="{{item.key}}" data-action="{{action}}" bindtap="onPermChange" style="{{permissions[item.key][action] ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.surface || '#1A1A2E') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}} padding: 8rpx 20rpx; border-radius: 999rpx; font-size: 24rpx;">
+            {{action === 'view' ? '查看' : action === 'add' ? '新增' : action === 'edit' ? '编辑' : action === 'delete' ? '删除' : action === 'export' ? '导出' : action}}
+          </view>
+        </view>
+      </view>
+    </theme-card>
+  </view>
+
+  <!-- Bottom Bar -->
+  <view class="bottom-bar safe-bottom">
+    <theme-btn wx:if="{{isEdit}}" theme="{{theme}}" type="danger" text="删除员工" bind:tap="onDelete" style="flex: 1; margin-right: 16rpx;" />
+    <theme-btn theme="{{theme}}" type="primary" text="{{isEdit ? '保存修改' : '添加员工'}}" block="{{true}}" loading="{{submitting}}" bind:tap="onSubmit" style="{{isEdit ? 'flex: 2;' : 'flex: 1;'}}" />
+  </view>
+
+  <theme-modal theme="{{theme}}" visible="{{showDeleteModal}}" title="删除员工" confirmText="确认删除" cancelText="返回" bind:confirm="onConfirmDelete" bind:close="onCloseDelete">
+    <view style="padding: 16rpx 0;">
+      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">确定要删除 {{name}} 吗？删除后员工将无法登录。</text>
+    </view>
+  </theme-modal>
+</view>

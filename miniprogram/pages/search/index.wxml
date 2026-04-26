@@ -1,0 +1,115 @@
+<view class="search-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh;">
+  <!-- Search Header -->
+  <view class="search-header safe-top" style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}}; padding: 24rpx 32rpx 16rpx;">
+    <search-bar theme="{{theme}}" placeholder="搜索预约/收入/采购/客户" value="{{keyword}}" bind:search="onSearch" bind:clear="onClear" />
+  </view>
+
+  <!-- Recent Searches -->
+  <view class="recent-section" wx:if="{{!keyword && recentSearches.length > 0}}">
+    <view class="recent-header">
+      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">最近搜索</text>
+      <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 24rpx;" bindtap="clearRecentSearches">清除</text>
+    </view>
+    <view class="recent-chips">
+      <view class="recent-chip" wx:for="{{recentSearches}}" wx:key="*this" data-keyword="{{item}}" bindtap="onRecentTap" style="background: {{theme.elevated || '#252540'}}; color: {{theme.textSecondary || '#9A9AB0'}}; border-radius: 999rpx; padding: 10rpx 24rpx; font-size: 26rpx; margin-right: 12rpx; margin-bottom: 12rpx;">
+        {{item}}
+      </view>
+    </view>
+  </view>
+
+  <!-- Loading -->
+  <view wx:if="{{searching}}" class="loading-state">
+    <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 28rpx;">搜索中...</text>
+  </view>
+
+  <!-- Results -->
+  <view wx:elif="{{keyword}}" class="results-section">
+    <!-- Tabs -->
+    <view class="tab-bar" style="border-bottom: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.06)'}};">
+      <view class="tab {{activeTab === 'all' ? 'active' : ''}}" data-tab="all" bindtap="onTabChange" style="{{activeTab === 'all' ? 'color:' + (theme.accentColor || '#C9A96E') + ';border-bottom:2rpx solid ' + (theme.accentColor || '#C9A96E') + ';' : 'color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+        <text>全部</text>
+      </view>
+      <view class="tab {{activeTab === 'reservations' ? 'active' : ''}}" data-tab="reservations" bindtap="onTabChange" style="{{activeTab === 'reservations' ? 'color:' + (theme.accentColor || '#C9A96E') + ';border-bottom:2rpx solid ' + (theme.accentColor || '#C9A96E') + ';' : 'color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+        <text>预约</text>
+      </view>
+      <view class="tab {{activeTab === 'income' ? 'active' : ''}}" data-tab="income" bindtap="onTabChange" style="{{activeTab === 'income' ? 'color:' + (theme.accentColor || '#C9A96E') + ';border-bottom:2rpx solid ' + (theme.accentColor || '#C9A96E') + ';' : 'color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+        <text>收入</text>
+      </view>
+      <view class="tab {{activeTab === 'purchases' ? 'active' : ''}}" data-tab="purchases" bindtap="onTabChange" style="{{activeTab === 'purchases' ? 'color:' + (theme.accentColor || '#C9A96E') + ';border-bottom:2rpx solid ' + (theme.accentColor || '#C9A96E') + ';' : 'color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+        <text>采购</text>
+      </view>
+      <view class="tab {{activeTab === 'customers' ? 'active' : ''}}" data-tab="customers" bindtap="onTabChange" style="{{activeTab === 'customers' ? 'color:' + (theme.accentColor || '#C9A96E') + ';border-bottom:2rpx solid ' + (theme.accentColor || '#C9A96E') + ';' : 'color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+        <text>客户</text>
+      </view>
+    </view>
+
+    <!-- Result Items -->
+    <view class="result-list">
+      <!-- Reservations -->
+      <block wx:if="{{(activeTab === 'all' || activeTab === 'reservations') && results.reservations.length > 0}}">
+        <view class="result-group-title" wx:if="{{activeTab === 'all'}}" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; padding: 16rpx 32rpx;">预约</view>
+        <view class="result-item" wx:for="{{results.reservations}}" wx:key="_id" data-id="{{item._id}}" data-type="reservation" bindtap="onResultTap" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border-bottom: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.04)'}}; padding: 24rpx 32rpx;">
+          <view style="display: flex; align-items: center; gap: 16rpx;">
+            <text style="font-size: 32rpx;">📅</text>
+            <view>
+              <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 600; display: block;">{{item.customerName}}</text>
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.roomName || item.room}} · {{item.time}} · {{formatDate(item.date)}}</text>
+            </view>
+          </view>
+        </view>
+      </block>
+
+      <!-- Income -->
+      <block wx:if="{{(activeTab === 'all' || activeTab === 'income') && results.income.length > 0}}">
+        <view class="result-group-title" wx:if="{{activeTab === 'all'}}" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; padding: 16rpx 32rpx;">收入</view>
+        <view class="result-item" wx:for="{{results.income}}" wx:key="_id" data-id="{{item._id}}" data-type="income" bindtap="onResultTap" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border-bottom: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.04)'}}; padding: 24rpx 32rpx;">
+          <view style="display: flex; align-items: center; justify-content: space-between;">
+            <view style="display: flex; align-items: center; gap: 16rpx;">
+              <text style="font-size: 32rpx;">💰</text>
+              <view>
+                <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 600; display: block;">{{item.source}}</text>
+                <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{formatDate(item.date)}}</text>
+              </view>
+            </view>
+            <text style="color: {{theme.amountPositive || '#4ADE80'}}; font-size: 32rpx; font-weight: 700; font-family: 'DIN Alternate', monospace;">+¥{{formatAmount(item.amount)}}</text>
+          </view>
+        </view>
+      </block>
+
+      <!-- Purchases -->
+      <block wx:if="{{(activeTab === 'all' || activeTab === 'purchases') && results.purchases.length > 0}}">
+        <view class="result-group-title" wx:if="{{activeTab === 'all'}}" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; padding: 16rpx 32rpx;">采购</view>
+        <view class="result-item" wx:for="{{results.purchases}}" wx:key="_id" data-id="{{item._id}}" data-type="purchase" bindtap="onResultTap" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border-bottom: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.04)'}}; padding: 24rpx 32rpx;">
+          <view style="display: flex; align-items: center; justify-content: space-between;">
+            <view style="display: flex; align-items: center; gap: 16rpx;">
+              <text style="font-size: 32rpx;">🛒</text>
+              <view>
+                <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 600; display: block;">{{item.item}}</text>
+                <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.category}}</text>
+              </view>
+            </view>
+            <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 32rpx; font-weight: 700; font-family: 'DIN Alternate', monospace;">¥{{formatAmount(item.amount)}}</text>
+          </view>
+        </view>
+      </block>
+
+      <!-- Customers -->
+      <block wx:if="{{(activeTab === 'all' || activeTab === 'customers') && results.customers.length > 0}}">
+        <view class="result-group-title" wx:if="{{activeTab === 'all'}}" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; padding: 16rpx 32rpx;">客户</view>
+        <view class="result-item" wx:for="{{results.customers}}" wx:key="name" data-id="{{item.name}}" data-type="customer" bindtap="onResultTap" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border-bottom: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.04)'}}; padding: 24rpx 32rpx;">
+          <view style="display: flex; align-items: center; gap: 16rpx;">
+            <text style="font-size: 32rpx;">👤</text>
+            <view>
+              <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 600; display: block;">{{item.name}}</text>
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">来访 {{item.count}} 次</text>
+            </view>
+          </view>
+        </view>
+      </block>
+
+      <empty-state wx:if="{{results.reservations.length === 0 && results.income.length === 0 && results.purchases.length === 0 && results.customers.length === 0}}" theme="{{theme}}" type="no-result" title="未找到结果" description="试试其他关键词" />
+    </view>
+  </view>
+
+  <empty-state wx:if="{{!keyword && recentSearches.length === 0}}" theme="{{theme}}" type="no-data" title="搜索功能" description="输入关键词搜索预约、收入、采购和客户信息" />
+</view>

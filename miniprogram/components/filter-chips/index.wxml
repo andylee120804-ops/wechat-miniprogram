@@ -1,0 +1,6 @@
+<scroll-view class="filter-chips" scroll-x enable-flex>
+  <view class="chip {{activeId === item.id ? 'active' : ''}}" wx:for="{{items}}" wx:key="id" data-id="{{item.id}}" bindtap="onChipTap" style="{{activeId === item.id ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+    <text class="chip-name">{{item.name}}</text>
+    <text class="chip-count" wx:if="{{item.count > 0}}">{{item.count}}</text>
+  </view>
+</scroll-view>

@@ -1,0 +1,40 @@
+<view class="staff-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx;">
+  <!-- Header -->
+  <view style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}}; padding: 32rpx;">
+    <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 36rpx; font-weight: 700; display: block;">员工管理</text>
+  </view>
+
+  <skeleton wx:if="{{loading}}" theme="{{theme}}" type="list" count="3" />
+
+  <view wx:else style="padding: 24rpx;">
+    <view class="staff-item stagger-item" wx:for="{{staffList}}" wx:key="_id" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 24rpx; padding: 28rpx; margin-bottom: 16rpx;">
+      <view class="staff-header">
+        <view class="avatar" style="background: {{theme.accentBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.accentColor || '#C9A96E'}}; width: 80rpx; height: 80rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36rpx; font-weight: 700; margin-right: 20rpx; flex-shrink: 0;">
+          {{item.name.substr(0, 1)}}
+        </view>
+        <view style="flex: 1;">
+          <view style="display: flex; align-items: center; gap: 12rpx; margin-bottom: 8rpx;">
+            <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 32rpx; font-weight: 600;">{{item.name}}</text>
+            <theme-badge theme="{{theme}}" status="{{item.role}}" type="role" text="{{item.roleName}}" size="sm" />
+          </view>
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.wechatId}}</text>
+        </view>
+        <view bindtap="onEditStaff" data-id="{{item._id}}" style="padding: 12rpx;">
+          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx;">编辑</text>
+        </view>
+      </view>
+
+      <view class="perm-tags" style="margin-top: 16rpx; display: flex; flex-wrap: wrap; gap: 8rpx;">
+        <view wx:if="{{item.role === 'boss'}}" style="background: {{theme.accentBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.accentColor || '#C9A96E'}}; padding: 6rpx 16rpx; border-radius: 999rpx; font-size: 22rpx;">全部权限</view>
+        <view wx:if="{{item.role !== 'boss' && item.permissions.length > 0}}" wx:for="{{getPermissionModules(item.permissions)}}" wx:for-item="mod" wx:key="*this" style="background: {{theme.elevated || '#252540'}}; color: {{theme.textSecondary || '#9A9AB0'}}; padding: 6rpx 16rpx; border-radius: 999rpx; font-size: 22rpx;">{{mod}}</view>
+        <text wx:if="{{item.role !== 'boss' && item.permissions.length === 0}}" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">未配置权限</text>
+      </view>
+    </view>
+
+    <empty-state wx:if="{{staffList.length === 0}}" theme="{{theme}}" type="no-data" title="暂无员工" description="点击底部按钮添加员工" />
+  </view>
+
+  <view class="fab" bindtap="onAddStaff" style="background: {{theme.buttonGradient || 'linear-gradient(135deg, #C9A96E, #E8D5A8)'}}; box-shadow: {{theme.shadowLg || '0 8rpx 32rpx rgba(201,169,110,0.3)'}};">
+    <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 48rpx; font-weight: 300; line-height: 1;">+</text>
+  </view>
+</view>

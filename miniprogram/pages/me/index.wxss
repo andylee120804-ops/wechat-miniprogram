@@ -1,0 +1,137 @@
+@import '../../styles/mixins.wxss';
+
+.me-page {
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Profile Hero */
+.profile-hero {
+  position: relative;
+  padding: 48rpx 32rpx 0;
+  overflow: hidden;
+}
+
+.hero-decor {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+}
+
+.hero-circle {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.hero-circle-1 {
+  width: 500rpx;
+  height: 500rpx;
+  top: -180rpx;
+  right: -120rpx;
+}
+
+.hero-circle-2 {
+  width: 300rpx;
+  height: 300rpx;
+  bottom: -60rpx;
+  left: -80rpx;
+}
+
+.hero-card {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+/* Avatar Circle */
+.avatar-circle {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 28rpx;
+}
+
+.avatar-char {
+  font-size: 48rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Profile Info */
+.profile-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-name {
+  font-weight: 700;
+}
+
+.profile-role-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+/* Menu Section */
+.menu-section {
+  padding-bottom: 32rpx;
+}
+
+.menu-group-title {
+  display: block;
+  margin-bottom: 12rpx;
+  padding-left: 8rpx;
+}
+
+.menu-card {
+  overflow: hidden;
+}
+
+.menu-item {
+  padding: 28rpx 28rpx;
+  align-items: center;
+}
+
+.menu-item:active {
+  opacity: 0.7;
+}
+
+.menu-item-left {
+  align-items: center;
+  gap: 20rpx;
+}
+
+.menu-icon {
+  font-size: 36rpx;
+  width: 44rpx;
+  text-align: center;
+}
+
+.menu-text {
+  font-weight: 500;
+}
+
+.menu-arrow {
+  font-size: 40rpx;
+  font-weight: 300;
+}
+
+/* Logout Section */
+.logout-section {
+  padding-bottom: 64rpx;
+}
+
+/* Safe bottom */
+.safe-bottom {
+  height: env(safe-area-inset-bottom);
+}

@@ -1,0 +1,10 @@
+<view class="swipe-action">
+  <view class="swipe-actions" style="right: 0; flex-direction: row;">
+    <view class="swipe-btn {{item.type}}" wx:for="{{actions}}" wx:key="index" data-index="{{index}}" bindtap="onActionTap" style="{{item.type === 'danger' ? 'background:' + (theme.statusDanger || '#F87171') + ';' : 'background:' + (theme.accentColor || '#C9A96E') + ';'}}">
+      <text class="swipe-btn-text">{{item.text}}</text>
+    </view>
+  </view>
+  <view class="swipe-content" style="transform: translateX({{translateX}}rpx); transition: transform 0.3s ease;" catchtouchstart="onTouchStart" catchtouchmove="onTouchMove" catchtouchend="onTouchEnd">
+    <slot></slot>
+  </view>
+</view>

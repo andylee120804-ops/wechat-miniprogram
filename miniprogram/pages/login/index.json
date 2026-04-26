@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "usingComponents": {
+    "glass-card": "/components/glass-card/index",
+    "theme-btn": "/components/theme-btn/index"
+  },
+  "navigationStyle": "custom"
+}

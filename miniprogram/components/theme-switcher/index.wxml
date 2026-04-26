@@ -1,0 +1,21 @@
+<view class="theme-switcher {{visible ? 'visible' : ''}}" wx:if="{{showPanel}}">
+  <view class="switcher-mask" bindtap="onClose"></view>
+  <view class="switcher-panel" style="background: {{theme.elevated || '#252540'}}; border-radius: 32rpx 32rpx 0 0;">
+    <view class="switcher-header">
+      <text class="switcher-title" style="color: {{theme.textPrimary || '#F0F0F5'}};">选择主题</text>
+      <view class="switcher-close" bindtap="onClose">✕</view>
+    </view>
+    <view class="switcher-list">
+      <view class="theme-option {{item.id === currentTheme ? 'active' : ''}}" wx:for="{{themeList}}" wx:key="id" data-id="{{item.id}}" bindtap="onSelectTheme" style="background: {{item.id === currentTheme ? (theme.accentBg || 'rgba(201,169,110,0.15)') : 'transparent'}}; border: 2rpx solid {{item.id === currentTheme ? (theme.accentColor || '#C9A96E') : (theme.border || 'rgba(255,255,255,0.06)')}}; border-radius: 24rpx;">
+        <view class="theme-preview">
+          <view class="preview-color" wx:for="{{item.previewColors}}" wx:key="*this" wx:for-item="color" style="background: {{color}}; width: 40rpx; height: 40rpx; border-radius: 50%; margin-right: 8rpx;"></view>
+        </view>
+        <view class="theme-info">
+          <text class="theme-name" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{item.name}}</text>
+          <text class="theme-desc" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.description}}</text>
+        </view>
+        <view class="theme-check" wx:if="{{item.id === currentTheme}}">✓</view>
+      </view>
+    </view>
+  </view>
+</view>

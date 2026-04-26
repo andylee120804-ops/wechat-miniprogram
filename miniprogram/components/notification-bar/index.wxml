@@ -1,0 +1,5 @@
+<view class="notification-bar {{type}}" wx:if="{{visible}}" style="background: {{type === 'urgent' ? (theme.statusDangerBg || 'rgba(248,113,113,0.15)') : type === 'warning' ? (theme.statusWarningBg || 'rgba(251,191,36,0.15)') : (theme.statusInfoBg || 'rgba(96,165,250,0.15)')}}; border: 1rpx solid {{type === 'urgent' ? (theme.statusDanger || '#F87171') : type === 'warning' ? (theme.statusWarning || '#FBBF24') : (theme.statusInfo || '#60A5FA')}}; color: {{theme.textPrimary || '#F0F0F5'}};" bindtap="onTap">
+  <text class="notification-icon">{{typeIcon}}</text>
+  <text class="notification-text">{{text}}</text>
+  <view class="notification-close" wx:if="{{closable}}" catchtap="onClose">✕</view>
+</view>

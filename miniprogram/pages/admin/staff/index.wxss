@@ -1,0 +1,33 @@
+.staff-page {
+  min-height: 100vh;
+}
+
+.staff-item {
+  transition: transform 0.15s ease;
+}
+
+.staff-item:active {
+  transform: scale(0.98);
+}
+
+.staff-header {
+  display: flex;
+  align-items: center;
+}
+
+.fab {
+  position: fixed;
+  bottom: 160rpx;
+  right: 40rpx;
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.fab:active {
+  transform: scale(0.93);
+}

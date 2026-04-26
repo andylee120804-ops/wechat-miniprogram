@@ -1,0 +1,99 @@
+.insights-page {
+  min-height: 100vh;
+}
+
+.page-header {
+  padding-top: 48rpx;
+  padding-bottom: 32rpx;
+}
+
+.page-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.page-subtitle {
+  font-size: 26rpx;
+  display: block;
+}
+
+.stats-row {
+  display: flex;
+  gap: 16rpx;
+  padding: 0 32rpx;
+  margin-top: -16rpx;
+  margin-bottom: 32rpx;
+}
+
+.stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.stat-icon {
+  font-size: 40rpx;
+  margin-bottom: 12rpx;
+}
+
+.stat-val {
+  font-size: 36rpx;
+  font-weight: 700;
+  margin-bottom: 8rpx;
+}
+
+.stat-lbl {
+  font-size: 22rpx;
+}
+
+.section {
+  padding: 0 32rpx;
+  margin-bottom: 32rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 20rpx;
+}
+
+.insight-card {
+  transition: transform 0.2s ease;
+}
+
+.insight-card:active {
+  transform: scale(0.98);
+}
+
+.insight-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.insight-icon {
+  font-size: 36rpx;
+  margin-right: 16rpx;
+}
+
+.insight-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.insight-desc {
+  font-size: 26rpx;
+  line-height: 1.6;
+  padding-left: 52rpx;
+}
+
+.chart-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}

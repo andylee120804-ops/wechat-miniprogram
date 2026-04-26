@@ -1,0 +1,10 @@
+{
+  "usingComponents": {
+    "theme-card": "/components/theme-card/index",
+    "theme-badge": "/components/theme-badge/index",
+    "skeleton": "/components/skeleton/index",
+    "empty-state": "/components/empty-state/index",
+    "filter-chips": "/components/filter-chips/index"
+  },
+  "navigationStyle": "custom"
+}

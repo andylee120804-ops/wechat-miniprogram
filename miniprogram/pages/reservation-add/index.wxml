@@ -1,0 +1,171 @@
+<view class="page" style="background: {{theme.surfaceColor || '#1A1A2E'}}; min-height: 100vh;">
+  <scroll-view scroll-y class="form-scroll" enhanced show-scrollbar="{{false}}">
+    <!-- Section 1: Date & Time -->
+    <theme-card theme="{{theme}}">
+      <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">日期与时间</view>
+
+      <theme-form-item theme="{{theme}}" label="日期" required="{{true}}" error="{{errors.date}}">
+        <picker mode="date" value="{{date}}" bindchange="onDateChange">
+          <view class="picker-value" style="color: {{date ? (theme.textPrimary || '#F5F0E8') : (theme.textMuted || 'rgba(245,240,232,0.40)')}};">
+            {{date || '请选择日期'}}
+          </view>
+        </picker>
+      </theme-form-item>
+
+      <view class="form-item-custom">
+        <text class="form-label" style="color: {{theme.textSecondary || 'rgba(245,240,232,0.65)'}};">时段</text>
+        <view class="pill-selector">
+          <view
+            class="pill {{time === item ? 'pill-active' : ''}}"
+            wx:for="{{timeOptions}}"
+            wx:key="*this"
+            data-value="{{item}}"
+            bindtap="selectTime"
+            style="{{time === item ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
+          >
+            {{item}}
+          </view>
+        </view>
+      </view>
+    </theme-card>
+
+    <!-- Section 2: Room -->
+    <theme-card theme="{{theme}}">
+      <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">房间</view>
+
+      <view class="exclusive-row">
+        <text class="form-label" style="color: {{theme.textSecondary || 'rgba(245,240,232,0.65)'}};">包场</text>
+        <switch
+          checked="{{isExclusive}}"
+          bindchange="toggleExclusive"
+          color="{{theme.accentColor || '#C9A96E'}}"
+        />
+      </view>
+
+      <view class="pill-selector room-selector {{isExclusive ? 'room-disabled' : ''}}">
+        <view
+          class="pill {{room === item.value && !isExclusive ? 'pill-active' : ''}}"
+          wx:for="{{roomOptions}}"
+          wx:key="value"
+          data-value="{{item.value}}"
+          bindtap="selectRoom"
+          style="{{room === item.value && !isExclusive ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
+        >
+          {{item.label}}
+        </view>
+      </view>
+      <text class="error-text" wx:if="{{errors.room}}" style="color: {{theme.statusDanger || '#F87171'}};">{{errors.room}}</text>
+    </theme-card>
+
+    <!-- Section 3: Standard -->
+    <theme-card theme="{{theme}}">
+      <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">餐标</view>
+
+      <view class="pill-selector standard-selector">
+        <view
+          class="pill {{standard === item ? 'pill-active' : ''}}"
+          wx:for="{{standardOptions}}"
+          wx:key="*this"
+          data-value="{{item}}"
+          bindtap="selectStandard"
+          style="{{standard === item ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
+        >
+          ¥{{item}}/人
+        </view>
+      </view>
+    </theme-card>
+
+    <!-- Section 4: Customer Info -->
+    <theme-card theme="{{theme}}">
+      <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">客户信息</view>
+
+      <theme-form-item theme="{{theme}}" label="客户姓名" required="{{true}}" error="{{errors.customerName}}">
+        <input
+          class="form-input"
+          value="{{customerName}}"
+          bindinput="onCustomerNameInput"
+          placeholder="请输入客户姓名"
+          placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};"
+          style="color: {{theme.textPrimary || '#F5F0E8'}};"
+        />
+      </theme-form-item>
+
+      <theme-form-item theme="{{theme}}" label="手机号" required="{{false}}" error="{{errors.phone}}">
+        <input
+          class="form-input"
+          type="number"
+          maxlength="11"
+          value="{{phone}}"
+          bindinput="onPhoneInput"
+          placeholder="请输入手机号"
+          placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};"
+          style="color: {{theme.textPrimary || '#F5F0E8'}};"
+        />
+      </theme-form-item>
+
+      <theme-form-item theme="{{theme}}" label="人数" required="{{true}}" error="{{errors.guestCount}}">
+        <input
+          class="form-input"
+          type="number"
+          value="{{guestCount}}"
+          bindinput="onGuestCountInput"
+          placeholder="请输入用餐人数"
+          placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};"
+          style="color: {{theme.textPrimary || '#F5F0E8'}};"
+        />
+      </theme-form-item>
+
+      <theme-form-item theme="{{theme}}" label="备注">
+        <textarea
+          class="form-textarea"
+          value="{{remark}}"
+          bindinput="onRemarkInput"
+          placeholder="备注信息（选填）"
+          placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};"
+          style="color: {{theme.textPrimary || '#F5F0E8'}};"
+          auto-height
+          maxlength="200"
+        />
+      </theme-form-item>
+    </theme-card>
+
+    <!-- Spacer for bottom bar -->
+    <view class="bottom-spacer"></view>
+  </scroll-view>
+
+  <!-- Fixed Bottom Bar -->
+  <view class="bottom-bar" style="background: {{theme.elevatedColor || '#252540'}}; border-top: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}};">
+    <view class="bottom-bar-inner {{isEdit ? 'two-btns' : 'single-btn'}}">
+      <theme-btn
+        wx:if="{{isEdit}}"
+        theme="{{theme}}"
+        text="删除"
+        type="danger"
+        size="normal"
+        bind:tap="onDelete"
+      />
+      <theme-btn
+        theme="{{theme}}"
+        text="{{isEdit ? '保存修改' : '创建预约'}}"
+        type="primary"
+        size="normal"
+        block="{{!isEdit}}"
+        loading="{{submitting}}"
+        bind:tap="onSubmit"
+      />
+    </view>
+    <view class="safe-bottom-bar"></view>
+  </view>
+
+  <!-- Delete Confirmation Modal -->
+  <theme-modal
+    theme="{{theme}}"
+    visible="{{showDeleteModal}}"
+    title="确认删除"
+    confirmText="删除"
+    bind:close="onCloseDeleteModal"
+    bind:confirm="onConfirmDelete"
+  >
+    <text style="color: {{theme.textSecondary || 'rgba(245,240,232,0.65)'}};">删除后将无法恢复，确认删除该预约吗？</text>
+  </theme-modal>
+</view>

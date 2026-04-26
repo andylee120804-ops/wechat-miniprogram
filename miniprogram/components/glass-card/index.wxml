@@ -1,0 +1,3 @@
+<view class="glass-card {{noMargin ? 'no-margin' : ''}}" style="background: rgba(255,255,255,{{opacity}}); backdrop-filter: blur({{blur}}px); -webkit-backdrop-filter: blur({{blur}}px); border: 1rpx solid {{theme.glass || 'rgba(255,255,255,0.1)'}}; border-radius: {{borderRadius}}; padding: {{padding}}; {{noMargin ? '' : 'margin-bottom: 24rpx;'}}">
+  <slot></slot>
+</view>

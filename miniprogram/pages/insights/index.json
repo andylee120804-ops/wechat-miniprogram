@@ -1,0 +1,11 @@
+{
+  "usingComponents": {
+    "stat-card": "/components/stat-card/index",
+    "theme-card": "/components/theme-card/index",
+    "glass-card": "/components/glass-card/index",
+    "theme-badge": "/components/theme-badge/index",
+    "ucharts": "/components/ucharts/index",
+    "skeleton": "/components/skeleton/index",
+    "empty-state": "/components/empty-state/index"
+  }
+}

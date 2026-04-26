@@ -1,0 +1,8 @@
+{
+  "usingComponents": {
+    "theme-badge": "/components/theme-badge/index",
+    "theme-card": "/components/theme-card/index",
+    "theme-btn": "/components/theme-btn/index",
+    "theme-modal": "/components/theme-modal/index"
+  }
+}

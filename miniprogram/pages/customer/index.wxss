@@ -1,0 +1,35 @@
+.customer-page {
+  min-height: 100vh;
+}
+
+.sort-bar {
+  display: flex;
+  gap: 12rpx;
+}
+
+.sort-pill {
+  padding: 10rpx 28rpx;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.customer-item {
+  transition: transform 0.15s ease;
+}
+
+.customer-item:active {
+  transform: scale(0.98);
+}
+
+.customer-header {
+  display: flex;
+  align-items: center;
+}
+
+.customer-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}

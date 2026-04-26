@@ -1,0 +1,78 @@
+<view class="attendance-detail-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 32rpx;">
+  <!-- Header -->
+  <view style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}}; padding: 32rpx; display: flex; align-items: center; gap: 24rpx;">
+    <view style="background: {{theme.accentBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.accentColor || '#C9A96E'}}; width: 100rpx; height: 100rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 44rpx; font-weight: 700; flex-shrink: 0;">
+      {{staffName.substr(0, 1)}}
+    </view>
+    <view>
+      <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 36rpx; font-weight: 700; display: block;">{{staffName}}</text>
+      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">{{currentMonth}} 出勤详情</text>
+    </view>
+  </view>
+
+  <!-- Month Nav -->
+  <view style="display: flex; align-items: center; justify-content: center; gap: 32rpx; padding: 24rpx; background: {{theme.surface || '#1A1A2E'}};">
+    <view bindtap="prevMonth" style="width: 64rpx; height: 64rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid rgba(255,255,255,0.1); border-radius: 50%; font-size: 36rpx; color: rgba(255,255,255,0.6);">‹</view>
+    <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 32rpx; font-weight: 600; min-width: 160rpx; text-align: center;">{{currentMonth}}</text>
+    <view bindtap="nextMonth" style="width: 64rpx; height: 64rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid rgba(255,255,255,0.1); border-radius: 50%; font-size: 36rpx; color: rgba(255,255,255,0.6);">›</view>
+  </view>
+
+  <!-- Overview Cards -->
+  <view style="display: flex; gap: 12rpx; padding: 0 32rpx 24rpx;">
+    <view style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; padding: 24rpx; flex: 1; text-align: center;">
+      <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 36rpx; font-weight: 800; display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{totalDays}}</text>
+      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">出勤天</text>
+    </view>
+    <view style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; padding: 24rpx; flex: 1; text-align: center;">
+      <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 36rpx; font-weight: 800; display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{totalHours}}h</text>
+      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">总工时</text>
+    </view>
+    <view style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; padding: 24rpx; flex: 1; text-align: center;">
+      <text style="color: {{totalLates > 0 ? (theme.statusDanger || '#F87171') : (theme.textPrimary || '#F0F0F5')}}; font-size: 36rpx; font-weight: 800; display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{totalLates}}</text>
+      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">迟到</text>
+    </view>
+  </view>
+
+  <!-- Calendar Grid -->
+  <view style="padding: 0 32rpx; margin-bottom: 24rpx;">
+    <theme-card theme="{{theme}}" padding="24rpx">
+      <view style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8rpx; margin-bottom: 16rpx;">
+        <text wx:for="{{['日','一','二','三','四','五','六']}}" wx:key="*this" style="text-align: center; color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; font-weight: 500;">{{item}}</text>
+      </view>
+      <view style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8rpx;">
+        <view wx:for="{{calendarDays}}" wx:key="dateStr" style="aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 50%; {{item.isToday ? 'border: 2rpx solid ' + (theme.accentColor || '#C9A96E') + ';' : ''}} {{item.isClocked ? 'background:' + (theme.statusSuccessBg || 'rgba(74,222,128,0.15)') + ';' : ''}}">
+          <text wx:if="{{item.day}}" style="font-size: 26rpx; color: {{item.isClocked ? (theme.statusSuccess || '#4ADE80') : (theme.textPrimary || '#F0F0F5')}}; font-weight: {{item.isClocked ? '600' : '400'}};">{{item.day}}</text>
+          <text wx:if="{{item.isClocked && item.day}}" style="font-size: 16rpx; color: {{theme.statusSuccess || '#4ADE80'}}; margin-top: 2rpx;">✓</text>
+        </view>
+      </view>
+    </theme-card>
+  </view>
+
+  <!-- Records -->
+  <view style="padding: 0 32rpx;">
+    <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600; display: block; margin-bottom: 16rpx;">打卡记录</text>
+    <skeleton wx:if="{{loading}}" theme="{{theme}}" type="list" count="5" />
+    <view wx:else>
+      <view wx:for="{{records}}" wx:key="dateStr" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 16rpx; padding: 20rpx 24rpx; margin-bottom: 12rpx;">
+        <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8rpx;">
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 600;">{{item.dateStr}}</text>
+          <text wx:if="{{item.isLate}}" style="color: {{theme.statusDanger || '#F87171'}}; font-size: 22rpx; background: rgba(248,113,113,0.15); padding: 4rpx 12rpx; border-radius: 999rpx;">迟到</text>
+        </view>
+        <view style="display: flex; gap: 32rpx;">
+          <view>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; display: block;">上班</text>
+            <text style="color: {{item.isLate ? (theme.statusDanger || '#F87171') : (theme.statusSuccess || '#4ADE80')}}; font-size: 28rpx; font-weight: 600;">{{item.clockInTime || '-'}}</text>
+          </view>
+          <view>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; display: block;">下班</text>
+            <text style="color: {{theme.statusWarning || '#FBBF24'}}; font-size: 28rpx; font-weight: 600;">{{item.clockOutTime || '-'}}</text>
+          </view>
+          <view>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; display: block;">位置</text>
+            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx;">{{item.clockInLocationText || '-'}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

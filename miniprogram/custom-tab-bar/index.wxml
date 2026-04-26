@@ -1,0 +1,8 @@
+<view class="custom-tab-bar safe-bottom" style="background: {{theme.tabBarBg || theme.surface || '#1A1A2E'}}; border-top: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}};">
+  <view class="tab-item {{active === index ? 'active' : ''}}" wx:for="{{items}}" wx:key="page" data-index="{{index}}" bindtap="onTabTap">
+    <view class="tab-icon-wrap {{active === index ? 'icon-active' : ''}}" style="{{active === index ? 'background:' + (theme.accentBg || 'rgba(201,169,110,0.15)') + ';' : ''}}">
+      <image class="tab-icon-img" src="{{active === index ? item.activeIcon : item.icon}}" mode="aspectFit" />
+    </view>
+    <text class="tab-text" style="color: {{active === index ? (theme.tabBarSelectedColor || theme.accentColor || '#C9A96E') : (theme.tabBarUnselectedColor || theme.textMuted || '#666680')}};">{{item.text}}</text>
+  </view>
+</view>

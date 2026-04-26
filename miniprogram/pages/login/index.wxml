@@ -1,0 +1,39 @@
+<view class="login-page" style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}};">
+  <!-- Background decoration -->
+  <view class="login-bg-decor">
+    <view class="bg-circle circle-1" style="background: {{theme.accentColor || '#C9A96E'}}; opacity: 0.05;"></view>
+    <view class="bg-circle circle-2" style="background: {{theme.accentColor || '#C9A96E'}}; opacity: 0.03;"></view>
+  </view>
+
+  <!-- Brand section -->
+  <view class="login-brand safe-top">
+    <text class="brand-name" style="color: {{theme.accentColor || '#C9A96E'}};">听澜轩</text>
+    <text class="brand-subtitle" style="color: {{theme.textMuted || '#5C5C72'}};">等风，也等你</text>
+  </view>
+
+  <!-- Login card -->
+  <glass-card theme="{{theme}}" blur="24" opacity="0.08" padding="48rpx 40rpx" class="{{shakeAnimation ? 'shake' : ''}}">
+    <view class="login-form">
+      <view class="form-title" style="color: {{theme.textPrimary || '#F0F0F5'}};">欢迎回来</view>
+      <view class="form-subtitle" style="color: {{theme.textMuted || '#5C5C72'}};">请输入您的微信号登录</view>
+
+      <view class="input-group" style="border-bottom: 2rpx solid {{theme.border || 'rgba(255,255,255,0.1)'}};">
+        <text class="input-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">微信号</text>
+        <input class="login-input" placeholder="请输入微信号" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" value="{{wechatId}}" bindinput="onWechatIdInput" confirm-type="done" style="color: {{theme.textPrimary || '#F0F0F5'}};" />
+      </view>
+
+      <view class="input-group" style="border-bottom: 2rpx solid {{theme.border || 'rgba(255,255,255,0.1)'}};">
+        <text class="input-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">手机号(选填)</text>
+        <input class="login-input" type="number" placeholder="请输入手机号" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" value="{{phone}}" bindinput="onPhoneInput" maxlength="11" style="color: {{theme.textPrimary || '#F0F0F5'}};" />
+      </view>
+
+      <view class="login-btn-wrap">
+        <theme-btn theme="{{theme}}" type="primary" text="登 录" block loading="{{loading}}" bind:tap="onLogin" />
+      </view>
+
+      <view class="login-hint" style="color: {{theme.textMuted || '#5C5C72'}};">
+        如无账号请联系管理员注册
+      </view>
+    </view>
+  </glass-card>
+</view>

@@ -1,0 +1,65 @@
+<view class="detail-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx;">
+  <block wx:if="{{!loading && income}}">
+    <!-- Amount Hero -->
+    <view class="amount-hero" style="background: linear-gradient(135deg, rgba(74,222,128,0.15), rgba(74,222,128,0.03)); padding: 48rpx 32rpx;">
+      <theme-badge theme="{{theme}}" status="{{income.type}}" type="status" text="{{getIncomeTypeText(income.type)}}" size="lg" />
+      <text class="amount-display" style="color: {{theme.amountPositive || '#4ADE80'}}; font-size: 56rpx; font-weight: 800; font-family: 'DIN Alternate', monospace; margin-top: 16rpx; display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">+¥{{formatAmount(income.amount)}}</text>
+      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; margin-top: 12rpx; display: block;">{{formatDate(income.date)}}</text>
+    </view>
+
+    <!-- Detail Card -->
+    <view style="padding: 32rpx;">
+      <theme-card theme="{{theme}}" padding="32rpx">
+        <view class="detail-row">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">来源</text>
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx;">{{income.source || '无来源'}}</text>
+        </view>
+        <view class="detail-row" wx:if="{{income.guestCount}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">人数</text>
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx;">{{income.guestCount}}人</text>
+        </view>
+        <view class="detail-row" wx:if="{{income.standard}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">餐标</text>
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx;">¥{{income.standard}}/人</text>
+        </view>
+        <view class="detail-row" wx:if="{{income.roomName}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">房间</text>
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx;">{{income.roomName}}</text>
+        </view>
+        <view class="detail-row" wx:if="{{income.collectedByName}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">收款人</text>
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">{{income.collectedByName}}</text>
+        </view>
+        <view class="detail-row" wx:if="{{income.remark}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">备注</text>
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; flex: 1; text-align: right;">{{income.remark}}</text>
+        </view>
+      </theme-card>
+
+      <!-- Linked Reservation -->
+      <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;" wx:if="{{income.reservationId}}">
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 16rpx;">关联预约</text>
+        <view class="detail-row">
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx;">关联预约</text>
+        </view>
+      </theme-card>
+    </view>
+
+    <!-- Action Bar -->
+    <view class="action-bar safe-bottom">
+      <theme-btn theme="{{theme}}" type="outline" text="编辑" bind:tap="onEdit" style="flex: 1; margin-right: 16rpx;" />
+      <theme-btn theme="{{theme}}" type="danger" text="删除" bind:tap="onDelete" style="flex: 1;" />
+    </view>
+
+    <!-- Delete Modal -->
+    <theme-modal theme="{{theme}}" visible="{{showDeleteModal}}" title="删除收入" confirmText="确认删除" cancelText="返回" bind:confirm="onConfirmDelete" bind:close="onCloseDelete">
+      <view style="padding: 16rpx 0;">
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">确定要删除此收入记录吗？删除后无法恢复。</text>
+      </view>
+    </theme-modal>
+  </block>
+
+  <view wx:if="{{loading}}" style="display: flex; align-items: center; justify-content: center; height: 60vh;">
+    <text style="color: {{theme.textMuted || '#5C5C72'}};">加载中...</text>
+  </view>
+</view>

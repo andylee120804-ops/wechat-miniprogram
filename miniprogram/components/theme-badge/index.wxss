@@ -1,0 +1,30 @@
+.theme-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.sm {
+  padding: 2rpx 12rpx;
+}
+
+.lg {
+  padding: 6rpx 20rpx;
+}
+
+.pulse {
+  animation: badgePulse 2s infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}

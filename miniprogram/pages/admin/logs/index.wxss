@@ -1,0 +1,178 @@
+@import '../../../styles/mixins.wxss';
+
+.page {
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Navigation Bar */
+.nav-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.nav-bar-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: 88rpx;
+  padding: 0 24rpx;
+}
+
+.nav-back {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-back-icon {
+  font-size: 44rpx;
+  font-weight: 300;
+}
+
+.nav-title {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.nav-action {
+  min-width: 64rpx;
+}
+
+/* Filter Section */
+.filter-section {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.06);
+}
+
+.chips-scroll {
+  white-space: nowrap;
+}
+
+.chips-row {
+  gap: 12rpx;
+  padding-bottom: 8rpx;
+}
+
+.filter-chip {
+  padding: 10rpx 24rpx;
+  border-radius: 32rpx;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.filter-chip:active {
+  transform: scale(0.96);
+}
+
+.chip-text {
+  font-size: 26rpx;
+  white-space: nowrap;
+}
+
+.chip-active .chip-text {
+  font-weight: 600;
+}
+
+/* Date Filters */
+.date-filters {
+  align-items: center;
+}
+
+.date-field {
+  align-items: center;
+}
+
+.query-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.query-btn:active {
+  opacity: 0.85;
+}
+
+/* Log List */
+.log-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.log-card {
+  border-radius: 16rpx;
+  overflow: hidden;
+  transition: transform 0.15s ease;
+}
+
+.log-inner {
+  display: flex;
+  flex-direction: column;
+}
+
+.log-header {
+  align-items: center;
+}
+
+.log-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.log-operator {
+  align-items: center;
+}
+
+.log-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.detail-row {
+  align-items: center;
+}
+
+.detail-key {
+  flex-shrink: 0;
+}
+
+.detail-value {
+  max-width: 480rpx;
+}
+
+/* Load More */
+.load-more {
+  text-align: center;
+}
+
+.load-more:active {
+  opacity: 0.7;
+}
+
+.no-more {
+  text-align: center;
+}
+
+/* Stagger animation */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(30rpx);
+  animation: staggerIn 0.4s ease-out forwards;
+}
+
+@keyframes staggerIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

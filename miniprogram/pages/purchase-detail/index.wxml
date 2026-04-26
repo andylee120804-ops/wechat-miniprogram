@@ -1,0 +1,79 @@
+<view class="page" style="background: {{theme.surfaceColor || '#1A1A2E'}};">
+  <!-- Custom Navigation Bar -->
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-bar-content">
+      <view class="nav-back" bindtap="onBack">
+        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}};">‹</text>
+      </view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">采购详情</text>
+      <view class="nav-action"></view>
+    </view>
+  </view>
+
+  <view class="page-content px-lg pt-xl" wx:if="{{!loading && purchase}}">
+    <!-- Amount Hero -->
+    <view class="hero-section flex-col flex-center" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border-radius: 20rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
+      <view class="p-xl flex-col flex-center">
+        <text class="text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">采购金额</text>
+        <text class="hero-amount text-display font-mono mt-xs" style="color: {{theme.amountNegative || '#F87171'}};">-¥{{purchase.formattedAmount}}</text>
+        <view class="hero-badge mt-sm">
+          <theme-badge theme="{{theme}}" status="{{purchase.category}}" type="category" text="{{purchase.categoryName}}" size="md" />
+        </view>
+      </view>
+    </view>
+
+    <!-- Detail Card -->
+    <theme-card theme="{{theme}}" class="mt-lg">
+      <view class="p-lg">
+        <view class="detail-row flex-row flex-between py-md" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
+          <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">物品名称</text>
+          <text class="detail-value text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{purchase.item}}</text>
+        </view>
+        <view class="detail-row flex-row flex-between py-md" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
+          <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">采购分类</text>
+          <text class="detail-value text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{purchase.categoryName}}</text>
+        </view>
+        <view class="detail-row flex-row flex-between py-md" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
+          <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">采购日期</text>
+          <text class="detail-value text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{purchase.formattedDate}}</text>
+        </view>
+        <view class="detail-row flex-row flex-between py-md" wx:if="{{purchase.purchaseByName}}" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
+          <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">采购人</text>
+          <text class="detail-value text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{purchase.purchaseByName}}</text>
+        </view>
+        <view class="detail-row flex-row flex-between py-md" wx:if="{{purchase.remark}}" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
+          <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">备注</text>
+          <text class="detail-value text-body" style="color: {{theme.textPrimary || '#F5F0E8'}}; max-width: 420rpx; text-align: right;">{{purchase.remark}}</text>
+        </view>
+        <view class="detail-row flex-row flex-between py-md">
+          <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">创建时间</text>
+          <text class="detail-value text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">{{purchase.formattedCreatedAt}}</text>
+        </view>
+      </view>
+    </theme-card>
+
+    <!-- Bottom Spacer -->
+    <view style="height: 200rpx;"></view>
+  </view>
+
+  <!-- Loading State -->
+  <view class="loading-container flex-col flex-center" wx:if="{{loading}}" style="padding-top: 400rpx;">
+    <text style="color: {{theme.textMuted || '#5C5C72'}};">加载中...</text>
+  </view>
+
+  <!-- Fixed Bottom Action Bar -->
+  <view class="bottom-bar safe-bottom" wx:if="{{!loading && purchase}}" style="background: {{theme.surfaceColor || '#1A1A2E'}}; border-top: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
+    <view class="bottom-bar-inner px-lg py-md flex-row">
+      <theme-btn wx:if="{{canDelete}}" theme="{{theme}}" type="danger" text="删除" size="normal" bind:tap="onDelete" />
+      <view class="flex-1"></view>
+      <theme-btn wx:if="{{canEdit}}" theme="{{theme}}" type="primary" text="编辑" size="normal" bind:tap="onEdit" />
+    </view>
+  </view>
+
+  <!-- Delete Confirmation Modal -->
+  <theme-modal theme="{{theme}}" visible="{{showDeleteModal}}" title="确认删除" confirmText="删除" cancelText="取消" bind:confirm="onDeleteConfirm" bind:close="onDeleteCancel">
+    <view class="p-lg">
+      <text style="color: {{theme.textPrimary || '#F5F0E8'}};">确定要删除此采购记录吗？删除后不可恢复。</text>
+    </view>
+  </theme-modal>
+</view>
