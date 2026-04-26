@@ -19,7 +19,7 @@ Page({
   },
 
   onLoad: function(options) {
-    const sysInfo = wx.getSystemInfoSync()
+    const sysInfo = wx.getWindowInfo()
     this.setData({ statusBarHeight: sysInfo.statusBarHeight || 44 })
     this.setData({ theme: app.getThemePageData() })
     if (options.id) {
@@ -33,7 +33,7 @@ Page({
 
   onShow: function() {
     this.setData({
-      canEdit: checkPermission('purchase', 'update'),
+      canEdit: checkPermission('purchase', 'edit'),
       canDelete: checkPermission('purchase', 'delete')
     })
   },
@@ -57,7 +57,7 @@ Page({
       that.setData({
         purchase: data,
         loading: false,
-        canEdit: checkPermission('purchase', 'update'),
+        canEdit: checkPermission('purchase', 'edit'),
         canDelete: checkPermission('purchase', 'delete')
       })
     }).catch(function(err) {
@@ -67,7 +67,7 @@ Page({
   },
 
   onEdit: function() {
-    if (!checkPermission('purchase', 'update')) return
+    if (!checkPermission('purchase', 'edit')) return
     wx.navigateTo({ url: '/pages/purchase-add/index?id=' + this.data.id })
   },
 

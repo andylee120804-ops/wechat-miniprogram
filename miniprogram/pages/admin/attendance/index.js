@@ -5,21 +5,30 @@ const { COLLECTIONS } = require('../../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     loading: true,
     currentMonth: '',
     staffAttendance: []
   },
 
-  onShow() {
-    if (!app.hasPermission('staff', 'view')) {
-      wx.showToast({ title: '无权限', icon: 'none' })
-      wx.navigateBack()
+  onLoad() {
+    if (!app.hasPermission('attendance', 'view')) {
+      wx.showToast({ title: '无权限查看考勤', icon: 'none' })
+      setTimeout(() => wx.navigateBack(), 1500)
       return
     }
     const theme = app.getThemePageData()
     const range = getMonthRange(0)
-    this.setData({ theme, currentMonth: range.label })
+    this.setData({ theme, currentMonth: range.label, statusBarHeight: app.globalData.statusBarHeight || 44 })
     this.loadData()
+  },
+
+  onShow() {
+    // No permission check here - menu already validated permission before allowing navigation
+  },
+
+  onBack: function() {
+    wx.navigateBack()
   },
 
   async loadData() {

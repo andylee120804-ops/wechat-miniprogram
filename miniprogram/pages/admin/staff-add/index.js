@@ -7,6 +7,7 @@ const { COLLECTIONS } = require('../../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     isEdit: false,
     id: '',
     name: '',
@@ -19,7 +20,10 @@ Page({
       purchase: { view: false, add: false, edit: false, delete: false },
       reservation: { view: false, add: false, edit: false, delete: false },
       income: { view: false, add: false, edit: false, delete: false },
+      expense: { view: false, add: false, edit: false, delete: false },
+      announcement: { view: false, add: false, edit: false, delete: false },
       staff: { view: false, add: false, edit: false, delete: false },
+      attendance: { view: false },
       dashboard: { view: false, export: false }
     },
     roleOptions: [
@@ -33,7 +37,10 @@ Page({
       { key: 'purchase', name: '采购管理', actions: ['view', 'add', 'edit', 'delete'] },
       { key: 'reservation', name: '预约管理', actions: ['view', 'add', 'edit', 'delete'] },
       { key: 'income', name: '收入管理', actions: ['view', 'add', 'edit', 'delete'] },
+      { key: 'expense', name: '支出管理', actions: ['view', 'add', 'edit', 'delete'] },
+      { key: 'announcement', name: '公告管理', actions: ['view', 'add', 'edit', 'delete'] },
       { key: 'staff', name: '员工管理', actions: ['view', 'add', 'edit', 'delete'] },
+      { key: 'attendance', name: '考勤打卡', actions: ['view'] },
       { key: 'dashboard', name: '经营报表', actions: ['view', 'export'] }
     ],
     showDeleteModal: false
@@ -41,11 +48,27 @@ Page({
 
   onLoad(options) {
     const theme = app.getThemePageData()
-    this.setData({ theme })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
     if (options.id) {
       this.setData({ isEdit: true, id: options.id })
       this.loadExisting()
     }
+  },
+
+  onBack() {
+    // Close any open modals first
+    this.setData({ showDeleteModal: false }, () => {
+      try {
+        const pages = getCurrentPages()
+        if (pages.length > 1) {
+          wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/me/index' }) })
+        } else {
+          wx.switchTab({ url: '/pages/me/index' })
+        }
+      } catch (e) {
+        wx.switchTab({ url: '/pages/me/index' })
+      }
+    })
   },
 
   async loadExisting() {
@@ -57,21 +80,39 @@ Page({
       ])
       const s = staffRes.data
       const perms = permRes.data[0]?.permissions || []
+
+      // Build permMap: { module: ['view','add',...] } from stored data
       const permMap = {}
-      perms.forEach(p => { permMap[p.module] = p.actions })
+      perms.forEach(p => { permMap[p.module] = p.actions || [] })
+
+      // Convert array format to { action: boolean } format for the UI
+      const defaultPerms = {
+        purchase: { view: false, add: false, edit: false, delete: false },
+        reservation: { view: false, add: false, edit: false, delete: false },
+        income: { view: false, add: false, edit: false, delete: false },
+        expense: { view: false, add: false, edit: false, delete: false },
+        announcement: { view: false, add: false, edit: false, delete: false },
+        staff: { view: false, add: false, edit: false, delete: false },
+        attendance: { view: false },
+        dashboard: { view: false, export: false }
+      }
+      // Overlay stored permissions on top of defaults
+      Object.keys(permMap).forEach(mod => {
+        if (defaultPerms[mod]) {
+          const actions = permMap[mod]
+          Object.keys(defaultPerms[mod]).forEach(a => {
+            defaultPerms[mod][a] = actions.includes(a)
+          })
+        }
+      })
+
       this.setData({
         name: s.name || '',
         role: s.role || 'admin',
         wechatId: s.wechatId || '',
         phone: s.phone || '',
         salary: s.salary ? String(s.salary) : '',
-        permissions: {
-          purchase: permMap.purchase || { view: false, add: false, edit: false, delete: false },
-          reservation: permMap.reservation || { view: false, add: false, edit: false, delete: false },
-          income: permMap.income || { view: false, add: false, edit: false, delete: false },
-          staff: permMap.staff || { view: false, add: false, edit: false, delete: false },
-          dashboard: permMap.dashboard || { view: false, export: false }
-        }
+        permissions: defaultPerms
       })
     } catch (err) {
       handleCloudError(err, '加载员工')
@@ -86,7 +127,9 @@ Page({
 
   onPermChange(e) {
     const { module, action } = e.currentTarget.dataset
+    if (!module || !action) return
     const perms = this.data.permissions
+    if (!perms[module]) return
     perms[module][action] = !perms[module][action]
     this.setData({ permissions: perms })
   },

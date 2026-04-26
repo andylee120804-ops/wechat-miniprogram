@@ -5,9 +5,11 @@ const { COLLECTIONS } = require('../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     loading: true,
     todayDate: '',
     latestAnnouncement: null,
+    marqueePaused: false,
     lunchReservations: [],
     dinnerReservations: [],
     tomorrowReservations: [],
@@ -17,7 +19,9 @@ Page({
     showSummary: false,
     canAddReservation: false,
     canAddPurchase: false,
-    canAddIncome: false
+    canAddIncome: false,
+    unreadAnnouncementCount: 0,
+    hasUrgentUnread: false
   },
 
   onShow() {
@@ -26,6 +30,7 @@ Page({
     const isBoss = userInfo && userInfo.role === 'boss'
     this.setData({
       theme,
+      statusBarHeight: app.globalData.statusBarHeight || 44,
       todayDate: formatDate(new Date()),
       showSummary: isBoss,
       canAddReservation: app.hasPermission('reservation', 'add'),
@@ -37,6 +42,15 @@ Page({
 
   async loadData() {
     this.setData({ loading: true })
+
+    // Timeout protection - fail fast if page doesn't respond
+    const timeoutId = setTimeout(() => {
+      if (this.data.loading) {
+        console.warn('首页加载超时，强制结束加载状态')
+        this.setData({ loading: false })
+      }
+    }, 10000) // 10 second timeout
+
     try {
       const db = wx.cloud.database()
       const _ = db.command
@@ -45,7 +59,6 @@ Page({
 
       const tomorrowDate = new Date(now)
       tomorrowDate.setDate(tomorrowDate.getDate() + 1)
-      const tomorrowStr = formatDate(tomorrowDate)
 
       // Build date ranges for today and tomorrow
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0)
@@ -53,18 +66,7 @@ Page({
       const tomorrowStart = new Date(tomorrowDate.getFullYear(), tomorrowDate.getMonth(), tomorrowDate.getDate(), 0, 0, 0)
       const tomorrowEnd = new Date(tomorrowDate.getFullYear(), tomorrowDate.getMonth(), tomorrowDate.getDate(), 23, 59, 59)
 
-      // Query announcement separately to avoid blocking page load if collection doesn't exist
-      let latestAnnouncement = null
-      try {
-        const announcementRes = await db.collection(COLLECTIONS.ANNOUNCEMENT).where({
-          active: true
-        }).orderBy('createdAt', 'desc').limit(1).get()
-        const announcements = announcementRes.data || []
-        latestAnnouncement = announcements.length > 0 ? announcements[0] : null
-      } catch (e) {
-        console.log('公告集合不存在或查询失败:', e.errMsg)
-      }
-
+      // Query core data first (parallel)
       const [todayRes, tomorrowRes, todayIncomeRes, todayExpenseRes] = await Promise.all([
         db.collection(COLLECTIONS.RESERVATION).where({
           date: _.gte(todayStart).and(_.lte(todayEnd)),
@@ -82,6 +84,27 @@ Page({
         }).get()
       ])
 
+      // Query announcement separately (non-blocking) - don't let it block the page
+      let latestAnnouncement = null
+      let unreadAnnouncementCount = 0
+      let hasUrgentUnread = false
+      try {
+        const userInfo = app.globalData.userInfo
+        const announcementRes = await db.collection(COLLECTIONS.ANNOUNCEMENT).where({
+          active: true
+        }).orderBy('createdAt', 'desc').limit(50).get()
+        const announcements = announcementRes.data || []
+        latestAnnouncement = announcements.length > 0 ? announcements[0] : null
+        // Count unread announcements and check for urgent unread
+        if (userInfo && userInfo._id) {
+          unreadAnnouncementCount = announcements.filter(a => !(a.readBy || []).includes(userInfo._id)).length
+          hasUrgentUnread = announcements.some(a => !(a.readBy || []).includes(userInfo._id) && a.priority === 'urgent')
+        }
+      } catch (e) {
+        console.log('公告查询失败，不影响首页显示:', e.errMsg)
+        latestAnnouncement = null
+      }
+
       const lunchRes = (todayRes.data || []).filter(r => r.time === '中午')
       const dinnerRes = (todayRes.data || []).filter(r => r.time === '晚上')
       const tomorrowData = tomorrowRes.data || []
@@ -93,7 +116,6 @@ Page({
       console.log('首页数据:', {
         todayCount: todayRes.data?.length || 0,
         tomorrowCount: tomorrowData.length,
-        tomorrowStr: tomorrowStr,
         hasAnnouncement: !!latestAnnouncement
       })
 
@@ -105,11 +127,15 @@ Page({
         tomorrowPreview: tomorrowPreview,
         todayIncome: todayIncomeTotal.toFixed(2),
         todayExpense: todayExpenseTotal.toFixed(2),
-        latestAnnouncement: latestAnnouncement
+        latestAnnouncement: latestAnnouncement,
+        unreadAnnouncementCount: unreadAnnouncementCount,
+        hasUrgentUnread: hasUrgentUnread
       })
     } catch (err) {
       console.error('加载首页数据失败:', err)
       this.setData({ loading: false })
+    } finally {
+      clearTimeout(timeoutId)
     }
   },
 
@@ -147,7 +173,33 @@ Page({
   },
 
   onAnnouncementTap() {
-    wx.switchTab({ url: '/pages/announcements/index' })
+    const ann = this.data.latestAnnouncement
+    if (ann && ann._id) {
+      wx.navigateTo({ url: `/pages/announcement-detail/index?id=${ann._id}` })
+    } else {
+      wx.switchTab({ url: '/pages/announcements/index' })
+    }
+  },
+
+  onNotificationTap() {
+    const ann = this.data.latestAnnouncement
+    if (this.data.unreadAnnouncementCount > 0 && ann && ann._id) {
+      wx.navigateTo({ url: `/pages/announcement-detail/index?id=${ann._id}` })
+    } else {
+      wx.switchTab({ url: '/pages/announcements/index' })
+    }
+  },
+
+  onMarqueeTouchStart() {
+    this.setData({ marqueePaused: true })
+  },
+
+  onMarqueeTouchEnd() {
+    // Debounce: delay resuming animation to prevent flickering
+    clearTimeout(this._marqueeResumeTimer)
+    this._marqueeResumeTimer = setTimeout(() => {
+      this.setData({ marqueePaused: false })
+    }, 300)
   },
 
   onPullDownRefresh() {

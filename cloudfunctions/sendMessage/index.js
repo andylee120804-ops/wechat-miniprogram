@@ -26,7 +26,7 @@ exports.main = async (event, context) => {
 }
 
 async function createAnnouncement(event) {
-  const { title, content, priority, createdBy, createdByName } = event
+  const { title, content, priority, needsConfirm, createdBy, createdByName } = event
 
   if (!title || !content) {
     return { success: false, message: '标题和内容不能为空' }
@@ -37,6 +37,7 @@ async function createAnnouncement(event) {
       title,
       content,
       priority: priority || 'normal',
+      needsConfirm: !!needsConfirm,
       createdBy: createdBy || '',
       createdByName: createdByName || '',
       active: true,
@@ -72,7 +73,7 @@ async function markRead(event) {
     return { success: false, message: '参数不完整' }
   }
 
-  await db.collection('announcements').doc(announcementId).update({
+  await db.collection('announcement').doc(announcementId).update({
     data: {
       readBy: _.push(staffId)
     }
@@ -88,7 +89,7 @@ async function deleteAnnouncement(event) {
     return { success: false, message: '缺少公告ID' }
   }
 
-  await db.collection('announcements').doc(announcementId).update({
+  await db.collection('announcement').doc(announcementId).update({
     data: { active: false }
   })
 

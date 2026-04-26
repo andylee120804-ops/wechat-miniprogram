@@ -8,6 +8,7 @@ const db = require('../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     id: '',
     reservation: null,
     loading: true,
@@ -17,7 +18,7 @@ Page({
   onLoad(options) {
     const app = getApp()
     const theme = app.getThemePageData()
-    this.setData({ theme, id: options.id })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, id: options.id })
     this.loadData()
   },
 
@@ -45,8 +46,12 @@ Page({
     }
   },
 
+  onBack() {
+    wx.navigateBack()
+  },
+
   onEdit() {
-    if (!hasPermission('reservation', 'update')) {
+    if (!hasPermission('reservation', 'edit')) {
       wx.showToast({ title: '无权限操作', icon: 'none' })
       return
     }
@@ -56,7 +61,7 @@ Page({
   },
 
   onCancel() {
-    if (!hasPermission('reservation', 'update')) {
+    if (!hasPermission('reservation', 'edit')) {
       wx.showToast({ title: '无权限操作', icon: 'none' })
       return
     }

@@ -8,10 +8,12 @@ const db = require('../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     isEdit: false,
     id: '',
     type: 'dining',
     amount: '',
+    date: '',
     noReservation: false,
     reservationId: '',
     selectedReservation: null,
@@ -30,7 +32,8 @@ Page({
 
   onLoad(options) {
     const theme = app.getThemePageData()
-    this.setData({ theme })
+    const today = formatDate(new Date())
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, date: today })
     if (options.id) {
       this.setData({ isEdit: true, id: options.id })
       this.loadExisting()
@@ -40,12 +43,13 @@ Page({
 
   async loadExisting() {
     try {
-      const db = wx.cloud.database()
-      const res = await db.collection(COLLECTIONS.INCOME).doc(this.data.id).get()
+      const dbInst = wx.cloud.database()
+      const res = await dbInst.collection(COLLECTIONS.INCOME).doc(this.data.id).get()
       const d = res.data
       this.setData({
         type: d.type || 'dining',
         amount: String(d.amount || ''),
+        date: d.date || formatDate(new Date()),
         noReservation: !d.reservationId,
         reservationId: d.reservationId || '',
         remark: d.remark || ''
@@ -57,23 +61,39 @@ Page({
 
   async loadRecentReservations() {
     try {
-      const db = wx.cloud.database()
-      const today = formatDate(new Date())
-      const threeDaysAgo = formatDate(new Date(Date.now() - 3 * 86400000))
-      const fourDaysLater = formatDate(new Date(Date.now() + 4 * 86400000))
-      const res = await db.collection(COLLECTIONS.RESERVATION).where({
-        date: db.command.gte(threeDaysAgo).and(db.command.lte(fourDaysLater)),
-        status: db.command.in(['reserved', 'confirmed']),
-        hasIncome: db.command.neq(true)
-      }).get()
-      this.setData({ recentReservations: res.data })
+      var that = this
+      var today = formatDate(new Date())
+      var sevenDaysAgo = formatDate(new Date(Date.now() - 7 * 86400000))
+      var sevenDaysLater = formatDate(new Date(Date.now() + 7 * 86400000))
+
+      var results = await db.queryAll(COLLECTIONS.RESERVATION, {
+        date: db.getDb().command.gte(sevenDaysAgo).and(db.getDb().command.lte(sevenDaysLater)),
+        status: db.getDb().command.in(['reserved', 'confirmed'])
+      })
+
+      // Filter out reservations already linked to income (hasIncome === true)
+      var allReservations = results.data || []
+      var available = allReservations.filter(function(r) { return r.hasIncome !== true })
+
+      // Sort by date descending
+      available.sort(function(a, b) { return (b.date || '').localeCompare(a.date || '') })
+
+      that.setData({ recentReservations: available })
     } catch (err) {
       console.error('加载最近预约失败:', err)
     }
   },
 
+  onBack() {
+    wx.navigateBack()
+  },
+
   selectType(e) {
     this.setData({ type: e.currentTarget.dataset.value })
+  },
+
+  onDateChange(e) {
+    this.setData({ date: e.detail.value })
   },
 
   toggleNoReservation() {
@@ -99,7 +119,7 @@ Page({
   },
 
   async onSubmit() {
-    const { type, amount, noReservation, reservationId, remark } = this.data
+    const { type, amount, date, noReservation, reservationId, remark } = this.data
     if (!amount || parseFloat(amount) <= 0) {
       wx.showToast({ title: '请输入有效金额', icon: 'none' })
       return
@@ -107,14 +127,13 @@ Page({
 
     this.setData({ submitting: true })
     try {
-      const db = wx.cloud.database()
+      const dbInst = wx.cloud.database()
       const userInfo = app.globalData.userInfo
-      const today = formatDate(new Date())
 
       const data = {
         type,
         amount: parseFloat(amount),
-        date: today,
+        date: date,
         source: this.data.selectedReservation ? this.data.selectedReservation.customerName : (noReservation ? '无预约' : ''),
         reservationId: noReservation ? '' : reservationId,
         remark,
@@ -132,13 +151,13 @@ Page({
 
       if (!this.data.isEdit) {
         data.createdAt = new Date()
-        await db.collection(COLLECTIONS.INCOME).add({ data })
+        await dbInst.collection(COLLECTIONS.INCOME).add({ data })
         if (reservationId) {
-          await db.collection(COLLECTIONS.RESERVATION).doc(reservationId).update({ data: { hasIncome: true } })
+          await dbInst.collection(COLLECTIONS.RESERVATION).doc(reservationId).update({ data: { hasIncome: true } })
         }
         log('INCOME_CREATE', { type, amount: data.amount, source: data.source })
       } else {
-        await db.collection(COLLECTIONS.INCOME).doc(this.data.id).update({ data })
+        await dbInst.collection(COLLECTIONS.INCOME).doc(this.data.id).update({ data })
         log('INCOME_UPDATE', { type, amount: data.amount })
       }
 

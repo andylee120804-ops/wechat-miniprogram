@@ -1,5 +1,15 @@
 <view class="page" style="background: {{theme.surfaceColor || '#1A1A2E'}}; min-height: 100vh;">
-  <scroll-view scroll-y class="form-scroll" enhanced show-scrollbar="{{false}}">
+  <!-- Custom Navigation Bar -->
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor || '#1A1A2E'}}; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-bar-content">
+      <view class="nav-back" bindtap="onBack">
+        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
+      </view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{isEdit ? '编辑预约' : '新增预约'}}</text>
+      <view class="nav-action"></view>
+    </view>
+  </view>
+  <scroll-view scroll-y class="form-scroll" enhanced show-scrollbar="{{false}}" style="padding-top: {{statusBarHeight + 44}}px;">
     <!-- Section 1: Date & Time -->
     <theme-card theme="{{theme}}">
       <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">日期与时间</view>

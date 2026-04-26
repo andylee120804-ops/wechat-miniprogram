@@ -8,7 +8,10 @@ const db = require('../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     loading: true,
+    selectedDate: '',
+    isToday: true,
     hasClockedIn: false,
     hasClockedOut: false,
     clockInTime: '',
@@ -17,17 +20,36 @@ Page({
     clockOutTimeStr: '',
     location: '',
     locationText: '',
-    monthlyRecords: []
+    monthlyRecords: [],
+    // Makeup clock form
+    makeupClockInTime: '',
+    makeupClockOutTime: '',
+    makeupReason: '',
+    makeupCanSubmit: false
+  },
+
+  onLoad() {
+    const today = formatDate(new Date())
+    this.setData({ selectedDate: today, maxDate: today, isToday: true })
   },
 
   onShow() {
     const theme = app.getThemePageData()
-    this.setData({ theme })
-    this.checkTodayStatus()
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
+    this.checkStatusByDate(this.data.selectedDate)
     this.loadMonthlyRecords()
   },
 
-  async checkTodayStatus() {
+  onDateChange(e) {
+    const date = e.detail.value
+    const today = formatDate(new Date())
+    const isToday = date === today
+    this.setData({ selectedDate: date, isToday }, () => {
+      this.checkStatusByDate(date)
+    })
+  },
+
+  async checkStatusByDate(dateStr) {
     try {
       const userInfo = app.globalData.userInfo
       if (!userInfo) {
@@ -35,13 +57,11 @@ Page({
         return
       }
 
-      const now = new Date()
-      const todayStr = formatDate(now)
       const dbInstance = db.getDb()
       const _ = dbInstance.command
 
-      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0)
-      const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
+      const dayStart = new Date(dateStr + 'T00:00:00')
+      const dayEnd = new Date(dateStr + 'T23:59:59')
 
       const res = await db.queryAll(COLLECTIONS.CLOCKIN, {
         staffId: userInfo._id,
@@ -50,20 +70,20 @@ Page({
 
       const records = res.data || []
       if (records.length > 0) {
-        const today = records[0]
-        const clockInTime = today.clockInTime ? new Date(today.clockInTime) : null
-        const clockOutTime = today.clockOutTime ? new Date(today.clockOutTime) : null
+        const day = records[0]
+        const clockInTime = day.clockInTime ? new Date(day.clockInTime) : null
+        const clockOutTime = day.clockOutTime ? new Date(day.clockOutTime) : null
 
         this.setData({
-          hasClockedIn: !!today.clockInTime,
-          hasClockedOut: !!today.clockOutTime,
-          clockInTime: today.clockInTime || '',
-          clockOutTime: today.clockOutTime || '',
+          hasClockedIn: !!day.clockInTime,
+          hasClockedOut: !!day.clockOutTime,
+          clockInTime: day.clockInTime || '',
+          clockOutTime: day.clockOutTime || '',
           clockInTimeStr: clockInTime ? formatTime(clockInTime) : '',
           clockOutTimeStr: clockOutTime ? formatTime(clockOutTime) : '',
-          location: today.clockInLocation || '',
-          locationText: today.clockInLocationText || '',
-          todayRecordId: today._id,
+          location: day.clockInLocation || '',
+          locationText: day.clockInLocationText || '',
+          recordId: day._id,
           loading: false
         })
       } else {
@@ -76,7 +96,7 @@ Page({
           clockOutTimeStr: '',
           location: '',
           locationText: '',
-          todayRecordId: '',
+          recordId: '',
           loading: false
         })
       }
@@ -112,7 +132,8 @@ Page({
           clockInTimeStr: clockIn ? formatTime(clockIn) : '--',
           clockOutTimeStr: clockOut ? formatTime(clockOut) : '--',
           duration: calcWorkDuration(clockIn, clockOut),
-          isLate: isLate(clockIn)
+          isLate: isLate(clockIn),
+          isMakeUp: !!(r.isMakeUp)
         }
       })
 
@@ -120,6 +141,10 @@ Page({
     } catch (err) {
       handleCloudError(err, '加载月度记录')
     }
+  },
+
+  onBack() {
+    wx.navigateBack({ delta: 1 })
   },
 
   onClockTap() {
@@ -130,41 +155,93 @@ Page({
     }
   },
 
+  async onMakeUpClock() {
+    const { selectedDate } = this.data
+    wx.showModal({
+      title: '确认补打卡',
+      content: `确定要为 ${selectedDate} 提交补打卡申请吗？`,
+      confirmText: '确认',
+      cancelText: '取消',
+      success: async (res) => {
+        if (res.confirm) {
+          await this.doClockIn(true)
+        }
+      }
+    })
+  },
+
+  onMakeUpClockInTimeChange(e) {
+    const time = e.detail.value
+    this.setData({ makeupClockInTime: time }, () => this.updateMakeupCanSubmit())
+  },
+
+  onMakeUpClockOutTimeChange(e) {
+    const time = e.detail.value
+    this.setData({ makeupClockOutTime: time }, () => this.updateMakeupCanSubmit())
+  },
+
+  onMakeupReasonInput(e) {
+    const reason = e.detail.value
+    this.setData({ makeupReason: reason }, () => this.updateMakeupCanSubmit())
+  },
+
+  updateMakeupCanSubmit() {
+    const { makeupClockInTime, makeupClockOutTime, makeupReason } = this.data
+    const canSubmit = !!(makeupClockInTime && makeupClockOutTime && makeupReason && makeupReason.trim().length > 0)
+    this.setData({ makeupCanSubmit: canSubmit })
+  },
+
+  onMakeupSubmit() {
+    const { makeupClockInTime, makeupClockOutTime, makeupReason, selectedDate } = this.data
+    if (!makeupClockInTime || !makeupClockOutTime || !makeupReason || !makeupReason.trim()) {
+      wx.showToast({ title: '请填写完整信息', icon: 'none' })
+      return
+    }
+    this.doMakeupClock()
+  },
+
   async onClockIn() {
-    if (this.data.hasClockedIn) {
-      wx.showToast({ title: '今日已打卡', icon: 'none' })
+    await this.doClockIn(false)
+  },
+
+  async doClockIn(isMakeUp) {
+    const { hasClockedIn, selectedDate } = this.data
+    if (hasClockedIn && !isMakeUp) {
+      wx.showToast({ title: '当日已打卡', icon: 'none' })
       return
     }
 
     try {
+      wx.showLoading({ title: '获取位置中...' })
+      const locationData = await this.askLocation()
       wx.showLoading({ title: '打卡中...' })
-      const locationData = await this.getLocation()
       const userInfo = app.globalData.userInfo
-      const now = new Date()
+      const clockTime = new Date()
 
-      const res = await db.addDoc('clockin', {
+      const res = await db.addDoc(COLLECTIONS.CLOCKIN, {
         staffId: userInfo._id,
         staffName: userInfo.name || '',
-        date: now,
-        clockInTime: now,
+        date: new Date(selectedDate + 'T12:00:00'),
+        clockInTime: clockTime,
         clockInLocation: locationData.location,
-        clockInLocationText: locationData.locationText
+        clockInLocationText: locationData.locationText,
+        isMakeUp: isMakeUp
       })
 
-      log(LOG_TYPES.ATTENDANCE_CLOCK_IN, userInfo.name + ' 上班打卡')
+      log(LOG_TYPES.ATTENDANCE_CLOCK_IN, userInfo.name + ' ' + (isMakeUp ? '补打卡' : '上班打卡') + ' ' + selectedDate)
 
       this.setData({
         hasClockedIn: true,
-        clockInTime: now,
-        clockInTimeStr: formatTime(now),
+        clockInTime: clockTime,
+        clockInTimeStr: formatTime(clockTime),
         location: locationData.location,
         locationText: locationData.locationText,
-        todayRecordId: res._id
+        recordId: res._id
       })
 
       wx.vibrateShort({ type: 'medium' })
       wx.hideLoading()
-      wx.showToast({ title: '上班打卡成功', icon: 'success' })
+      wx.showToast({ title: isMakeUp ? '补打卡申请已提交' : '上班打卡成功', icon: 'success' })
       this.loadMonthlyRecords()
     } catch (err) {
       wx.hideLoading()
@@ -172,35 +249,85 @@ Page({
     }
   },
 
+  async doMakeupClock() {
+    const { makeupClockInTime, makeupClockOutTime, makeupReason, selectedDate } = this.data
+    try {
+      wx.showLoading({ title: '提交中...' })
+      const userInfo = app.globalData.userInfo
+
+      // Parse selected times
+      const [inH, inM] = (makeupClockInTime || '09:00').split(':')
+      const [outH, outM] = (makeupClockOutTime || '18:00').split(':')
+      const clockInDate = new Date(selectedDate + 'T' + makeupClockInTime + ':00')
+      const clockOutDate = new Date(selectedDate + 'T' + makeupClockOutTime + ':00')
+
+      const res = await db.addDoc(COLLECTIONS.CLOCKIN, {
+        staffId: userInfo._id,
+        staffName: userInfo.name || '',
+        date: new Date(selectedDate + 'T12:00:00'),
+        clockInTime: clockInDate,
+        clockOutTime: clockOutDate,
+        clockInLocation: '',
+        clockInLocationText: '补打卡（' + makeupReason + '）',
+        clockOutLocation: '',
+        clockOutLocationText: '补打卡（下班）',
+        isMakeUp: true,
+        makeupReason: makeupReason.trim()
+      })
+
+      log(LOG_TYPES.ATTENDANCE_CLOCK_IN, userInfo.name + ' 补打卡 ' + selectedDate + ' ' + makeupClockInTime + '-' + makeupClockOutTime)
+
+      wx.vibrateShort({ type: 'medium' })
+      wx.hideLoading()
+      wx.showToast({ title: '补打卡已提交', icon: 'success' })
+
+      // Reset form
+      this.setData({
+        makeupClockInTime: '',
+        makeupClockOutTime: '',
+        makeupReason: '',
+        makeupCanSubmit: false
+      })
+
+      this.checkStatusByDate(selectedDate)
+      this.loadMonthlyRecords()
+    } catch (err) {
+      wx.hideLoading()
+      handleCloudError(err, '补打卡')
+    }
+  },
+
   async onClockOut() {
-    if (!this.data.hasClockedIn) {
-      wx.showToast({ title: '请先上班打卡', icon: 'none' })
+    const { hasClockedIn, hasClockedOut, recordId } = this.data
+    if (!hasClockedIn) {
+      wx.showToast({ title: '当日未上班打卡', icon: 'none' })
       return
     }
 
-    if (this.data.hasClockedOut) {
-      wx.showToast({ title: '今日已下班打卡', icon: 'none' })
+    if (hasClockedOut) {
+      wx.showToast({ title: '当日已下班打卡', icon: 'none' })
       return
     }
 
     try {
+      wx.showLoading({ title: '获取位置中...' })
+      const locationData = await this.askLocation()
       wx.showLoading({ title: '打卡中...' })
-      const locationData = await this.getLocation()
       const userInfo = app.globalData.userInfo
-      const now = new Date()
+      const clockTime = new Date()
 
-      await db.updateDoc('clockin', this.data.todayRecordId, {
-        clockOutTime: now,
+      await db.updateDoc(COLLECTIONS.CLOCKIN, recordId, {
+        clockOutTime: clockTime,
         clockOutLocation: locationData.location,
         clockOutLocationText: locationData.locationText
       })
 
-      log(LOG_TYPES.ATTENDANCE_CLOCK_OUT, userInfo.name + ' 下班打卡')
+      log(LOG_TYPES.ATTENDANCE_CLOCK_OUT, userInfo.name + ' 下班打卡 ' + this.data.selectedDate)
 
       this.setData({
         hasClockedOut: true,
-        clockOutTime: now,
-        clockOutTimeStr: formatTime(now)
+        clockOutTime: clockTime,
+        clockOutTimeStr: formatTime(clockTime)
       })
 
       wx.vibrateShort({ type: 'medium' })
@@ -213,22 +340,55 @@ Page({
     }
   },
 
-  getLocation() {
-    return new Promise(function(resolve, reject) {
-      wx.getLocation({
-        type: 'gcj02',
+  askLocation() {
+    return new Promise(function(resolve) {
+      wx.getSetting({
         success: function(res) {
-          const location = res.latitude + ',' + res.longitude
-          // Reverse geocode using QQ Map SDK or just show coordinates
-          const locationText = res.latitude.toFixed(4) + ', ' + res.longitude.toFixed(4)
-          resolve({ location: location, locationText: locationText })
+          var authSetting = res.authSetting
+          if (!authSetting['scope.userLocation']) {
+            wx.authorize({
+              scope: 'scope.userLocation',
+              success: function() {
+                getLocationOnce(resolve)
+              },
+              fail: function() {
+                wx.showModal({
+                  title: '位置权限',
+                  content: '打卡将记录位置信息，请在设置中开启位置权限',
+                  confirmText: '手动打卡',
+                  cancelText: '取消',
+                  success: function(modalRes) {
+                    if (modalRes.confirm) {
+                      resolve({ location: '', locationText: '手动打卡（位置未授权）' })
+                    } else {
+                      resolve({ location: '', locationText: '已取消' })
+                    }
+                  }
+                })
+              }
+            })
+          } else {
+            getLocationOnce(resolve)
+          }
         },
-        fail: function(err) {
-          // If location fails, still allow clock-in with empty location
-          console.warn('[ClockIn] Location failed:', err)
-          resolve({ location: '', locationText: '无法获取位置' })
+        fail: function() {
+          getLocationOnce(resolve)
         }
       })
+
+      function getLocationOnce(resolve) {
+        wx.getLocation({
+          type: 'gcj02',
+          success: function(res) {
+            var location = res.latitude + ',' + res.longitude
+            var locationText = res.latitude.toFixed(4) + '°, ' + res.longitude.toFixed(4) + '°'
+            resolve({ location: location, locationText: locationText })
+          },
+          fail: function() {
+            resolve({ location: '', locationText: '定位失败（手动打卡）' })
+          }
+        })
+      }
     })
   }
 })

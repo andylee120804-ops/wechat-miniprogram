@@ -2,26 +2,34 @@ const app = getApp()
 const { formatDateTime } = require('../../utils/helpers')
 const { log, LOG_TYPES } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
+const { hasPermission } = require('../../utils/permission')
 
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     loading: true,
     announcements: [],
-    isAdmin: false,
+    canAddAnnouncement: false,
+    canDeleteAnnouncement: false,
     showCreateModal: false,
     createTitle: '',
     createContent: '',
     createPriority: 'normal',
+    createNeedsConfirm: false,
     expandedId: ''
   },
 
   onShow() {
     const theme = app.getThemePageData()
-    const userInfo = app.globalData.userInfo
-    const isAdmin = userInfo && (userInfo.role === 'boss' || userInfo.role === 'admin')
-    this.setData({ theme, isAdmin })
+    const canAddAnnouncement = hasPermission('announcement', 'add')
+    const canDeleteAnnouncement = hasPermission('announcement', 'delete')
+    this.setData({ theme, canAddAnnouncement, canDeleteAnnouncement, statusBarHeight: app.globalData.statusBarHeight || 44 })
     this.loadData()
+  },
+
+  onBack: function() {
+    wx.navigateBack()
   },
 
   async loadData() {
@@ -41,14 +49,15 @@ Page({
 
   onAnnouncementTap(e) {
     const id = e.currentTarget.dataset.id
-    const userInfo = app.globalData.userInfo
-    // Mark as read
-    wx.cloud.callFunction({ name: 'sendMessage', data: { action: 'markRead', announcementId: id, staffId: userInfo._id } }).catch(() => {})
-    this.setData({ expandedId: this.data.expandedId === id ? '' : id })
+    if (id) {
+      wx.navigateTo({ url: `/pages/announcement-detail/index?id=${id}` })
+    } else {
+      wx.showToast({ title: '公告ID无效', icon: 'none' })
+    }
   },
 
   onAddAnnouncement() {
-    this.setData({ showCreateModal: true, createTitle: '', createContent: '', createPriority: 'normal' })
+    this.setData({ showCreateModal: true, createTitle: '', createContent: '', createPriority: 'normal', createNeedsConfirm: false })
   },
 
   onTitleInput(e) {
@@ -63,8 +72,12 @@ Page({
     this.setData({ createPriority: e.currentTarget.dataset.priority })
   },
 
+  onNeedsConfirmChange(e) {
+    this.setData({ createNeedsConfirm: e.detail.value })
+  },
+
   async onSaveAnnouncement() {
-    const { createTitle, createContent, createPriority } = this.data
+    const { createTitle, createContent, createPriority, createNeedsConfirm } = this.data
     if (!createTitle.trim() || !createContent.trim()) {
       wx.showToast({ title: '请填写标题和内容', icon: 'none' })
       return
@@ -78,6 +91,7 @@ Page({
           title: createTitle.trim(),
           content: createContent.trim(),
           priority: createPriority,
+          needsConfirm: createNeedsConfirm,
           createdBy: userInfo._id,
           createdByName: userInfo.name
         }

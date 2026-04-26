@@ -35,7 +35,7 @@ Page({
   },
 
   onLoad: function(options) {
-    const sysInfo = wx.getSystemInfoSync()
+    const sysInfo = wx.getWindowInfo()
     this.setData({ statusBarHeight: sysInfo.statusBarHeight || 44 })
     this.setData({ theme: app.getThemePageData() })
 
@@ -139,7 +139,7 @@ Page({
     wx.showLoading({ title: that.data.isEdit ? '保存中...' : '添加中...' })
 
     if (that.data.isEdit) {
-      if (!checkPermission('purchase', 'update')) {
+      if (!checkPermission('purchase', 'edit')) {
         that.setData({ submitting: false })
         wx.hideLoading()
         return
@@ -155,7 +155,7 @@ Page({
         handleCloudError(err, '保存采购记录')
       })
     } else {
-      if (!checkPermission('purchase', 'create')) {
+      if (!checkPermission('purchase', 'add')) {
         that.setData({ submitting: false })
         wx.hideLoading()
         return

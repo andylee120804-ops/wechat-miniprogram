@@ -1,4 +1,14 @@
-<view class="detail-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx;">
+<view class="detail-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx; padding-top: {{statusBarHeight + 44}}px;">
+  <!-- Custom Navigation Bar -->
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor || '#1A1A2E'}}; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-bar-content">
+      <view class="nav-back" bindtap="onBack">
+        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
+      </view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">收入详情</text>
+      <view class="nav-action"></view>
+    </view>
+  </view>
   <block wx:if="{{!loading && income}}">
     <!-- Amount Hero -->
     <view class="amount-hero" style="background: linear-gradient(135deg, rgba(74,222,128,0.15), rgba(74,222,128,0.03)); padding: 48rpx 32rpx;">
@@ -47,8 +57,8 @@
 
     <!-- Action Bar -->
     <view class="action-bar safe-bottom">
-      <theme-btn theme="{{theme}}" type="outline" text="编辑" bind:tap="onEdit" style="flex: 1; margin-right: 16rpx;" />
-      <theme-btn theme="{{theme}}" type="danger" text="删除" bind:tap="onDelete" style="flex: 1;" />
+      <theme-btn theme="{{theme}}" type="outline" text="编辑" bind:tap="onEdit" />
+      <theme-btn theme="{{theme}}" type="danger" text="删除" bind:tap="onDelete" />
     </view>
 
     <!-- Delete Modal -->

@@ -62,7 +62,7 @@ function _getThemeColors(themeId) {
 function getRingChartConfig(theme, series, opts) {
   opts = opts || {}
   const themeId = theme || getCurrentThemeId()
-  const palette = _getPalette(themeId)
+  const palette = opts.colors || _getPalette(themeId)
   const tc = _getThemeColors(themeId)
   const width = opts.width || 375
   const height = opts.height || 280
@@ -83,9 +83,9 @@ function getRingChartConfig(theme, series, opts) {
     subtitle: opts.subtitle || '',
     dataLabel: opts.dataLabel !== false,
     legend: {
-      show: opts.showLegend !== false,
-      position: opts.legendPosition || 'bottom',
-      float: opts.legendFloat || 'center',
+      show: false,
+      position: 'bottom',
+      float: 'center',
       padding: 5,
       margin: 0,
       fontSize: 12,

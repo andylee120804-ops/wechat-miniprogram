@@ -1,4 +1,5 @@
 {
+  "navigationStyle": "custom",
   "usingComponents": {
     "theme-card": "/components/theme-card/index",
     "theme-badge": "/components/theme-badge/index",

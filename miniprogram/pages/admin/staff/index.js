@@ -5,19 +5,23 @@ const { COLLECTIONS } = require('../../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     loading: true,
     staffList: []
   },
 
-  onShow() {
-    if (!app.hasPermission('staff', 'view')) {
-      wx.showToast({ title: '无权限', icon: 'none' })
-      wx.navigateBack()
-      return
-    }
+  onLoad() {
     const theme = app.getThemePageData()
-    this.setData({ theme })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
     this.loadData()
+  },
+
+  onShow() {
+    // No permission check here - menu already validated permission before navigation
+  },
+
+  onBack: function() {
+    wx.navigateBack()
   },
 
   async loadData() {

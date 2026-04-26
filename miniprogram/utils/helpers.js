@@ -55,7 +55,7 @@ function getWeekRange(offset) {
   sunday.setDate(monday.getDate() + 6)
   sunday.setHours(23, 59, 59, 999)
 
-  const label = offset === 0 ? '本周' : offset === -1 ? '上周' : offset === 1 ? '下周' : `${offset > 0 ? offset + '周后' : Math.abs(offset) + '周前'}`
+  const label = offset === 0 ? '本周' : offset === -1 ? '上周' : `${monday.getMonth() + 1}/${monday.getDate()}-${sunday.getMonth() + 1}/${sunday.getDate()}`
 
   return {
     start: formatDate(monday),
@@ -81,7 +81,7 @@ function getMonthRange(offset) {
   end.setHours(23, 59, 59, 999)
 
   const monthStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`
-  const label = offset === 0 ? '本月' : offset === -1 ? '上月' : offset === 1 ? '下月' : monthStr
+  const label = `${targetDate.getFullYear()}年${targetDate.getMonth() + 1}月`
 
   return {
     start: formatDate(start),
@@ -111,7 +111,7 @@ function getQuarterRange(offset) {
   end.setHours(23, 59, 59, 999)
 
   const quarterNum = actualQuarter + 1
-  const label = offset === 0 ? '本季度' : offset === -1 ? '上季度' : `${actualYear}年Q${quarterNum}`
+  const label = `${actualYear}年Q${quarterNum}`
 
   return {
     start: formatDate(start),
@@ -134,7 +134,7 @@ function getYearRange(offset) {
   const end = new Date(year, 11, 31)
   end.setHours(23, 59, 59, 999)
 
-  const label = offset === 0 ? '今年' : offset === -1 ? '去年' : `${year}年`
+  const label = `${year}年`
 
   return {
     start: formatDate(start),

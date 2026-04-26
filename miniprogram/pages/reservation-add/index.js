@@ -9,6 +9,7 @@ const db = require('../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     isEdit: false,
     id: '',
     date: '',
@@ -35,7 +36,7 @@ Page({
     const app = getApp()
     const theme = app.getThemePageData()
     const today = formatDate(new Date())
-    this.setData({ theme, date: today })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, date: today })
 
     if (options.id) {
       this.setData({ isEdit: true, id: options.id })
@@ -43,6 +44,10 @@ Page({
     } else if (options.date) {
       this.setData({ date: options.date })
     }
+  },
+
+  onBack() {
+    wx.navigateBack()
   },
 
   async loadReservation(id) {
@@ -168,11 +173,11 @@ Page({
       return
     }
 
-    if (this.data.isEdit && !hasPermission('reservation', 'update')) {
+    if (this.data.isEdit && !hasPermission('reservation', 'edit')) {
       wx.showToast({ title: '无权限修改预约', icon: 'none' })
       return
     }
-    if (!this.data.isEdit && !hasPermission('reservation', 'create')) {
+    if (!this.data.isEdit && !hasPermission('reservation', 'add')) {
       wx.showToast({ title: '无权限创建预约', icon: 'none' })
       return
     }

@@ -1,7 +1,17 @@
 <view class="detail-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx;">
+  <!-- Custom Navigation Bar -->
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor || '#1A1A2E'}}; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-bar-content">
+      <view class="nav-back" bindtap="onBack">
+        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
+      </view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">预约详情</text>
+      <view class="nav-action"></view>
+    </view>
+  </view>
   <block wx:if="{{!loading && reservation}}">
     <!-- Status Hero - grey for cancelled -->
-    <view class="status-hero" style="background: {{reservation.status === 'cancelled' ? 'linear-gradient(135deg, rgba(150,150,170,0.15), rgba(100,100,110,0.05))' : 'linear-gradient(135deg, rgba(201,169,110,0.2), rgba(201,169,110,0.05))'}};">
+    <view class="status-hero" style="background: {{reservation.status === 'cancelled' ? 'linear-gradient(135deg, rgba(150,150,170,0.15), rgba(100,100,110,0.05))' : 'linear-gradient(135deg, rgba(201,169,110,0.2), rgba(201,169,110,0.05))'}}; padding-top: {{statusBarHeight + 44 + 24}}px;">
       <view class="hero-content">
         <!-- Status indicator - clear display -->
         <view style="display: inline-flex; align-items: center; background: {{reservation.status === 'cancelled' ? 'rgba(248,113,113,0.2)' : 'rgba(74,222,128,0.2)'}}; padding: 8rpx 20rpx; border-radius: 100rpx; margin-bottom: 12rpx;">
@@ -55,8 +65,8 @@
 
     <!-- Action Bar - only for non-cancelled -->
     <view class="action-bar safe-bottom" wx:if="{{reservation.status !== 'cancelled'}}">
-      <theme-btn theme="{{theme}}" type="primary" text="编辑" bind:tap="onEdit" style="flex: 1; margin-right: 12rpx;" />
-      <theme-btn theme="{{theme}}" type="danger" text="取消预约" bind:tap="onCancel" style="flex: 1;" />
+      <theme-btn theme="{{theme}}" type="primary" text="编辑" bind:tap="onEdit" />
+      <theme-btn theme="{{theme}}" type="danger" text="取消预约" bind:tap="onCancel" />
     </view>
 
     <!-- Cancel Modal -->
@@ -67,7 +77,7 @@
     </theme-modal>
   </block>
 
-  <view wx:if="{{loading}}" class="loading-state">
+  <view wx:if="{{loading}}" class="loading-state" style="padding-top: {{statusBarHeight + 44}}px;">
     <text style="color: {{theme.textMuted || '#5C5C72'}};">加载中...</text>
   </view>
 </view>

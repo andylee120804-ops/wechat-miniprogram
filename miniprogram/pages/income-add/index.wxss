@@ -1,3 +1,48 @@
+@import '../../styles/mixins.wxss';
+
+/* Navigation Bar */
+.nav-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.nav-bar-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: 88rpx;
+  padding: 0 24rpx;
+}
+
+.nav-back {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-back-icon {
+  font-size: 44rpx;
+  font-weight: 300;
+}
+
+.nav-title {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.nav-action {
+  min-width: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .income-add-page {
   min-height: 100vh;
 }
@@ -70,6 +115,18 @@
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
   border-top: 1rpx solid rgba(255,255,255,0.06);
   z-index: 100;
+}
+
+.bottom-bar-inner {
   display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.bottom-bar-inner.single-btn {
   justify-content: center;
+}
+
+.bottom-bar-inner.two-btns {
+  justify-content: space-between;
 }

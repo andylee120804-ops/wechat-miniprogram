@@ -3,12 +3,10 @@
   <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
     <view class="nav-bar-content">
       <view class="nav-back" bindtap="onBack">
-        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}};">&#x2039;</text>
+        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
       </view>
-      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">管理仪表盘</text>
-      <view class="nav-action">
-        <text class="nav-action-text" style="color: {{theme.textMuted || '#5C5C72'}};" bindtap="togglePeriodMode">{{periodMode === 'preset' ? '自定义' : '预设'}}</text>
-      </view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}}">经营报表</text>
+      <view class="nav-action"></view>
     </view>
   </view>
 
@@ -16,13 +14,12 @@
 
     <!-- Skeleton Loading -->
     <view wx:if="{{loading}}" class="px-lg mt-md">
-      <skeleton theme="{{theme}}" type="card" count="5" />
+      <skeleton theme="{{theme}}" type="card" count="3" />
     </view>
 
     <view wx:if="{{!loading}}">
       <!-- Period Selector -->
       <view class="period-section px-lg pt-md">
-        <!-- Period Type Tabs -->
         <view class="period-tabs" style="background: {{theme.glassBg || 'rgba(255,255,255,0.06)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 16rpx;">
           <view class="period-tab {{periodType === 'week' ? 'period-tab-active' : ''}}"
             data-type="week" bindtap="switchPeriodType"
@@ -46,189 +43,133 @@
           </view>
         </view>
 
+        <!-- Quick Period Chips -->
+        <view class="quick-chips mt-sm">
+          <view class="quick-chip {{periodType === 'month' ? (periodOffset === 0 ? 'quick-chip-active' : '') : ''}}" bindtap="quickSelect" data-offset="0" data-type="month"
+            style="{{periodType === 'month' && periodOffset === 0 ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+            <text>本月</text>
+          </view>
+          <view class="quick-chip {{periodType === 'month' ? (periodOffset === -1 ? 'quick-chip-active' : '') : ''}}" bindtap="quickSelect" data-offset="-1" data-type="month"
+            style="{{periodType === 'month' && periodOffset === -1 ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+            <text>上月</text>
+          </view>
+          <view class="quick-chip {{periodType === 'quarter' ? 'quick-chip-active' : ''}}" bindtap="quickSelect" data-offset="0" data-type="quarter"
+            style="{{periodType === 'quarter' && periodOffset === 0 ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+            <text>本季</text>
+          </view>
+          <view class="quick-chip {{periodType === 'quarter' ? (periodOffset === -1 ? 'quick-chip-active' : '') : ''}}" bindtap="quickSelect" data-offset="-1" data-type="quarter"
+            style="{{periodType === 'quarter' && periodOffset === -1 ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+            <text>上季</text>
+          </view>
+          <view class="quick-chip {{periodType === 'year' ? 'quick-chip-active' : ''}}" bindtap="quickSelect" data-offset="0" data-type="year"
+            style="{{periodType === 'year' && periodOffset === 0 ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+            <text>本年</text>
+          </view>
+        </view>
+
         <!-- Period Navigation -->
-        <view class="period-nav flex-row flex-between mt-sm" wx:if="{{periodMode === 'preset'}}">
+        <view class="period-nav flex-row flex-between flex-center-y mt-sm">
           <view class="period-arrow press-scale" bindtap="prevPeriod"
-            style="color: {{theme.textSecondary || '#9A9AB0'}}; width: 64rpx; height: 64rpx; display: flex; align-items: center; justify-content: center; font-size: 36rpx; font-weight: 300;">
-            <text>&#x2039;</text>
+            style="color: {{theme.textSecondary || '#9A9AB0'}}; width: 64rpx; height: 64rpx; display: flex; align-items: center; justify-content: center; font-size: 40rpx;">
+            <text decode="true">&lt;</text>
           </view>
-          <text class="period-label text-body font-mono" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{periodLabel}}</text>
+          <view class="period-label-wrap press-scale" bindtap="showPeriodPicker">
+            <view class="flex-col flex-center">
+              <text class="period-label text-body" style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 32rpx; font-weight: 600;">{{periodLabel}}</text>
+              <text class="period-range" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; margin-top: 2rpx;">{{startDate}} ~ {{endDate}}</text>
+            </view>
+            <text class="period-dropdown-icon" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; margin-left: 8rpx;">&#9660;</text>
+          </view>
           <view class="period-arrow press-scale {{periodOffset >= 0 ? 'period-arrow-disabled' : ''}}" bindtap="nextPeriod"
-            style="color: {{periodOffset >= 0 ? theme.textMuted || '#5C5C72' : theme.textSecondary || '#9A9AB0'}}; width: 64rpx; height: 64rpx; display: flex; align-items: center; justify-content: center; font-size: 36rpx; font-weight: 300;">
-            <text>&#x203A;</text>
-          </view>
-        </view>
-
-        <!-- Custom Date Range -->
-        <view class="custom-range flex-row flex-between mt-sm" wx:if="{{periodMode === 'custom'}}">
-          <picker mode="date" value="{{customStart}}" bindchange="onCustomStartChange">
-            <view class="custom-date-btn" style="background: {{theme.elevatedColor || '#252540'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; color: {{customStart ? theme.textPrimary || '#F5F0E8' : theme.textMuted || '#5C5C72'}};">
-              <text>{{customStart || '开始日期'}}</text>
-            </view>
-          </picker>
-          <text class="custom-range-sep" style="color: {{theme.textMuted || '#5C5C72'}};">至</text>
-          <picker mode="date" value="{{customEnd}}" bindchange="onCustomEndChange">
-            <view class="custom-date-btn" style="background: {{theme.elevatedColor || '#252540'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; color: {{customEnd ? theme.textPrimary || '#F5F0E8' : theme.textMuted || '#5C5C72'}};">
-              <text>{{customEnd || '结束日期'}}</text>
-            </view>
-          </picker>
-          <view class="custom-query-btn press-scale" bindtap="onCustomQuery"
-            style="background: {{theme.gradientButton || 'linear-gradient(135deg, #C9A96E 0%, #E8D5A8 100%)'}}; color: {{theme.textInverse || '#0F0F1A'}};">
-            <text>查询</text>
+            style="color: {{periodOffset >= 0 ? theme.textMuted || '#5C5C72' : theme.textSecondary || '#9A9AB0'}}; width: 64rpx; height: 64rpx; display: flex; align-items: center; justify-content: center; font-size: 40rpx;">
+            <text decode="true">&gt;</text>
           </view>
         </view>
       </view>
 
-      <!-- KPI Cards Row -->
-      <view class="kpi-row px-lg mt-lg">
-        <view class="kpi-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
-          <view class="kpi-inner p-lg">
-            <text class="kpi-label text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">总收入</text>
-            <view class="kpi-value-row flex-row flex-between mt-xs">
-              <text class="kpi-amount text-title2 font-mono" style="color: {{theme.amountPositive || '#4ADE80'}};">¥{{totalIncome.toFixed ? totalIncome.toFixed(2) : '0.00'}}</text>
-              <view class="kpi-trend {{incomeChange >= 0 ? 'trend-up' : 'trend-down'}}" style="background: {{incomeChange >= 0 ? theme.amountPositiveBg || 'rgba(74,222,128,0.10)' : theme.amountNegativeBg || 'rgba(248,113,113,0.10)'}};">
-                <text class="trend-arrow" style="color: {{incomeChange >= 0 ? theme.amountPositive || '#4ADE80' : theme.amountNegative || '#F87171'}};">{{incomeChange >= 0 ? '&#x2191;' : '&#x2193;'}}</text>
-                <text class="trend-value text-overline" style="color: {{incomeChange >= 0 ? theme.amountPositive || '#4ADE80' : theme.amountNegative || '#F87171'}};">{{Math.abs(incomeChange)}}%</text>
-              </view>
+      <!-- Period Picker Modal -->
+      <theme-modal theme="{{theme}}" visible="{{showPicker}}" title="选择时段" confirmText="确定" cancelText="取消" bind:confirm="onPickerConfirm" bind:close="onPickerCancel">
+        <view class="picker-content p-lg">
+          <!-- Year selector -->
+          <view class="picker-section">
+            <text class="picker-section-title" style="color: {{theme.textSecondary || '#9A9AB0'}};">年份</text>
+            <view class="picker-chips flex-row flex-wrap">
+              <view class="picker-chip {{pickerYear === item ? 'picker-chip-active' : ''}}" wx:for="{{pickerYears}}" wx:key="*this"
+                data-year="{{item}}" bindtap="onPickerYearSelect"
+                style="{{pickerYear === item ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">{{item}}年</view>
+            </view>
+          </view>
+          <!-- Month selector (only for month/quarter mode) -->
+          <view class="picker-section mt-lg" wx:if="{{periodType === 'month'}}">
+            <text class="picker-section-title" style="color: {{theme.textSecondary || '#9A9AB0'}};">月份</text>
+            <view class="picker-chips flex-row flex-wrap">
+              <view class="picker-chip {{pickerMonth === item ? 'picker-chip-active' : ''}}" wx:for="{{pickerMonths}}" wx:key="*this"
+                data-month="{{item}}" bindtap="onPickerMonthSelect"
+                style="{{pickerMonth === item ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">{{item}}月</view>
+            </view>
+          </view>
+          <!-- Quarter selector (only for quarter mode) -->
+          <view class="picker-section mt-lg" wx:if="{{periodType === 'quarter'}}">
+            <text class="picker-section-title" style="color: {{theme.textSecondary || '#9A9AB0'}};">季度</text>
+            <view class="picker-chips flex-row flex-wrap">
+              <view class="picker-chip {{pickerQuarter === item ? 'picker-chip-active' : ''}}" wx:for="{{pickerQuarters}}" wx:key="*this"
+                data-quarter="{{item}}" bindtap="onPickerQuarterSelect"
+                style="{{pickerQuarter === item ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">Q{{item}}</view>
             </view>
           </view>
         </view>
+      </theme-modal>
 
-        <view class="kpi-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
-          <view class="kpi-inner p-lg">
-            <text class="kpi-label text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">总支出</text>
-            <view class="kpi-value-row flex-row flex-between mt-xs">
-              <text class="kpi-amount text-title2 font-mono" style="color: {{theme.amountNegative || '#F87171'}};">¥{{totalExpense.toFixed ? totalExpense.toFixed(2) : '0.00'}}</text>
-              <view class="kpi-trend {{expenseChange >= 0 ? 'trend-up' : 'trend-down'}}" style="background: {{expenseChange >= 0 ? theme.amountNegativeBg || 'rgba(248,113,113,0.10)' : theme.amountPositiveBg || 'rgba(74,222,128,0.10)'}};">
-                <text class="trend-arrow" style="color: {{expenseChange >= 0 ? theme.amountNegative || '#F87171' : theme.amountPositive || '#4ADE80'}};">{{expenseChange >= 0 ? '&#x2191;' : '&#x2193;'}}</text>
-                <text class="trend-value text-overline" style="color: {{expenseChange >= 0 ? theme.amountNegative || '#F87171' : theme.amountPositive || '#4ADE80'}};">{{Math.abs(expenseChange)}}%</text>
-              </view>
-            </view>
-          </view>
-        </view>
-
-        <view class="kpi-card" style="background: {{profit >= 0 ? theme.gradientProfit || 'linear-gradient(135deg, #2D6A4F 0%, #40916C 100%)' : theme.gradientLoss || 'linear-gradient(135deg, #9B2335 0%, #C1404D 100%)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
-          <view class="kpi-inner p-lg">
-            <text class="kpi-label text-caption" style="color: rgba(255,255,255,0.75);">净利润</text>
-            <view class="kpi-value-row flex-row flex-between mt-xs">
-              <text class="kpi-amount text-title2 font-mono" style="color: #FFFFFF;">¥{{profit.toFixed ? profit.toFixed(2) : '0.00'}}</text>
-              <view class="kpi-trend" style="background: rgba(255,255,255,0.18);">
-                <text class="trend-arrow" style="color: #FFFFFF;">{{profitChange >= 0 ? '&#x2191;' : '&#x2193;'}}</text>
-                <text class="trend-value text-overline" style="color: #FFFFFF;">{{Math.abs(profitChange)}}%</text>
-              </view>
-            </view>
-          </view>
+      <!-- Profit Hero Section -->
+      <view class="profit-hero mx-lg mt-lg">
+        <view class="profit-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">净利润</view>
+        <view class="profit-value" style="color: {{profit >= 0 ? theme.amountPositive || '#4ADE80' : theme.amountNegative || '#F87171'}};">
+          {{profit >= 0 ? '' : '-'}}¥{{profitAbs}}
         </view>
       </view>
 
-      <!-- Chart Section -->
-      <view class="chart-section mx-lg mt-lg" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}}; border-radius: 20rpx; overflow: hidden;">
-        <!-- Chart Tab & Type Toggle -->
-        <view class="chart-header p-lg flex-row flex-between">
-          <view class="chart-tabs flex-row">
-            <view class="chart-tab {{chartTab === 'income' ? 'chart-tab-active' : ''}}" data-tab="income" bindtap="switchChartTab"
-              style="{{chartTab === 'income' ? 'background: ' + (theme.accentColor || '#C9A96E') + '; color: ' + (theme.textInverse || '#0F0F1A') + ';' : 'color: ' + (theme.textSecondary || '#9A9AB0') + ';'}}">
-              <text>收入构成</text>
-            </view>
-            <view class="chart-tab {{chartTab === 'expense' ? 'chart-tab-active' : ''}}" data-tab="expense" bindtap="switchChartTab"
-              style="{{chartTab === 'expense' ? 'background: ' + (theme.accentColor || '#C9A96E') + '; color: ' + (theme.textInverse || '#0F0F1A') + ';' : 'color: ' + (theme.textSecondary || '#9A9AB0') + ';'}}">
-              <text>支出构成</text>
-            </view>
-          </view>
-          <view class="chart-type-toggle flex-row">
-            <view class="chart-type-btn {{chartType === 'ring' ? 'chart-type-active' : ''}}" data-type="ring" bindtap="switchChartType"
-              style="color: {{chartType === 'ring' ? theme.accentColor || '#C9A96E' : theme.textMuted || '#5C5C72'}};">
-              <text>环形</text>
-            </view>
-            <text class="chart-type-sep" style="color: {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">|</text>
-            <view class="chart-type-btn {{chartType === 'bar' ? 'chart-type-active' : ''}}" data-type="bar" bindtap="switchChartType"
-              style="color: {{chartType === 'bar' ? theme.accentColor || '#C9A96E' : theme.textMuted || '#5C5C72'}};">
-              <text>柱状</text>
-            </view>
-          </view>
+      <!-- Income/Expense Cards (clickable to switch chart) -->
+      <view class="summary-row px-lg mt-lg">
+        <view class="summary-card {{chartMode === 'income' ? 'summary-card-active' : ''}}" bindtap="switchToIncome"
+          style="background: {{chartMode === 'income' ? (theme.amountPositiveBg || 'rgba(74,222,128,0.10)') : (theme.cardBg || 'rgba(26,26,46,0.85)')}}; border: 2rpx solid {{chartMode === 'income' ? (theme.amountPositive || '#4ADE80') : (theme.borderColor || 'rgba(255,255,255,0.10)')}}; border-radius: 16rpx;">
+          <text class="summary-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">收入</text>
+          <text class="summary-value" style="color: {{theme.amountPositive || '#4ADE80'}};">¥{{totalIncome}}</text>
+        </view>
+        <view class="summary-card {{chartMode === 'expense' ? 'summary-card-active' : ''}}" bindtap="switchToExpense"
+          style="background: {{chartMode === 'expense' ? (theme.amountNegativeBg || 'rgba(248,113,113,0.10)') : (theme.cardBg || 'rgba(26,26,46,0.85)')}}; border: 2rpx solid {{chartMode === 'expense' ? (theme.amountNegative || '#F87171') : (theme.borderColor || 'rgba(255,255,255,0.10)')}}; border-radius: 16rpx;">
+          <text class="summary-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">支出</text>
+          <text class="summary-value" style="color: {{theme.amountNegative || '#F87171'}};">¥{{totalExpense}}</text>
+        </view>
+      </view>
+
+      <!-- Ring Chart Section -->
+      <view class="chart-section mx-lg mt-lg mb-xl" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx; overflow: hidden;">
+        <!-- Mode Indicator -->
+        <view class="chart-header p-lg flex-row flex-between" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.06)'}};">
+          <text class="chart-mode-text" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{chartMode === 'income' ? '收入构成' : '支出构成'}}</text>
         </view>
 
         <!-- Chart Canvas -->
-        <view class="chart-canvas-wrapper">
-          <ucharts wx:if="{{chartTab === 'income' && incomeChartData}}" chartData="{{incomeChartData}}" canvasId="incomeChart" />
-          <ucharts wx:if="{{chartTab === 'expense' && expenseChartData}}" chartData="{{expenseChartData}}" canvasId="expenseChart" />
+        <view class="chart-wrapper">
+          <ucharts wx:if="{{currentChartData && !showPicker}}" chartData="{{currentChartData}}" canvasId="mainChart" canvasWidth="280" canvasHeight="280" />
+          <!-- Center Overlay for Tap -->
+          <view class="chart-center-overlay">
+            <text class="chart-center-total" style="color: {{theme.textPrimary || '#F5F0E8'}}">{{chartMode === 'income' ? totalIncome : totalExpense}}</text>
+            <text class="chart-center-label" style="color: {{theme.textMuted || '#5C5C72'}};">{{chartMode === 'income' ? '收入' : '支出'}}</text>
+          </view>
         </view>
 
-        <!-- Chart Legend -->
-        <view class="chart-legend px-lg pb-lg" wx:if="{{chartTab === 'income'}}">
-          <view class="legend-item flex-row flex-between" wx:for="{{incomeBreakdown}}" wx:key="name">
-            <view class="legend-left flex-row">
+        <!-- Legend -->
+        <view class="chart-legend px-lg pb-lg">
+          <view class="legend-item flex-row flex-between" wx:for="{{currentBreakdown}}" wx:key="name">
+            <view class="legend-left flex-row flex-center-y">
               <view class="legend-dot" style="background: {{item.color}};"></view>
-              <text class="legend-name text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{item.name}}</text>
+              <text class="legend-name" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{item.name}}</text>
             </view>
             <view class="legend-right flex-row">
-              <text class="legend-percent text-bodySmall font-mono" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.percent}}%</text>
-              <text class="legend-value text-bodySmall font-mono ml-sm" style="color: {{theme.textMuted || '#5C5C72'}};">¥{{item.value.toFixed ? item.value.toFixed(2) : '0.00'}}</text>
+              <text class="legend-percent" style="color: {{theme.textPrimary || '#F5F0E8'}}">{{item.percent}}%</text>
+              <text class="legend-amount" style="color: {{theme.textMuted || '#5C5C72'}};">¥{{item.value}}</text>
             </view>
-          </view>
-        </view>
-
-        <view class="chart-legend px-lg pb-lg" wx:if="{{chartTab === 'expense'}}">
-          <view class="legend-item flex-row flex-between" wx:for="{{expenseBreakdown}}" wx:key="name">
-            <view class="legend-left flex-row">
-              <view class="legend-dot" style="background: {{item.color}};"></view>
-              <text class="legend-name text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{item.name}}</text>
-            </view>
-            <view class="legend-right flex-row">
-              <text class="legend-percent text-bodySmall font-mono" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.percent}}%</text>
-              <text class="legend-value text-bodySmall font-mono ml-sm" style="color: {{theme.textMuted || '#5C5C72'}};">¥{{item.value.toFixed ? item.value.toFixed(2) : '0.00'}}</text>
-            </view>
-          </view>
-        </view>
-      </view>
-
-      <!-- Fixed Expenses Section -->
-      <view class="fixed-section mx-lg mt-lg">
-        <view class="section-header flex-row flex-between mb-md">
-          <text class="section-title text-title3" style="color: {{theme.textPrimary || '#F5F0E8'}};">固定支出</text>
-          <view class="add-btn press-scale" bindtap="onShowFixedExpenseModal"
-            style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}}; width: 48rpx; height: 48rpx; border-radius: 24rpx; display: flex; align-items: center; justify-content: center; font-size: 36rpx; font-weight: 300;">
-            <text>+</text>
-          </view>
-        </view>
-
-        <view wx:if="{{fixedExpenses.length === 0}}" class="empty-fixed text-center py-xl">
-          <text class="text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">暂无固定支出项目</text>
-        </view>
-
-        <view class="fixed-list" wx:if="{{fixedExpenses.length > 0}}">
-          <view class="fixed-item flex-row flex-between" wx:for="{{fixedExpenses}}" wx:key="_id"
-            style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};">
-            <view class="fixed-info p-md flex-1">
-              <text class="fixed-name text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.name}}</text>
-              <text class="fixed-amount text-bodySmall font-mono mt-xs" style="color: {{theme.amountNegative || '#F87171'}};">¥{{item.formattedAmount}}/月</text>
-            </view>
-            <view class="fixed-delete press-scale" data-id="{{item._id}}" data-name="{{item.name}}" bindtap="onFixedExpenseDelete"
-              style="color: {{theme.statusDanger || '#F87171'}}; padding: 24rpx; font-size: 28rpx;">
-              <text>删除</text>
-            </view>
-          </view>
-        </view>
-      </view>
-
-      <!-- Quick Navigation -->
-      <view class="quick-nav mx-lg mt-lg mb-xl">
-        <text class="section-title text-title3 mb-md" style="color: {{theme.textPrimary || '#F5F0E8'}}; display: block;">快捷管理</text>
-        <view class="quick-nav-grid">
-          <view class="quick-nav-pill press-scale" bindtap="onStaffManage"
-            style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};">
-            <text class="quick-nav-icon" style="color: {{theme.accentColor || '#C9A96E'}};">&#x1F464;</text>
-            <text class="quick-nav-text text-bodySmall mt-xs" style="color: {{theme.textPrimary || '#F5F0E8'}};">员工管理</text>
-          </view>
-          <view class="quick-nav-pill press-scale" bindtap="onOperationLogs"
-            style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};">
-            <text class="quick-nav-icon" style="color: {{theme.accentColor || '#C9A96E'}};">&#x1F4CB;</text>
-            <text class="quick-nav-text text-bodySmall mt-xs" style="color: {{theme.textPrimary || '#F5F0E8'}};">操作日志</text>
-          </view>
-          <view class="quick-nav-pill press-scale" bindtap="onAttendance"
-            style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};">
-            <text class="quick-nav-icon" style="color: {{theme.accentColor || '#C9A96E'}};">&#x1F4C5;</text>
-            <text class="quick-nav-text text-bodySmall mt-xs" style="color: {{theme.textPrimary || '#F5F0E8'}};">考勤管理</text>
           </view>
         </view>
       </view>
@@ -237,30 +178,4 @@
     <!-- Bottom Spacer -->
     <view style="height: 60rpx;"></view>
   </view>
-
-  <!-- Fixed Expense Modal -->
-  <theme-modal show="{{showFixedExpenseModal}}" title="添加固定支出" bind:close="onHideFixedExpenseModal" theme="{{theme}}">
-    <view class="modal-form p-lg">
-      <view class="modal-field mb-md">
-        <text class="modal-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">名称</text>
-        <input class="modal-input" placeholder="如: 房租、网费" value="{{fixedExpenseName}}" bindinput="onFixedExpenseNameInput"
-          style="background: {{theme.elevatedColor || '#252540'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; color: {{theme.textPrimary || '#F5F0E8'}}; padding: 20rpx; border-radius: 12rpx; font-size: 28rpx;" />
-      </view>
-      <view class="modal-field mb-lg">
-        <text class="modal-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">月金额 (元)</text>
-        <input class="modal-input" type="digit" placeholder="0.00" value="{{fixedExpenseAmount}}" bindinput="onFixedExpenseAmountInput"
-          style="background: {{theme.elevatedColor || '#252540'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; color: {{theme.textPrimary || '#F5F0E8'}}; padding: 20rpx; border-radius: 12rpx; font-size: 28rpx;" />
-      </view>
-      <view class="modal-actions flex-row flex-around">
-        <view class="modal-cancel-btn press-scale" bindtap="onHideFixedExpenseModal"
-          style="background: {{theme.elevatedColor || '#252540'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; color: {{theme.textSecondary || '#9A9AB0'}}; padding: 20rpx 48rpx; border-radius: 12rpx; font-size: 28rpx;">
-          <text>取消</text>
-        </view>
-        <view class="modal-confirm-btn press-scale" bindtap="onFixedExpenseAdd"
-          style="background: {{theme.gradientButton || 'linear-gradient(135deg, #C9A96E 0%, #E8D5A8 100%)'}}; color: {{theme.textInverse || '#0F0F1A'}}; padding: 20rpx 48rpx; border-radius: 12rpx; font-size: 28rpx; font-weight: 600;">
-          <text>确认添加</text>
-        </view>
-      </view>
-    </view>
-  </theme-modal>
 </view>

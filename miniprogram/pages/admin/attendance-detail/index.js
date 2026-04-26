@@ -5,6 +5,7 @@ const { COLLECTIONS } = require('../../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     staffId: '',
     staffName: '',
     currentMonth: '',
@@ -20,8 +21,12 @@ Page({
     const theme = app.getThemePageData()
     const name = decodeURIComponent(options.staffName || '')
     const range = getMonthRange(0)
-    this.setData({ theme, staffId: options.staffId, staffName: name, currentMonth: range.label })
+    this.setData({ theme, staffId: options.staffId, staffName: name, currentMonth: range.label, statusBarHeight: app.globalData.statusBarHeight || 44 })
     this.loadData()
+  },
+
+  onBack: function() {
+    wx.navigateBack()
   },
 
   async loadData() {

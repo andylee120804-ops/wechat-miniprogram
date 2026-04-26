@@ -29,15 +29,20 @@ const LOG_TYPES = {
   ATTENDANCE_CLOCK_IN: 'ATTENDANCE_CLOCK_IN',
   ATTENDANCE_CLOCK_OUT: 'ATTENDANCE_CLOCK_OUT',
 
-  // Announcement related (NEW)
+  // Announcement related
   ANNOUNCEMENT_CREATE: 'ANNOUNCEMENT_CREATE',
   ANNOUNCEMENT_DELETE: 'ANNOUNCEMENT_DELETE',
 
-  // General (NEW)
+  // Staff & permission related
+  STAFF_CREATE: 'STAFF_CREATE',
+  STAFF_UPDATE: 'STAFF_UPDATE',
+  STAFF_DELETE: 'STAFF_DELETE',
+
+  // General
   SEARCH: 'SEARCH',
   EXPORT: 'EXPORT',
 
-  // Auth
+  // Auth (not persisted)
   LOGIN: 'LOGIN',
   LOGOUT: 'LOGOUT'
 }
@@ -59,20 +64,33 @@ const LOG_TYPE_NAMES = {
   ATTENDANCE_CLOCK_OUT: '打卡签退',
   ANNOUNCEMENT_CREATE: '创建公告',
   ANNOUNCEMENT_DELETE: '删除公告',
+  STAFF_CREATE: '新增员工',
+  STAFF_UPDATE: '更新员工',
+  STAFF_DELETE: '删除员工',
   SEARCH: '搜索',
   EXPORT: '导出',
   LOGIN: '登录',
   LOGOUT: '登出'
 }
 
+// Types that are persisted to operation_log (important operations only)
+const PERSISTED_TYPES = new Set([
+  'INCOME_CREATE', 'INCOME_UPDATE', 'INCOME_DELETE',
+  'PURCHASE_CREATE', 'PURCHASE_UPDATE', 'PURCHASE_DELETE',
+  'EXPENSE_CREATE', 'EXPENSE_UPDATE', 'EXPENSE_DELETE',
+  'RESERVATION_CREATE', 'RESERVATION_UPDATE', 'RESERVATION_DELETE',
+  'STAFF_CREATE', 'STAFF_UPDATE', 'STAFF_DELETE',
+  'ANNOUNCEMENT_CREATE', 'ANNOUNCEMENT_DELETE'
+])
+
 const MAX_LOG_ENTRIES = 200
+const LOG_RETENTION_DAYS = 30
 const STORAGE_KEY = 'app_logs'
 
 /**
  * Add a log entry
- * @param {string} type - One of LOG_TYPES
- * @param {string} detail - Description of the action
- * @param {object} extra - Optional extra data
+ * Only PERSISTED_TYPES are written to cloud operation_log and kept long-term.
+ * LOGIN/LOGOUT and minor types are dropped silently.
  */
 function log(type, detail, extra) {
   try {
@@ -88,16 +106,16 @@ function log(type, detail, extra) {
       timeStr: _formatLogTime(new Date())
     }
 
-    // Write to cloud database (operation_log) for cross-device access
-    const db = wx.cloud.database()
-    db.collection(COLLECTIONS.OPERATION_LOG).add({ data: entry }).catch(() => {})
+    // Only persist important operations (money + permission changes)
+    if (PERSISTED_TYPES.has(type)) {
+      const db = wx.cloud.database()
+      db.collection(COLLECTIONS.OPERATION_LOG).add({ data: entry }).catch(() => {})
+    }
 
-    // Also keep local cache for fast reads
+    // Local cache keeps all types for debugging, but trimmed to retention period
     const logs = _getLogStorage()
     logs.unshift(entry)
-    if (logs.length > MAX_LOG_ENTRIES) {
-      logs.length = MAX_LOG_ENTRIES
-    }
+    _trimLogs(logs)
     wx.setStorageSync(STORAGE_KEY, logs)
 
     console.log(`[Log] ${entry.typeName} - ${entry.detail}`)
@@ -107,7 +125,23 @@ function log(type, detail, extra) {
 }
 
 /**
- * Get recent logs (from cloud + local cache merged, deduped by timestamp)
+ * Trim logs to retention period and max entries
+ */
+function _trimLogs(logs) {
+  const cutoff = Date.now() - LOG_RETENTION_DAYS * 86400000
+  // Remove logs older than 30 days
+  let i = logs.length - 1
+  while (i >= 0 && logs[i].timestamp < cutoff) {
+    logs.splice(i, 1)
+    i--
+  }
+  if (logs.length > MAX_LOG_ENTRIES) {
+    logs.length = MAX_LOG_ENTRIES
+  }
+}
+
+/**
+ * Get recent logs from cloud (last 30 days, important types only)
  * @param {number} limit - Max number of logs to return
  * @returns {Promise<Array>} Log entries
  */
@@ -115,20 +149,26 @@ async function getRecentLogs(limit) {
   limit = limit || 50
   try {
     const db = wx.cloud.database()
+    const cutoff = Date.now() - LOG_RETENTION_DAYS * 86400000
     const res = await db.collection(COLLECTIONS.OPERATION_LOG)
+      .where({
+        timestamp: db.command.gte(cutoff)
+      })
       .orderBy('timestamp', 'desc')
       .limit(limit)
       .get()
     return res.data || []
   } catch (e) {
-    // Fallback to local cache if cloud fails
     const logs = _getLogStorage()
-    return logs.slice(0, limit)
+    const cutoff = Date.now() - LOG_RETENTION_DAYS * 86400000
+    return logs.filter(function(entry) {
+      return entry.timestamp >= cutoff
+    }).slice(0, limit)
   }
 }
 
 /**
- * Get logs filtered by type (from cloud)
+ * Get logs filtered by type (from cloud, last 30 days)
  * @param {string} type - LOG_TYPE to filter by
  * @param {number} limit - Max number of logs to return
  * @returns {Promise<Array>} Filtered log entries
@@ -137,16 +177,21 @@ async function getLogsByType(type, limit) {
   limit = limit || 50
   try {
     const db = wx.cloud.database()
+    const cutoff = Date.now() - LOG_RETENTION_DAYS * 86400000
     const res = await db.collection(COLLECTIONS.OPERATION_LOG)
-      .where({ type })
+      .where({
+        type: type,
+        timestamp: db.command.gte(cutoff)
+      })
       .orderBy('timestamp', 'desc')
       .limit(limit)
       .get()
     return res.data || []
   } catch (e) {
     const logs = _getLogStorage()
+    const cutoff = Date.now() - LOG_RETENTION_DAYS * 86400000
     return logs.filter(function(entry) {
-      return entry.type === type
+      return entry.type === type && entry.timestamp >= cutoff
     }).slice(0, limit)
   }
 }

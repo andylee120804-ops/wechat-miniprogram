@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"C:\\\\Users\\\\Andy\\\\.claude\\\\plans\")",
+      "Bash(cat)"
+    ]
+  },
+  "enabledPlugins": {}
+}

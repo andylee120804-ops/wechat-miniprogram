@@ -12,8 +12,19 @@ App({
 
   onLaunch() {
     wx.cloud.init({ env: 'cloud1-d9gwvttcr864f8021', traceUser: true })
-    const sysInfo = wx.getSystemInfoSync()
-    this.globalData.statusBarHeight = sysInfo.statusBarHeight || 44
+    // Get status bar height - use new API if available, fallback otherwise
+    try {
+      if (typeof wx.getWindowInfo === 'function') {
+        const sysInfo = wx.getWindowInfo()
+        this.globalData.statusBarHeight = sysInfo.statusBarHeight || 44
+      } else {
+        // Fallback for older SDK versions
+        const sysInfo = wx.getSystemInfoSync()
+        this.globalData.statusBarHeight = sysInfo.statusBarHeight || 44
+      }
+    } catch (e) {
+      this.globalData.statusBarHeight = 44
+    }
     this.loadTheme()
     this.checkLogin()
   },

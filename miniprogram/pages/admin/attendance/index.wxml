@@ -1,11 +1,20 @@
-<view class="attendance-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 32rpx;">
-  <!-- Header -->
-  <view class="month-header" style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}}; padding: 32rpx;">
-    <view class="month-nav">
-      <view class="nav-arrow" bindtap="prevMonth">‹</view>
-      <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 32rpx; font-weight: 600; min-width: 160rpx; text-align: center;">{{currentMonth}}</text>
-      <view class="nav-arrow" bindtap="nextMonth">›</view>
+<view class="attendance-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 32rpx; padding-top: {{statusBarHeight + 44}}px;">
+  <!-- Custom Navigation Bar -->
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-bar-content">
+      <view class="nav-back" bindtap="onBack">
+        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
+      </view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">出勤统计</text>
+      <view class="nav-action"></view>
     </view>
+  </view>
+
+  <!-- Month Nav (kept below nav-bar) -->
+  <view class="month-nav" style="display: flex; align-items: center; justify-content: center; gap: 32rpx; padding: 24rpx;">
+    <view class="nav-arrow" bindtap="prevMonth">‹</view>
+    <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 32rpx; font-weight: 600; min-width: 160rpx; text-align: center;">{{currentMonth}}</text>
+    <view class="nav-arrow" bindtap="nextMonth">›</view>
   </view>
 
   <skeleton wx:if="{{loading}}" theme="{{theme}}" type="list" count="3" />

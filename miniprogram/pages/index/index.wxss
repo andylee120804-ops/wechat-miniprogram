@@ -1,57 +1,51 @@
+@import '../../styles/mixins.wxss';
+
 .home-page {
   min-height: 100vh;
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Header */
-.home-header {
-  padding: 0 32rpx 40rpx;
-  position: relative;
+/* Navigation Bar */
+.nav-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
 }
 
-.home-header::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 32rpx;
-  right: 32rpx;
-  height: 1rpx;
-  background: linear-gradient(90deg, transparent, rgba(201,169,110,0.3), transparent);
+.nav-bar-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: 88rpx;
+  padding: 0 24rpx;
 }
 
-.header-accent {
-  width: 48rpx;
-  height: 4rpx;
-  background: linear-gradient(90deg, #C9A96E, #E8D5A3);
-  border-radius: 2rpx;
-  margin-bottom: 20rpx;
-  box-shadow: 0 0 12rpx rgba(201,169,110,0.4);
-}
-
-.header-title {
-  font-size: 52rpx;
-  font-weight: 800;
-  letter-spacing: 6rpx;
-  text-shadow: 0 2rpx 20rpx rgba(201,169,110,0.2);
-}
-
-.header-date-row {
+.nav-back {
+  width: 64rpx;
+  height: 64rpx;
   display: flex;
   align-items: center;
-  margin-top: 16rpx;
+  justify-content: center;
 }
 
-.header-date-dot {
-  width: 8rpx;
-  height: 8rpx;
-  border-radius: 50%;
-  margin-right: 12rpx;
-  box-shadow: 0 0 8rpx currentColor;
+.nav-back-icon {
+  font-size: 44rpx;
+  font-weight: 300;
 }
 
-.header-date {
-  font-size: 26rpx;
-  letter-spacing: 2rpx;
+.nav-title {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.nav-action {
+  min-width: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 /* Announcement Marquee */
@@ -86,7 +80,7 @@
   font-size: 26rpx;
   color: #C9A96E;
   white-space: nowrap;
-  animation: marquee 8s linear infinite;
+  animation: marquee 23s linear infinite;
 }
 
 @keyframes marquee {
@@ -96,6 +90,10 @@
   100% {
     transform: translateX(-100%);
   }
+}
+
+.announcement-marquee.paused .marquee-text {
+  animation-play-state: paused;
 }
 
 .marquee-arrow {

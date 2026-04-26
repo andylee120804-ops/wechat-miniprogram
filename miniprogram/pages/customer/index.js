@@ -5,6 +5,7 @@ const { COLLECTIONS } = require('../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     loading: true,
     customers: [],
     filteredCustomers: [],
@@ -14,8 +15,12 @@ Page({
 
   onShow() {
     const theme = app.getThemePageData()
-    this.setData({ theme })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
     this.loadCustomers()
+  },
+
+  onBack: function() {
+    wx.navigateBack()
   },
 
   async loadCustomers() {

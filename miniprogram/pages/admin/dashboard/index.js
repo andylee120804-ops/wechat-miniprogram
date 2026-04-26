@@ -1,11 +1,9 @@
 const app = getApp()
-const { formatDate, formatAmount, getWeekRange, getMonthRange, getQuarterRange, getYearRange, getRoleName, getCategoryName, getIncomeTypeText, getExpenseCategoryName } = require('../../../utils/helpers')
-const { log, LOG_TYPES } = require('../../../utils/logger')
+const { getWeekRange, getMonthRange, getQuarterRange, getYearRange, getIncomeTypeText, getExpenseCategoryName } = require('../../../utils/helpers')
 const { handleCloudError } = require('../../../utils/error-handler')
-const { getRingChartConfig, getBarChartConfig, getIncomeTypeColors, getExpenseTypeColors } = require('../../../utils/chart-config')
+const { getRingChartConfig, getIncomeTypeColors, getExpenseTypeColors } = require('../../../utils/chart-config')
 const { checkPermission } = require('../../../utils/permission')
 const { COLLECTIONS } = require('../../../utils/db')
-const db = require('../../../utils/db')
 
 Page({
   data: {
@@ -13,45 +11,36 @@ Page({
     loading: true,
     statusBarHeight: 0,
     // Period controls
-    periodMode: 'preset', // 'preset' | 'custom'
-    periodType: 'month',  // 'week' | 'month' | 'quarter' | 'year'
+    periodType: 'month',
     periodOffset: 0,
     periodLabel: '',
     startDate: '',
     endDate: '',
-    customStart: '',
-    customEnd: '',
     // KPI totals
-    totalIncome: 0,
-    totalExpense: 0,
-    profit: 0,
-    incomeChange: 0,
-    expenseChange: 0,
-    profitChange: 0,
+    totalIncome: '0.00',
+    totalExpense: '0.00',
+    profit: '0.00',
+    profitAbs: '0.00',
     // Chart
-    chartType: 'ring',   // 'ring' | 'bar'
-    chartTab: 'income',  // 'income' | 'expense'
+    chartMode: 'income',
     incomeChartData: null,
     expenseChartData: null,
-    incomeChartWidth: 375,
-    incomeChartHeight: 280,
-    expenseChartWidth: 375,
-    expenseChartHeight: 280,
-    // Income type breakdown for legend
+    currentChartData: null,
     incomeBreakdown: [],
     expenseBreakdown: [],
-    // Fixed expenses
-    fixedExpenses: [],
-    showFixedExpenseModal: false,
-    fixedExpenseName: '',
-    fixedExpenseAmount: '',
-    // Quick nav
-    showQuickNav: false
+    currentBreakdown: [],
+    // Period picker
+    showPicker: false,
+    pickerYear: 2026,
+    pickerMonth: 1,
+    pickerQuarter: 1,
+    pickerYears: [],
+    pickerMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    pickerQuarters: [1, 2, 3, 4]
   },
 
   onLoad: function() {
-    const sysInfo = wx.getSystemInfoSync()
-    this.setData({ statusBarHeight: sysInfo.statusBarHeight || 44 })
+    this.setData({ statusBarHeight: app.globalData.statusBarHeight || 44 })
     this.setPeriodRange()
   },
 
@@ -63,7 +52,6 @@ Page({
     this.setData({ theme: app.getThemePageData() })
     this.setPeriodRange()
     this.loadData()
-    this.loadFixedExpenses()
   },
 
   // ==================== Period Range ====================
@@ -92,13 +80,9 @@ Page({
 
   formatPeriodLabel: function(label, type) {
     if (!label) return ''
-    var suffixMap = {
-      week: '周报',
-      month: '月报',
-      quarter: '季报',
-      year: '年报'
-    }
-    return label + ' ' + (suffixMap[type] || '')
+    // Always show the computed label from helpers (e.g. "2026-04" or "2026年Q1")
+    // No need to append "月报/季报" suffix — the period type tabs already indicate the mode
+    return label
   },
 
   prevPeriod: function() {
@@ -124,34 +108,119 @@ Page({
     this.loadData()
   },
 
-  togglePeriodMode: function() {
-    var mode = this.data.periodMode === 'preset' ? 'custom' : 'preset'
-    this.setData({ periodMode: mode })
-  },
-
-  onCustomStartChange: function(e) {
-    this.setData({ customStart: e.detail.value })
-  },
-
-  onCustomEndChange: function(e) {
-    this.setData({ customEnd: e.detail.value })
-  },
-
-  onCustomQuery: function() {
-    if (!this.data.customStart || !this.data.customEnd) {
-      wx.showToast({ title: '请选择起止日期', icon: 'none' })
-      return
-    }
-    if (this.data.customStart > this.data.customEnd) {
-      wx.showToast({ title: '开始日期不能晚于结束日期', icon: 'none' })
-      return
-    }
+  quickSelect: function(e) {
+    var offset = parseInt(e.currentTarget.dataset.offset)
+    var type = e.currentTarget.dataset.type
     this.setData({
-      startDate: this.data.customStart,
-      endDate: this.data.customEnd,
-      periodLabel: this.data.customStart + ' ~ ' + this.data.customEnd
+      periodType: type,
+      periodOffset: offset
     })
+    this.setPeriodRange()
     this.loadData()
+  },
+
+  // ==================== Period Picker ====================
+
+  showPeriodPicker: function() {
+    var now = new Date()
+    // Compute current year and period from current offset
+    var type = this.data.periodType
+    var offset = this.data.periodOffset
+    var targetDate = new Date(now.getFullYear(), now.getMonth() + offset, 1)
+
+    var pickerYear = targetDate.getFullYear()
+    var pickerMonth = targetDate.getMonth() + 1
+    var pickerQuarter = Math.floor(targetDate.getMonth() / 3) + 1
+
+    // Build year list: current year ± 3
+    var currentYear = now.getFullYear()
+    var years = []
+    for (var y = currentYear - 3; y <= currentYear + 1; y++) {
+      years.push(y)
+    }
+
+    this.setData({
+      showPicker: true,
+      pickerYear: pickerYear,
+      pickerMonth: pickerMonth,
+      pickerQuarter: pickerQuarter,
+      pickerYears: years
+    })
+  },
+
+  onPickerYearSelect: function(e) {
+    this.setData({ pickerYear: e.currentTarget.dataset.year })
+  },
+
+  onPickerMonthSelect: function(e) {
+    this.setData({ pickerMonth: e.currentTarget.dataset.month })
+  },
+
+  onPickerQuarterSelect: function(e) {
+    this.setData({ pickerQuarter: e.currentTarget.dataset.quarter })
+  },
+
+  onPickerConfirm: function() {
+    var type = this.data.periodType
+    var now = new Date()
+    var pickerYear = this.data.pickerYear
+    var offset
+
+    if (type === 'year') {
+      offset = pickerYear - now.getFullYear()
+    } else if (type === 'quarter') {
+      // Calculate offset in quarters from current quarter
+      var currentQuarter = Math.floor(now.getMonth() / 3)
+      var targetQuarter = this.data.pickerQuarter - 1
+      offset = (pickerYear - now.getFullYear()) * 4 + (targetQuarter - currentQuarter)
+    } else if (type === 'month') {
+      // Calculate offset in months from current month
+      offset = (pickerYear - now.getFullYear()) * 12 + (this.data.pickerMonth - 1 - now.getMonth())
+    } else {
+      // week — just close, no picker for week
+      this.setData({ showPicker: false })
+      return
+    }
+
+    this.setData({
+      showPicker: false,
+      periodOffset: offset
+    })
+    this.setPeriodRange()
+    this.loadData()
+  },
+
+  onPickerCancel: function() {
+    this.setData({ showPicker: false })
+  },
+
+  // ==================== Chart Mode Toggle ====================
+
+  toggleChartMode: function() {
+    var mode = this.data.chartMode === 'income' ? 'expense' : 'income'
+    this.setData({
+      chartMode: mode,
+      currentChartData: mode === 'income' ? this.data.incomeChartData : this.data.expenseChartData,
+      currentBreakdown: mode === 'income' ? this.data.incomeBreakdown : this.data.expenseBreakdown
+    })
+  },
+
+  switchToIncome: function() {
+    if (this.data.chartMode === 'income') return
+    this.setData({
+      chartMode: 'income',
+      currentChartData: this.data.incomeChartData,
+      currentBreakdown: this.data.incomeBreakdown
+    })
+  },
+
+  switchToExpense: function() {
+    if (this.data.chartMode === 'expense') return
+    this.setData({
+      chartMode: 'expense',
+      currentChartData: this.data.expenseChartData,
+      currentBreakdown: this.data.expenseBreakdown
+    })
   },
 
   // ==================== Data Loading ====================
@@ -165,7 +234,7 @@ Page({
     var dbInstance = wx.cloud.database()
     var cmd = dbInstance.command
 
-    // Query current period data in parallel
+    // Query current period data
     var incomePromise = dbInstance.collection(COLLECTIONS.INCOME).where({
       date: cmd.gte(startDate).and(cmd.lte(endDate))
     }).get()
@@ -187,40 +256,16 @@ Page({
       status: cmd.neq('inactive')
     }).get()
 
-    // Calculate previous period for comparison
-    var prevRange = that._getPreviousPeriodRange()
-    var prevIncomePromise = dbInstance.collection(COLLECTIONS.INCOME).where({
-      date: cmd.gte(prevRange.start).and(cmd.lte(prevRange.end))
-    }).get()
-
-    var prevPurchasePromise = dbInstance.collection(COLLECTIONS.PURCHASE).where({
-      date: cmd.gte(prevRange.start).and(cmd.lte(prevRange.end))
-    }).get()
-
-    var prevExpensePromise = dbInstance.collection(COLLECTIONS.EXPENSE).where({
-      date: cmd.gte(prevRange.start).and(cmd.lte(prevRange.end))
-    }).get()
-
-    var prevFixedExpensePromise = dbInstance.collection(COLLECTIONS.FIXED_EXPENSE).where({
-      date: cmd.gte(prevRange.start).and(cmd.lte(prevRange.end)),
-      status: cmd.neq('deleted')
-    }).get()
-
     Promise.all([
-      incomePromise, purchasePromise, expensePromise, fixedExpensePromise, salaryPromise,
-      prevIncomePromise, prevPurchasePromise, prevExpensePromise, prevFixedExpensePromise
+      incomePromise, purchasePromise, expensePromise, fixedExpensePromise, salaryPromise
     ]).then(function(results) {
       var incomeData = results[0].data || []
       var purchaseData = results[1].data || []
       var expenseData = results[2].data || []
       var fixedExpenseData = results[3].data || []
       var staffData = results[4].data || []
-      var prevIncomeData = results[5].data || []
-      var prevPurchaseData = results[6].data || []
-      var prevExpenseData = results[7].data || []
-      var prevFixedExpenseData = results[8].data || []
 
-      // Calculate current period totals
+      // Calculate income totals
       var totalIncome = 0
       var incomeByType = {}
       incomeData.forEach(function(item) {
@@ -230,11 +275,13 @@ Page({
         incomeByType[type] = (incomeByType[type] || 0) + amount
       })
 
+      // Calculate purchase totals
       var totalPurchase = 0
       purchaseData.forEach(function(item) {
         totalPurchase += Number(item.amount) || 0
       })
 
+      // Calculate expense totals (expense + fixed_expense)
       var totalExpense = 0
       var expenseByCategory = {}
       expenseData.forEach(function(item) {
@@ -243,7 +290,7 @@ Page({
         var category = item.category || 'other'
         expenseByCategory[category] = (expenseByCategory[category] || 0) + amount
       })
-      // Also include fixed expenses (recurring: salary, rent, utilities, supplies, other)
+
       fixedExpenseData.forEach(function(item) {
         var amount = Number(item.amount) || 0
         totalExpense += amount
@@ -251,6 +298,7 @@ Page({
         expenseByCategory[category] = (expenseByCategory[category] || 0) + amount
       })
 
+      // Calculate salary totals
       var totalSalary = 0
       staffData.forEach(function(item) {
         totalSalary += Number(item.salary) || 0
@@ -259,40 +307,29 @@ Page({
       var totalExpenseAll = totalPurchase + totalExpense + totalSalary
       var profit = totalIncome - totalExpenseAll
 
-      // Calculate previous period totals for comparison
-      var prevTotalIncome = 0
-      prevIncomeData.forEach(function(item) {
-        prevTotalIncome += Number(item.amount) || 0
-      })
-      var prevTotalPurchase = 0
-      prevPurchaseData.forEach(function(item) {
-        prevTotalPurchase += Number(item.amount) || 0
-      })
-      var prevTotalExpense = 0
-      prevExpenseData.forEach(function(item) {
-        prevTotalExpense += Number(item.amount) || 0
-      })
-      prevFixedExpenseData.forEach(function(item) {
-        prevTotalExpense += Number(item.amount) || 0
-      })
-      var prevTotalExpenseAll = prevTotalPurchase + prevTotalExpense + totalSalary
-      var prevProfit = prevTotalIncome - prevTotalExpenseAll
+      // Prepare chart data — pass purchase and salary for expense chart
+      var incomeResult = that.prepareIncomeChart(incomeByType)
+      var expenseResult = that.prepareExpenseChart(expenseByCategory, totalPurchase, totalSalary)
 
-      var incomeChange = that._calcChange(totalIncome, prevTotalIncome)
-      var expenseChange = that._calcChange(totalExpenseAll, prevTotalExpenseAll)
-      var profitChange = that._calcChange(profit, prevProfit)
+      var incomeChartData = incomeResult.chartConfig
+      var incomeBreakdown = incomeResult.breakdown
+      var expenseChartData = expenseResult.chartConfig
+      var expenseBreakdown = expenseResult.breakdown
 
-      // Prepare chart data
-      that.prepareIncomeChart(incomeByType)
-      that.prepareExpenseChart(expenseByCategory)
+      var currentChartData = that.data.chartMode === 'income' ? incomeChartData : expenseChartData
+      var currentBreakdown = that.data.chartMode === 'income' ? incomeBreakdown : expenseBreakdown
 
       that.setData({
-        totalIncome: totalIncome,
-        totalExpense: totalExpenseAll,
-        profit: profit,
-        incomeChange: incomeChange,
-        expenseChange: expenseChange,
-        profitChange: profitChange,
+        totalIncome: totalIncome.toFixed(2),
+        totalExpense: totalExpenseAll.toFixed(2),
+        profit: profit.toFixed(2),
+        profitAbs: Math.abs(profit).toFixed(2),
+        incomeChartData: incomeChartData,
+        expenseChartData: expenseChartData,
+        incomeBreakdown: incomeBreakdown,
+        expenseBreakdown: expenseBreakdown,
+        currentChartData: currentChartData,
+        currentBreakdown: currentBreakdown,
         loading: false
       })
     }).catch(function(err) {
@@ -301,39 +338,12 @@ Page({
     })
   },
 
-  _getPreviousPeriodRange: function() {
-    var type = this.data.periodType
-    var prevOffset = this.data.periodOffset - 1
-    if (type === 'week') return getWeekRange(prevOffset)
-    if (type === 'month') return getMonthRange(prevOffset)
-    if (type === 'quarter') return getQuarterRange(prevOffset)
-    return getYearRange(prevOffset)
-  },
-
-  _calcChange: function(current, previous) {
-    if (previous === 0) return current > 0 ? 100 : 0
-    return Math.round((current - previous) / Math.abs(previous) * 100)
-  },
-
   // ==================== Charts ====================
-
-  switchChartTab: function(e) {
-    var tab = e.currentTarget.dataset.tab
-    this.setData({ chartTab: tab })
-  },
-
-  switchChartType: function(e) {
-    var type = e.currentTarget.dataset.type
-    this.setData({ chartType: type })
-    // Re-prepare charts with current data
-    this.loadData()
-  },
 
   prepareIncomeChart: function(incomeByType) {
     var themeId = app.getTheme()
     var colors = getIncomeTypeColors(themeId)
     var types = ['dining', 'chess', 'liquor', 'teatime', 'service', 'other']
-    var that = this
 
     var series = []
     var breakdown = []
@@ -347,202 +357,85 @@ Page({
     types.forEach(function(type, index) {
       var value = incomeByType[type] || 0
       if (value > 0) {
-        series.push({ name: getIncomeTypeText(type), data: value })
+        var color = colors[index]
+        series.push({ name: getIncomeTypeText(type), data: value, color: color })
         breakdown.push({
           name: getIncomeTypeText(type),
-          value: value,
-          color: colors[index],
+          value: value.toFixed(2),
+          color: color,
           percent: totalForPercent > 0 ? (value / totalForPercent * 100).toFixed(1) : '0.0'
         })
       }
     })
 
     if (series.length === 0) {
-      series.push({ name: '暂无数据', data: 1 })
+      series.push({ name: '暂无数据', data: 1, color: colors[5] })
     }
 
-    var chartConfig
-    if (that.data.chartType === 'ring') {
-      chartConfig = getRingChartConfig(themeId, series, {
-        width: that.data.incomeChartWidth,
-        height: that.data.incomeChartHeight
-      })
-    } else {
-      chartConfig = getBarChartConfig(themeId, types.map(function(t) { return getIncomeTypeText(t) }), [{
-        name: '收入',
-        data: types.map(function(t) { return incomeByType[t] || 0 })
-      }], {
-        width: that.data.incomeChartWidth,
-        height: that.data.incomeChartHeight
-      })
-    }
-
-    that.setData({
-      incomeChartData: chartConfig,
-      incomeBreakdown: breakdown
+    var chartConfig = getRingChartConfig(themeId, series, {
+      width: 280,
+      height: 280,
+      colors: colors
     })
+
+    return { chartConfig: chartConfig, breakdown: breakdown }
   },
 
-  prepareExpenseChart: function(expenseByCategory) {
+  prepareExpenseChart: function(expenseByCategory, totalPurchase, totalSalary) {
     var themeId = app.getTheme()
     var colors = getExpenseTypeColors(themeId)
-    var categories = ['salary', 'rent', 'utilities', 'supplies', 'other']
-    var that = this
+    // Expense composition: 采购 + 各类支出 + 工资
+    var expenseItems = [
+      { key: 'purchase', name: '采购', value: totalPurchase || 0 },
+      { key: 'salary', name: '工资', value: totalSalary || 0 },
+      { key: 'rent', name: '房租', value: expenseByCategory['rent'] || 0 },
+      { key: 'utilities', name: '水电', value: expenseByCategory['utilities'] || 0 },
+      { key: 'supplies', name: '物资', value: expenseByCategory['supplies'] || 0 },
+      { key: 'other', name: '其他', value: expenseByCategory['other'] || 0 }
+    ]
 
     var series = []
     var breakdown = []
     var totalForPercent = 0
 
-    categories.forEach(function(cat) {
-      var value = expenseByCategory[cat] || 0
-      totalForPercent += value
+    expenseItems.forEach(function(item) {
+      totalForPercent += item.value
     })
 
-    categories.forEach(function(cat, index) {
-      var value = expenseByCategory[cat] || 0
-      if (value > 0) {
-        series.push({ name: getExpenseCategoryName(cat), data: value })
+    // Use distinct colors for each expense item
+    var expenseColors = ['#F87171', '#C9A96E', '#60A5FA', '#4ADE80', '#FBBF24', '#6B7B8D']
+    if (themeId === 'cloud-pearl') {
+      expenseColors = ['#DC2626', '#5B7FFF', '#D97706', '#16A34A', '#7C3AED', '#909399']
+    } else if (themeId === 'neon-night') {
+      expenseColors = ['#F43F5E', '#8B5CF6', '#60A5FA', '#06D6A0', '#FBBF24', '#6B7B8D']
+    } else if (themeId === 'zen-mist') {
+      expenseColors = ['#A0522D', '#8B7355', '#6B7B8D', '#5A7D4A', '#B8860B', '#909399']
+    }
+
+    expenseItems.forEach(function(item, index) {
+      if (item.value > 0) {
+        var color = expenseColors[index]
+        series.push({ name: item.name, data: item.value, color: color })
         breakdown.push({
-          name: getExpenseCategoryName(cat),
-          value: value,
-          color: colors[index],
-          percent: totalForPercent > 0 ? (value / totalForPercent * 100).toFixed(1) : '0.0'
+          name: item.name,
+          value: item.value.toFixed(2),
+          color: color,
+          percent: totalForPercent > 0 ? (item.value / totalForPercent * 100).toFixed(1) : '0.0'
         })
       }
     })
 
     if (series.length === 0) {
-      series.push({ name: '暂无数据', data: 1 })
+      series.push({ name: '暂无数据', data: 1, color: expenseColors[5] })
     }
 
-    var chartConfig
-    if (that.data.chartType === 'ring') {
-      chartConfig = getRingChartConfig(themeId, series, {
-        width: that.data.expenseChartWidth,
-        height: that.data.expenseChartHeight
-      })
-    } else {
-      chartConfig = getBarChartConfig(themeId, categories.map(function(c) { return getExpenseCategoryName(c) }), [{
-        name: '支出',
-        data: categories.map(function(c) { return expenseByCategory[c] || 0 })
-      }], {
-        width: that.data.expenseChartWidth,
-        height: that.data.expenseChartHeight
-      })
-    }
-
-    that.setData({
-      expenseChartData: chartConfig,
-      expenseBreakdown: breakdown
+    var chartConfig = getRingChartConfig(themeId, series, {
+      width: 280,
+      height: 280,
+      colors: expenseColors
     })
-  },
 
-  // ==================== Fixed Expenses ====================
-
-  loadFixedExpenses: function() {
-    var that = this
-    var dbInstance = wx.cloud.database()
-
-    dbInstance.collection(COLLECTIONS.FIXED_EXPENSE).where({
-      status: dbInstance.command.neq('deleted')
-    }).orderBy('createdAt', 'desc').get().then(function(res) {
-      var list = (res.data || []).map(function(item) {
-        item.formattedAmount = formatAmount(item.amount)
-        return item
-      })
-      that.setData({ fixedExpenses: list })
-    }).catch(function(err) {
-      handleCloudError(err, '加载固定支出')
-    })
-  },
-
-  onFixedExpenseAdd: function() {
-    var that = this
-    var name = that.data.fixedExpenseName.trim()
-    var amount = Number(that.data.fixedExpenseAmount)
-
-    if (!name) {
-      wx.showToast({ title: '请输入名称', icon: 'none' })
-      return
-    }
-    if (!amount || amount <= 0) {
-      wx.showToast({ title: '请输入有效金额', icon: 'none' })
-      return
-    }
-
-    wx.showLoading({ title: '保存中...' })
-    var dbInstance = wx.cloud.database()
-    var now = dbInstance.serverDate()
-
-    dbInstance.collection(COLLECTIONS.FIXED_EXPENSE).add({
-      data: {
-        name: name,
-        amount: amount,
-        status: 'active',
-        createdAt: now,
-        updatedAt: now
-      }
-    }).then(function() {
-      wx.hideLoading()
-      wx.showToast({ title: '添加成功', icon: 'success' })
-      log(LOG_TYPES.EXPENSE_CREATE, '添加固定支出: ' + name)
-      that.setData({
-        showFixedExpenseModal: false,
-        fixedExpenseName: '',
-        fixedExpenseAmount: ''
-      })
-      that.loadFixedExpenses()
-    }).catch(function(err) {
-      wx.hideLoading()
-      handleCloudError(err, '添加固定支出')
-    })
-  },
-
-  onFixedExpenseDelete: function(e) {
-    var that = this
-    var id = e.currentTarget.dataset.id
-    var name = e.currentTarget.dataset.name
-
-    wx.showModal({
-      title: '确认删除',
-      content: '确定删除固定支出"' + name + '"吗？',
-      success: function(res) {
-        if (!res.confirm) return
-        wx.showLoading({ title: '删除中...' })
-        var dbInstance = wx.cloud.database()
-        dbInstance.collection(COLLECTIONS.FIXED_EXPENSE).doc(id).update({
-          data: { status: 'deleted', updatedAt: dbInstance.serverDate() }
-        }).then(function() {
-          wx.hideLoading()
-          wx.showToast({ title: '已删除', icon: 'success' })
-          log(LOG_TYPES.EXPENSE_DELETE, '删除固定支出: ' + name)
-          that.loadFixedExpenses()
-        }).catch(function(err) {
-          wx.hideLoading()
-          handleCloudError(err, '删除固定支出')
-        })
-      }
-    })
-  },
-
-  onShowFixedExpenseModal: function() {
-    this.setData({ showFixedExpenseModal: true })
-  },
-
-  onHideFixedExpenseModal: function() {
-    this.setData({
-      showFixedExpenseModal: false,
-      fixedExpenseName: '',
-      fixedExpenseAmount: ''
-    })
-  },
-
-  onFixedExpenseNameInput: function(e) {
-    this.setData({ fixedExpenseName: e.detail.value })
-  },
-
-  onFixedExpenseAmountInput: function(e) {
-    this.setData({ fixedExpenseAmount: e.detail.value })
+    return { chartConfig: chartConfig, breakdown: breakdown }
   },
 
   // ==================== Navigation ====================

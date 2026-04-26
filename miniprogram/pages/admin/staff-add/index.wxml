@@ -1,5 +1,15 @@
 <view class="staff-add-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 140rpx;">
-  <view style="padding: 32rpx;">
+  <!-- Custom Navigation Bar -->
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor || '#1A1A2E'}}; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-bar-content">
+      <view class="nav-back" bindtap="onBack">
+        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
+      </view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{isEdit ? '编辑员工' : '新增员工'}}</text>
+      <view class="nav-action"></view>
+    </view>
+  </view>
+  <view style="padding: 32rpx; padding-top: {{statusBarHeight + 44}}px;">
     <!-- Basic Info -->
     <theme-card theme="{{theme}}" padding="32rpx">
       <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 20rpx;">基本信息</text>
@@ -36,8 +46,8 @@
           <view class="select-all-btn" data-module="{{item.key}}" bindtap="onModuleSelectAll" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 24rpx;">全选</view>
         </view>
         <view class="perm-actions" style="margin-top: 16rpx; display: flex; flex-wrap: wrap; gap: 12rpx;">
-          <view class="perm-action {{permissions[item.key][action] ? 'active' : ''}}" wx:for="{{item.actions}}" wx:key="action" data-module="{{item.key}}" data-action="{{action}}" bindtap="onPermChange" style="{{permissions[item.key][action] ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.surface || '#1A1A2E') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}} padding: 8rpx 20rpx; border-radius: 999rpx; font-size: 24rpx;">
-            {{action === 'view' ? '查看' : action === 'add' ? '新增' : action === 'edit' ? '编辑' : action === 'delete' ? '删除' : action === 'export' ? '导出' : action}}
+          <view class="perm-action {{permissions[item.key][act] ? 'active' : ''}}" wx:for="{{item.actions}}" wx:for-item="act" wx:key="*this" data-module="{{item.key}}" data-action="{{act}}" bindtap="onPermChange" style="{{permissions[item.key][act] ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.surface || '#1A1A2E') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}} padding: 8rpx 20rpx; border-radius: 999rpx; font-size: 24rpx;">
+            {{act === 'view' ? '查看' : act === 'add' ? '新增' : act === 'edit' ? '编辑' : act === 'delete' ? '删除' : act === 'export' ? '导出' : act}}
           </view>
         </view>
       </view>
@@ -45,9 +55,11 @@
   </view>
 
   <!-- Bottom Bar -->
-  <view class="bottom-bar safe-bottom">
-    <theme-btn wx:if="{{isEdit}}" theme="{{theme}}" type="danger" text="删除员工" bind:tap="onDelete" style="flex: 1; margin-right: 16rpx;" />
-    <theme-btn theme="{{theme}}" type="primary" text="{{isEdit ? '保存修改' : '添加员工'}}" block="{{true}}" loading="{{submitting}}" bind:tap="onSubmit" style="{{isEdit ? 'flex: 2;' : 'flex: 1;'}}" />
+  <view class="bottom-bar safe-bottom" style="position: fixed; left: 0rpx; top: 1555rpx">
+    <view class="bottom-bar-inner {{isEdit ? 'two-btns' : 'single-btn'}}">
+      <theme-btn wx:if="{{isEdit}}" theme="{{theme}}" type="danger" text="删除员工" bind:tap="onDelete" />
+      <theme-btn style="width: 369rpx; display: block; box-sizing: border-box; height: 77rpx" theme="{{theme}}" type="primary" text="{{isEdit ? '保存修改' : '添加员工'}}" loading="{{submitting}}" bind:tap="onSubmit" />
+    </view>
   </view>
 
   <theme-modal theme="{{theme}}" visible="{{showDeleteModal}}" title="删除员工" confirmText="确认删除" cancelText="返回" bind:confirm="onConfirmDelete" bind:close="onCloseDelete">

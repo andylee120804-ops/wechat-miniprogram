@@ -1,4 +1,5 @@
 {
+  "navigationStyle": "custom",
   "usingComponents": {
     "stat-card": "/components/stat-card/index",
     "theme-card": "/components/theme-card/index",

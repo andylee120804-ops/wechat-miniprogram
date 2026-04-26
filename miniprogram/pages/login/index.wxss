@@ -1,3 +1,5 @@
+@import '../../styles/mixins.wxss';
+
 .login-page {
   min-height: 100vh;
   display: flex;
@@ -36,11 +38,12 @@
 
 .login-brand {
   text-align: center;
-  margin-bottom: 64rpx;
+  margin-bottom: 48rpx;
+  padding-top: 80rpx;
 }
 
 .brand-name {
-  font-size: 64rpx;
+  font-size: 56rpx;
   font-weight: 800;
   letter-spacing: 8rpx;
   display: block;

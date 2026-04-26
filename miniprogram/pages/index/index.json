@@ -1,4 +1,5 @@
 {
+  "navigationStyle": "custom",
   "usingComponents": {
     "glass-card": "/components/glass-card/index",
     "stat-card": "/components/stat-card/index",

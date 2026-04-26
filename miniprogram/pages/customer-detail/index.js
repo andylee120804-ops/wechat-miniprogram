@@ -5,6 +5,7 @@ const { COLLECTIONS } = require('../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     customerName: '',
     loading: true,
     totalVisits: 0,
@@ -17,8 +18,12 @@ Page({
   onLoad(options) {
     const theme = app.getThemePageData()
     const name = decodeURIComponent(options.name || '')
-    this.setData({ theme, customerName: name })
+    this.setData({ theme, customerName: name, statusBarHeight: app.globalData.statusBarHeight || 44 })
     this.loadData()
+  },
+
+  onBack: function() {
+    wx.navigateBack()
   },
 
   async loadData() {

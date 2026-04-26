@@ -8,6 +8,7 @@ const db = require('../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     loading: true,
     currentYear: 0,
     currentMonth: 0,
@@ -28,6 +29,7 @@ Page({
     const today = formatDate(now)
     this.setData({
       theme,
+      statusBarHeight: app.globalData.statusBarHeight || 44,
       currentYear: now.getFullYear(),
       currentMonth: now.getMonth() + 1,
       selectedDate: today
@@ -132,7 +134,7 @@ Page({
   },
 
   onAddReservation() {
-    if (!hasPermission('reservation', 'create')) {
+    if (!hasPermission('reservation', 'add')) {
       wx.showToast({ title: '无权限创建预约', icon: 'none' })
       return
     }

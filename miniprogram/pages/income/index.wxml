@@ -1,10 +1,19 @@
 <view class="income-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx;">
+  <!-- Custom Navigation Bar -->
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-bar-content">
+      <view class="nav-back"></view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">收入管理</text>
+      <view class="nav-action"></view>
+    </view>
+  </view>
+
   <!-- Header with month nav -->
-  <view class="month-header" style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}}; padding: 32rpx;">
+  <view class="month-header" style="padding-top: {{statusBarHeight + 44}}px;">
     <view class="month-nav">
-      <view class="nav-arrow" bindtap="onMonthChange" data-offset="-1">‹</view>
+      <view class="nav-arrow" bindtap="onPrevMonth">❮</view>
       <text class="month-label" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{currentMonth}}</text>
-      <view class="nav-arrow" bindtap="onMonthChange" data-offset="1">›</view>
+      <view class="nav-arrow {{monthOffset >= 0 ? 'nav-arrow-disabled' : ''}}" bindtap="onNextMonth">❯</view>
     </view>
   </view>
 
@@ -31,11 +40,11 @@
   <view class="income-list" wx:else>
     <view class="income-item stagger-item" wx:for="{{filteredIncomes}}" wx:key="_id" bindtap="onItemTap" data-id="{{item._id}}" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 24rpx; margin: 0 32rpx 16rpx; padding: 24rpx;">
       <view class="item-header">
-        <theme-badge theme="{{theme}}" status="{{item.type}}" type="status" text="{{getIncomeTypeText(item.type)}}" />
-        <text class="item-amount" style="color: {{theme.amountPositive || '#4ADE80'}}; font-size: 36rpx; font-weight: 700; font-family: 'DIN Alternate', monospace;">+¥{{formatAmount(item.amount)}}</text>
+        <theme-badge theme="{{theme}}" status="{{item.type}}" type="status" text="{{item.typeText}}" />
+        <text class="item-amount" style="color: {{theme.amountPositive || '#4ADE80'}}; font-size: 36rpx; font-weight: 700; font-family: 'DIN Alternate', monospace;">+¥{{item.amountText}}</text>
       </view>
       <view class="item-meta" style="margin-top: 12rpx;">
-        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">{{item.source || '无来源'}} · {{formatDate(item.date)}}</text>
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">{{item.source || '无来源'}} · {{item.dateText}}</text>
         <text wx:if="{{item.reservationId}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 22rpx; margin-left: 12rpx;">📅 已关联</text>
       </view>
       <view class="item-remark" wx:if="{{item.remark}}" style="margin-top: 8rpx;">

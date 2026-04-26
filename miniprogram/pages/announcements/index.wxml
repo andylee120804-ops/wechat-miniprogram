@@ -1,7 +1,13 @@
-<view class="announcements-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx;">
-  <!-- Header -->
-  <view style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}}; padding: 32rpx;">
-    <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 36rpx; font-weight: 700; display: block;">公告通知</text>
+<view class="announcements-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx; padding-top: {{statusBarHeight + 44}}px;">
+  <!-- Custom Navigation Bar -->
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-bar-content">
+      <view class="nav-back" bindtap="onBack">
+        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
+      </view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">公告通知</text>
+      <view class="nav-action"></view>
+    </view>
   </view>
 
   <!-- Skeleton -->
@@ -17,7 +23,7 @@
         </view>
         <view style="display: flex; align-items: center; gap: 12rpx;">
           <theme-badge theme="{{theme}}" status="{{item.priority}}" type="role" text="{{item.priority === 'urgent' ? '紧急' : item.priority === 'important' ? '重要' : '普通'}}" size="sm" />
-          <text wx:if="{{isAdmin}}" style="color: {{theme.statusDanger || '#F87171'}}; font-size: 24rpx;" data-id="{{item._id}}" catchtap="onDeleteAnnouncement">删除</text>
+          <text wx:if="{{canDeleteAnnouncement}}" style="color: {{theme.statusDanger || '#F87171'}}; font-size: 24rpx;" data-id="{{item._id}}" catchtap="onDeleteAnnouncement">删除</text>
         </view>
       </view>
 
@@ -38,7 +44,7 @@
   </view>
 
   <!-- FAB for Admin -->
-  <view wx:if="{{isAdmin}}" class="fab" bindtap="onAddAnnouncement" style="background: {{theme.buttonGradient || 'linear-gradient(135deg, #C9A96E, #E8D5A8)'}}; box-shadow: {{theme.shadowLg || '0 8rpx 32rpx rgba(201,169,110,0.3)'}};">
+  <view wx:if="{{canAddAnnouncement}}" class="fab" bindtap="onAddAnnouncement" style="background: {{theme.buttonGradient || 'linear-gradient(135deg, #C9A96E, #E8D5A8)'}}; box-shadow: {{theme.shadowLg || '0 8rpx 32rpx rgba(201,169,110,0.3)'}};">
     <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 48rpx; font-weight: 300; line-height: 1;">+</text>
   </view>
 
@@ -53,13 +59,20 @@
         <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; display: block; margin-bottom: 12rpx;">内容</text>
         <textarea class="modal-textarea" placeholder="公告内容" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{createContent}}" bindinput="onContentInput" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.1)'}}; border-radius: 12rpx; padding: 16rpx 20rpx; color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; width: 100%; min-height: 200rpx; resize: none;" />
       </view>
-      <view>
+      <view style="margin-bottom: 24rpx;">
         <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; display: block; margin-bottom: 12rpx;">优先级</text>
         <view style="display: flex; gap: 12rpx;">
           <view class="priority-pill {{createPriority === 'normal' ? 'active' : ''}}" data-priority="normal" bindtap="onPriorityChange" style="{{createPriority === 'normal' ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}} padding: 10rpx 24rpx; border-radius: 999rpx; font-size: 26rpx;">普通</view>
           <view class="priority-pill {{createPriority === 'important' ? 'active' : ''}}" data-priority="important" bindtap="onPriorityChange" style="{{createPriority === 'important' ? 'background:' + (theme.statusWarning || '#FBBF24') + ';color:#000;' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}} padding: 10rpx 24rpx; border-radius: 999rpx; font-size: 26rpx;">重要</view>
           <view class="priority-pill {{createPriority === 'urgent' ? 'active' : ''}}" data-priority="urgent" bindtap="onPriorityChange" style="{{createPriority === 'urgent' ? 'background:' + (theme.statusDanger || '#F87171') + ';color:#fff;' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}} padding: 10rpx 24rpx; border-radius: 999rpx; font-size: 26rpx;">紧急</view>
         </view>
+      </view>
+      <view class="toggle-row">
+        <view style="flex: 1;">
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 500;">需要员工确认</text>
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-top: 4rpx;">开启后员工需点击确认才计入已读</text>
+        </view>
+        <switch checked="{{createNeedsConfirm}}" bindchange="onNeedsConfirmChange" color="{{theme.accentColor || '#C9A96E'}}" />
       </view>
     </view>
   </theme-modal>

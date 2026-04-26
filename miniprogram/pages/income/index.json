@@ -1,4 +1,5 @@
 {
+  "navigationStyle": "custom",
   "usingComponents": {
     "filter-chips": "/components/filter-chips/index",
     "search-bar": "/components/search-bar/index",

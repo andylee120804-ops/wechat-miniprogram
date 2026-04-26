@@ -7,6 +7,7 @@ const { COLLECTIONS } = require('../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     id: '',
     income: null,
     loading: true,
@@ -15,7 +16,7 @@ Page({
 
   onLoad(options) {
     const theme = app.getThemePageData()
-    this.setData({ theme, id: options.id })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, id: options.id })
     this.loadData()
   },
 
@@ -28,6 +29,10 @@ Page({
       handleCloudError(err, '加载收入详情')
       this.setData({ loading: false })
     }
+  },
+
+  onBack() {
+    wx.navigateBack()
   },
 
   onEdit() {

@@ -1,5 +1,50 @@
+@import '../../styles/mixins.wxss';
+
 .income-page {
   min-height: 100vh;
+}
+
+/* Navigation Bar */
+.nav-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.nav-bar-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: 88rpx;
+  padding: 0 24rpx;
+}
+
+.nav-back {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-back-icon {
+  font-size: 44rpx;
+  font-weight: 300;
+}
+
+.nav-title {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.nav-action {
+  min-width: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .month-header {
@@ -23,6 +68,12 @@
   color: rgba(255,255,255,0.6);
   border: 1rpx solid rgba(255,255,255,0.1);
   border-radius: 50%;
+  transition: opacity 0.2s;
+}
+
+.nav-arrow-disabled {
+  opacity: 0.3;
+  pointer-events: none;
 }
 
 .month-label {

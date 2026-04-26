@@ -3,6 +3,7 @@ const app = getApp()
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     wechatId: '',
     phone: '',
     loading: false,
@@ -11,7 +12,7 @@ Page({
 
   onShow() {
     const theme = app.getThemePageData()
-    this.setData({ theme })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
   },
 
   onWechatIdInput(e) {

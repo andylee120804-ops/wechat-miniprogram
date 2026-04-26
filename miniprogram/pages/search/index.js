@@ -5,6 +5,7 @@ const { COLLECTIONS } = require('../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     keyword: '',
     recentSearches: [],
     activeTab: 'all',
@@ -16,7 +17,11 @@ Page({
   onShow() {
     const theme = app.getThemePageData()
     const recent = wx.getStorageSync('recentSearches') || []
-    this.setData({ theme, recentSearches: recent })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, recentSearches: recent })
+  },
+
+  onBack() {
+    wx.navigateBack({ delta: 1 })
   },
 
   onSearch(e) {

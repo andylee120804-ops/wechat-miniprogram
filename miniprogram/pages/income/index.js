@@ -7,7 +7,9 @@ const db = require('../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     loading: true,
+    monthOffset: 0,
     currentMonth: '',
     monthStr: '',
     incomes: [],
@@ -38,28 +40,38 @@ Page({
       return
     }
     const theme = app.getThemePageData()
-    const monthRange = getMonthRange(0)
-    this.setData({ theme, currentMonth: monthRange.label, monthStr: monthRange.monthStr })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
+    this.updateMonthLabel()
     this.loadData()
+  },
+
+  updateMonthLabel() {
+    const range = getMonthRange(this.data.monthOffset)
+    this.setData({ currentMonth: range.label, monthStr: range.monthStr })
   },
 
   async loadData() {
     this.setData({ loading: true, page: 1, incomes: [], filteredIncomes: [] })
     try {
-      const range = getMonthRange(0)
+      const range = getMonthRange(this.data.monthOffset)
       const res = await db.queryPage(COLLECTIONS.INCOME, {
         date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
       }, 1, this.data.pageSize, 'createdAt', 'desc')
 
       const total = (res.data || []).reduce((s, i) => s + (i.amount || 0), 0)
+      const items = (res.data || []).map(i => ({
+        ...i,
+        typeText: getIncomeTypeText(i.type) || '其他',
+        amountText: formatAmount(i.amount),
+        dateText: formatDate(i.date)
+      }))
       this.setData({
         loading: false,
-        incomes: res.data || [],
-        filteredIncomes: res.data || [],
+        incomes: items,
+        filteredIncomes: items,
         totalAmount: formatAmount(total),
         hasMore: res.hasMore,
-        page: 1,
-        pageSize: this.data.pageSize
+        page: 1
       })
       this.applyFilter()
     } catch (err) {
@@ -72,12 +84,18 @@ Page({
     if (this.data.loadingMore || !this.data.hasMore) return
     var that = this
     that.setData({ loadingMore: true })
-    var range = getMonthRange(0)
+    var range = getMonthRange(that.data.monthOffset)
 
     db.queryPage(COLLECTIONS.INCOME, {
       date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
     }, that.data.page + 1, that.data.pageSize, 'createdAt', 'desc').then(function(res) {
-      var newItems = res.data || []
+      var newItems = (res.data || []).map(function(i) {
+        return Object.assign({}, i, {
+          typeText: getIncomeTypeText(i.type) || '其他',
+          amountText: formatAmount(i.amount),
+          dateText: formatDate(i.date)
+        })
+      })
       var allItems = that.data.incomes.concat(newItems)
       var total = allItems.reduce(function(s, i) { return s + (i.amount || 0) }, 0)
       that.setData({
@@ -94,10 +112,16 @@ Page({
     })
   },
 
-  onMonthChange(e) {
-    const offset = e.currentTarget.dataset.offset || 0
-    const range = getMonthRange(offset)
-    this.setData({ currentMonth: range.label, monthStr: range.monthStr, activeType: '', searchKeyword: '' })
+  onPrevMonth() {
+    this.setData({ monthOffset: this.data.monthOffset - 1, activeType: '', searchKeyword: '' })
+    this.updateMonthLabel()
+    this.loadData()
+  },
+
+  onNextMonth() {
+    if (this.data.monthOffset >= 0) return
+    this.setData({ monthOffset: this.data.monthOffset + 1, activeType: '', searchKeyword: '' })
+    this.updateMonthLabel()
     this.loadData()
   },
 

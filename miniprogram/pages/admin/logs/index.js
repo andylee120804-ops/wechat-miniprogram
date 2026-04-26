@@ -46,7 +46,7 @@ Page({
       wx.navigateBack()
       return
     }
-    var sysInfo = wx.getSystemInfoSync()
+    var sysInfo = wx.getWindowInfo()
     this.setData({
       theme: app.getThemePageData(),
       statusBarHeight: sysInfo.statusBarHeight || 44

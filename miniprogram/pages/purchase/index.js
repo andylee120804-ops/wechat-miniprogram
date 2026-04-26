@@ -40,7 +40,7 @@ Page({
   },
 
   onLoad: function() {
-    const sysInfo = wx.getSystemInfoSync()
+    const sysInfo = wx.getWindowInfo()
     this.setData({ statusBarHeight: sysInfo.statusBarHeight || 44 })
     this.setData({ theme: app.getThemePageData() })
     this.loadData()
@@ -179,7 +179,7 @@ Page({
   },
 
   onAddPurchase: function() {
-    if (!checkPermission('purchase', 'create')) return
+    if (!checkPermission('purchase', 'add')) return
     wx.navigateTo({ url: '/pages/purchase-add/index' })
   },
 

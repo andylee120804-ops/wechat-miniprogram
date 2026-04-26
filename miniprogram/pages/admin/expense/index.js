@@ -35,7 +35,7 @@ Page({
       wx.navigateBack()
       return
     }
-    const sysInfo = wx.getSystemInfoSync()
+    const sysInfo = wx.getWindowInfo()
     this.setData({
       theme: app.getThemePageData(),
       statusBarHeight: sysInfo.statusBarHeight || 44
@@ -94,7 +94,7 @@ Page({
   },
 
   onAddExpense: function() {
-    if (!checkPermission('expense', 'create')) return
+    if (!checkPermission('expense', 'add')) return
     this.setData({
       showModal: true,
       isEdit: false,
@@ -106,7 +106,7 @@ Page({
   },
 
   onExpenseTap: function(e) {
-    if (!checkPermission('expense', 'update')) return
+    if (!checkPermission('expense', 'edit')) return
     var id = e.currentTarget.dataset.id
     var expense = null
     for (var i = 0; i < this.data.expenses.length; i++) {

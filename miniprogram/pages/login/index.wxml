@@ -1,4 +1,4 @@
-<view class="login-page" style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}};">
+<view class="login-page" style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}}; position: relative; left: 0rpx; top: 66rpx; height: 1619rpx; display: flex; box-sizing: border-box">
   <!-- Background decoration -->
   <view class="login-bg-decor">
     <view class="bg-circle circle-1" style="background: {{theme.accentColor || '#C9A96E'}}; opacity: 0.05;"></view>
@@ -6,13 +6,13 @@
   </view>
 
   <!-- Brand section -->
-  <view class="login-brand safe-top">
-    <text class="brand-name" style="color: {{theme.accentColor || '#C9A96E'}};">听澜轩</text>
-    <text class="brand-subtitle" style="color: {{theme.textMuted || '#5C5C72'}};">等风，也等你</text>
+  <view class="login-brand safe-top" style="padding-top: {{statusBarHeight}}px;">
+    <text class="brand-name" style="color: {{theme.textPrimary || '#F5F0E8'}}; width: 350rpx; height: 120rpx; display: block; box-sizing: border-box">听澜轩</text>
+    <text class="brand-subtitle" style="color: {{theme.textMuted || '#5C5C72'}}; position: relative; left: 0rpx; top: -15rpx">等风，也等你</text>
   </view>
 
   <!-- Login card -->
-  <glass-card theme="{{theme}}" blur="24" opacity="0.08" padding="48rpx 40rpx" class="{{shakeAnimation ? 'shake' : ''}}">
+  <glass-card theme="{{theme}}" blur="24" opacity="0.08" padding="48rpx 40rpx" class="{{shakeAnimation ? 'shake' : ''}}" style="width: 529rpx; height: 789rpx; display: block; box-sizing: border-box; position: relative; left: 0rpx; top: 21rpx">
     <view class="login-form">
       <view class="form-title" style="color: {{theme.textPrimary || '#F0F0F5'}};">欢迎回来</view>
       <view class="form-subtitle" style="color: {{theme.textMuted || '#5C5C72'}};">请输入您的微信号登录</view>
@@ -28,7 +28,7 @@
       </view>
 
       <view class="login-btn-wrap">
-        <theme-btn theme="{{theme}}" type="primary" text="登 录" block loading="{{loading}}" bind:tap="onLogin" />
+        <theme-btn style="position: relative; left: 35rpx; top: 0rpx" theme="{{theme}}" type="primary" text="登 录" block loading="{{loading}}" bind:tap="onLogin" />
       </view>
 
       <view class="login-hint" style="color: {{theme.textMuted || '#5C5C72'}};">

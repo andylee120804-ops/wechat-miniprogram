@@ -1,11 +1,15 @@
 <view class="me-page" style="background: {{theme.surfaceColor || '#1A1A2E'}}; min-height: 100vh;">
-  <!-- Profile Hero -->
-  <view class="profile-hero" style="background: {{theme.gradientHeader || 'linear-gradient(135deg, #1A1A2E, #252540)'}};">
-    <view class="hero-decor">
-      <view class="hero-circle hero-circle-1" style="background: {{theme.accentColor || '#C9A96E'}}; opacity: 0.06;"></view>
-      <view class="hero-circle hero-circle-2" style="background: {{theme.accentColor || '#C9A96E'}}; opacity: 0.04;"></view>
+  <!-- Custom Navigation Bar -->
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-bar-content">
+      <view class="nav-back"></view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">我的</text>
+      <view class="nav-action"></view>
     </view>
+  </view>
 
+  <!-- Profile Hero -->
+  <view class="profile-hero" style="padding-top: {{statusBarHeight + 44}}px;">
     <glass-card theme="{{theme}}" blur="20" opacity="0.06" padding="40rpx 32rpx" class="hero-card">
       <view class="profile-row">
         <!-- Avatar -->
@@ -76,9 +80,9 @@
 
   <!-- Logout Button -->
   <view class="logout-section" wx:if="{{userInfo}}">
-    <view bindtap="onLogout" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; padding: 28rpx 48rpx; text-align: center; margin: 0 32rpx;">
-      <text style="color: {{theme.statusDanger || '#F87171'}}; font-size: 28rpx; font-weight: 500;">退出登录</text>
-    </view>
+    <button bindtap="onLogout" class="logout-btn" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; padding: 28rpx 48rpx; margin: 0 32rpx; width: auto; display: block; line-height: 1; font-size: 28rpx; font-weight: 500; color: {{theme.statusDanger || '#F87171'}};">
+      退出登录
+    </button>
   </view>
 
   <!-- Bottom safe area -->

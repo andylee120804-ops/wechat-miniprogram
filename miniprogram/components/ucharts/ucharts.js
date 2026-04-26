@@ -242,7 +242,6 @@ uCharts.prototype._drawRingChart = function() {
 
   // Draw rings
   let startAngle = -Math.PI / 2
-  const activeOpacity = this.extra.ring && this.extra.ring.activeOpacity || 0.5
 
   this.series.forEach((s, i) => {
     const ratio = s.data / total

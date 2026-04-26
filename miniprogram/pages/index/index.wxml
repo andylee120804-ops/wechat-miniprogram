@@ -5,29 +5,32 @@
 
   <block wx:else>
 
-    <!-- Premium Header -->
-    <view class="home-header" style="padding-top: env(safe-area-inset-top);">
-      <view class="header-accent"></view>
-      <text class="header-title" style="color: {{theme.textPrimary || '#F0F0F5'}}; display: block;">听澜轩</text>
-      <view class="header-date-row">
-        <view class="header-date-dot" style="background: {{theme.accentColor || '#C9A96E'}};"></view>
-        <text class="header-date" style="color: {{theme.textSecondary || '#9A9AB0'}};">今日 {{todayDate}}</text>
+    <!-- Custom Navigation Bar -->
+    <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
+      <view class="nav-bar-content">
+        <view class="nav-back"></view>
+        <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">💕 听澜轩 💕</text>
+        <view class="nav-action" bindtap="onNotificationTap" style="position: relative;">
+          <text style="font-size: 40rpx;">{{hasUrgentUnread ? '🔴' : '🔔'}}</text>
+          <view wx:if="{{unreadAnnouncementCount > 0}}" style="position: absolute; top: -8rpx; right: -8rpx; background: {{hasUrgentUnread ? '#EF4444' : (theme.statusDanger || '#F87171')}}; color: #fff; font-size: 20rpx; min-width: 32rpx; height: 32rpx; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; padding: 0 6rpx; font-weight: 600; line-height: 1;">{{unreadAnnouncementCount > 99 ? '99+' : unreadAnnouncementCount}}</view>
+        </view>
       </view>
+    </view>
+
+    <!-- Main Content -->
+    <view class="home-content" style="padding-top: {{statusBarHeight + 44}}px;">
+
       <!-- Announcement Marquee -->
-      <view wx:if="{{latestAnnouncement}}" class="announcement-marquee" bindtap="onAnnouncementTap">
+      <view wx:if="{{latestAnnouncement}}" class="announcement-marquee {{marqueePaused ? 'paused' : ''}}" style="margin: 0 8rpx 16rpx;" bindtap="onAnnouncementTap" bindtouchstart="onMarqueeTouchStart" bindtouchend="onMarqueeTouchEnd">
         <view class="marquee-icon">📢</view>
         <view class="marquee-content">
           <view class="marquee-text">{{latestAnnouncement.title}}</view>
         </view>
         <view class="marquee-arrow">›</view>
       </view>
-    </view>
-
-    <!-- Main Content -->
-    <view class="home-content">
 
       <!-- Block 1: 今日预约 (Hero Section) -->
-      <view class="section-block section-today">
+      <view class="section-block section-today" style="height: 650rpx; display: block; box-sizing: border-box; left: 0rpx; top: 9rpx; position: relative">
         <view class="section-header">
           <text class="section-title" style="color: {{theme.accentColor || '#C9A96E'}};">今日预约</text>
           <text class="section-badge">{{lunchReservations.length + dinnerReservations.length}} 组</text>

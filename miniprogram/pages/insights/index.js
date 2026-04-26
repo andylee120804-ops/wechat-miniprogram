@@ -7,6 +7,7 @@ const { COLLECTIONS } = require('../../utils/db')
 Page({
   data: {
     theme: {},
+    statusBarHeight: 0,
     loading: true,
     busiestDay: { date: '', count: 0 },
     topIncomeSource: { type: '', amount: 0, typeName: '' },
@@ -19,8 +20,12 @@ Page({
 
   onShow() {
     const theme = app.getThemePageData()
-    this.setData({ theme })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
     this.loadData()
+  },
+
+  onBack: function() {
+    wx.navigateBack()
   },
 
   async loadData() {
