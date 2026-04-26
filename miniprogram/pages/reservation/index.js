@@ -106,14 +106,16 @@ Page({
   },
 
   groupByRoom(reservations) {
-    const groups = { exclusive: [], big: [], small: [] }
+    const groups = { noon: [], night: [], full: [], big: [], small: [] }
     reservations.forEach(function(r) {
-      let key = r.room || 'big'
-      if (r.isExclusive) key = 'exclusive'
-      if (groups[key]) {
-        groups[key].push(r)
+      const et = r.exclusiveType || (r.isExclusive ? 'full' : 'none')
+      if (et !== 'none') {
+        if (!groups[et]) groups[et] = []
+        groups[et].push(r)
       } else {
-        groups.big.push(r)
+        const key = r.room || 'big'
+        if (groups[key]) groups[key].push(r)
+        else groups.big.push(r)
       }
     })
     return groups
