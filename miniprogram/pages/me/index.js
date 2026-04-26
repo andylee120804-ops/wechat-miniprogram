@@ -60,6 +60,12 @@ Page({
     settingsGroup.push({ key: 'theme', icon: '🎨', text: '主题选择' })
     settingsGroup.push({ key: 'about', icon: 'ℹ️', text: '关于' })
 
+    // Boss-only settings
+    const userInfo = app.globalData.userInfo
+    if (userInfo && userInfo.role === 'boss') {
+      settingsGroup.push({ key: 'minAmount', icon: '💰', text: '最低消费设置' })
+    }
+
     this.setData({
       managementGroup,
       featureGroup,
@@ -77,6 +83,7 @@ Page({
       announcements: '/pages/announcements/index',
       customer: '/pages/customer/index',
       insights: '/pages/insights/index',
+      minAmount: '/pages/min-amount/index',
       about: ''
     }
 
