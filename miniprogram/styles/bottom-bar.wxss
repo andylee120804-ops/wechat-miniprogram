@@ -20,39 +20,51 @@
   left: 0;
   right: 0;
   bottom: 0;
+  width: 100vw;
   background: rgba(26, 26, 46, 0.95);
   border-top: 1rpx solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   z-index: 100;
+  box-sizing: border-box;
+  padding: 16rpx 24rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
 }
 
 /* Inner flex container - base styles */
 .bottom-bar-inner {
   display: flex;
   align-items: center;
-  padding: 16rpx 24rpx;
+  padding: 0;
   gap: 12rpx;
 }
 
 /* Single button - center aligned */
 .bottom-bar-inner.single-btn {
   justify-content: center;
+  width: 100vw;
+  box-sizing: border-box;
 }
 
-/* Two buttons - space between */
+/* Two buttons: fixed width distribution */
 .bottom-bar-inner.two-btns {
   justify-content: space-between;
-}
-
-/* Two buttons: child theme-btn takes flex space, max 46% */
-.bottom-bar-inner.two-btns > .theme-btn {
-  flex: 1;
-  min-width: 0;
-  max-width: 46%;
+  width: 100vw;
   box-sizing: border-box;
   overflow: hidden;
-  padding: 14rpx 20rpx !important;
+}
+
+/* Two buttons: child theme-btn - fixed half width */
+.bottom-bar-inner.two-btns > .theme-btn {
+  width: 48%;
+  min-width: 0;
+  max-width: none;
+  box-sizing: border-box;
+  overflow: hidden;
+  flex-shrink: 0;
+  /* Override component padding to ensure fit */
+  padding-left: 16rpx !important;
+  padding-right: 16rpx !important;
 }
 
 /* Two buttons: ensure text doesn't overflow */
