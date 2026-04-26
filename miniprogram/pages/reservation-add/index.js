@@ -14,7 +14,7 @@ Page({
     id: '',
     date: '',
     time: '中午',
-    isExclusive: false,
+    exclusiveType: 'none',
     room: 'big',
     standard: 300,
     customerName: '',
@@ -62,7 +62,7 @@ Page({
       this.setData({
         date: formatDate(res.date),
         time: res.time || '中午',
-        isExclusive: !!res.isExclusive,
+        exclusiveType: res.exclusiveType || (res.isExclusive ? 'full' : 'none'),
         room: res.room || 'big',
         standard: res.standard || 300,
         customerName: res.customerName || '',
@@ -88,17 +88,18 @@ Page({
     this.clearError('time')
   },
 
-  toggleExclusive() {
+  selectExclusive(e) {
     wx.vibrateShort({ type: 'light' })
-    const newVal = !this.data.isExclusive
+    const value = e.currentTarget.dataset.value
     this.setData({
-      isExclusive: newVal,
-      room: newVal ? '' : this.data.room
+      exclusiveType: value,
+      room: value === 'none' ? this.data.room : ''
     })
+    this.clearError('room')
   },
 
   selectRoom(e) {
-    if (this.data.isExclusive) return
+    if (this.data.exclusiveType !== 'none') return
     wx.vibrateShort({ type: 'light' })
     this.setData({ room: e.currentTarget.dataset.value })
     this.clearError('room')
@@ -158,7 +159,7 @@ Page({
     const guestResult = validateGuestCount(data.guestCount)
     if (!guestResult.valid) errors.guestCount = guestResult.message
 
-    if (!data.isExclusive && !data.room) {
+    if (data.exclusiveType === 'none' && !data.room) {
       errors.room = '请选择包厢'
     }
 
@@ -192,12 +193,24 @@ Page({
       const app = getApp()
       const userInfo = app.globalData.userInfo || {}
 
+      const et = this.data.exclusiveType
+      let roomName = ''
+      if (et === 'none') {
+        roomName = getRoomName(this.data.room)
+      } else if (et === 'noon') {
+        roomName = '包场（中午）'
+      } else if (et === 'night') {
+        roomName = '包场（晚上）'
+      } else if (et === 'full') {
+        roomName = '包场'
+      }
+
       const docData = {
         date: new Date(this.data.date + 'T00:00:00'),
         time: this.data.time,
-        isExclusive: this.data.isExclusive,
-        room: this.data.isExclusive ? 'big' : this.data.room,
-        roomName: this.data.isExclusive ? '包场' : getRoomName(this.data.room),
+        exclusiveType: this.data.exclusiveType,
+        room: et === 'none' ? this.data.room : 'big',
+        roomName: roomName,
         standard: Number(this.data.standard),
         customerName: this.data.customerName.trim(),
         phone: this.data.phone.trim(),
@@ -236,31 +249,49 @@ Page({
       const dayStart = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 0, 0, 0)
       const dayEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 23, 59, 59)
 
-      const where = {
-        date: _.gte(dayStart).and(_.lte(dayEnd)),
-        time: this.data.time,
-        status: _.neq('cancelled')
-      }
+      const et = this.data.exclusiveType
 
-      if (this.data.isEdit) {
-        where._id = _.neq(this.data.id)
-      }
+      let where
 
-      if (this.data.isExclusive) {
-        // Exclusive blocks all rooms
+      if (et === 'full') {
+        where = { date: _.gte(dayStart).and(_.lte(dayEnd)), status: _.neq('cancelled') }
+      } else if (et === 'noon') {
+        const noonConflict = await db.queryAll(COLLECTIONS.RESERVATION, {
+          date: _.gte(dayStart).and(_.lte(dayEnd)),
+          time: '中午',
+          status: _.neq('cancelled')
+        })
+        if (noonConflict.data && noonConflict.data.length > 0) {
+          throw new Error('该时段已被包场（中午），请更换时间')
+        }
+        return
+      } else if (et === 'night') {
+        const nightConflict = await db.queryAll(COLLECTIONS.RESERVATION, {
+          date: _.gte(dayStart).and(_.lte(dayEnd)),
+          time: '晚上',
+          status: _.neq('cancelled')
+        })
+        if (nightConflict.data && nightConflict.data.length > 0) {
+          throw new Error('该时段已被包场（晚上），请更换时间')
+        }
+        return
       } else {
-        where.room = this.data.room
+        where = { date: _.gte(dayStart).and(_.lte(dayEnd)), time: this.data.time, room: this.data.room, status: _.neq('cancelled') }
       }
+
+      if (this.data.isEdit) { where._id = _.neq(this.data.id) }
 
       const res = await db.queryAll(COLLECTIONS.RESERVATION, where)
       if (res.data && res.data.length > 0) {
-        throw new Error('该时段已存在预约，请更换时间或包厢')
+        if (et === 'full') {
+          throw new Error('该时段已被包场（全天），请更换时间')
+        }
+        throw new Error('该时段【' + getRoomName(this.data.room) + '】已有预约，请更换时间或包厢')
       }
     } catch (err) {
-      if (err.message && err.message.indexOf('已存在预约') !== -1) {
+      if (err.message && (err.message.indexOf('已被包场') !== -1 || err.message.indexOf('已有预约') !== -1)) {
         throw err
       }
-      // Non-conflict errors: let them pass silently
     }
   },
 
