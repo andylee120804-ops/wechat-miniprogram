@@ -1,0 +1,62 @@
+@import '../../styles/mixins.wxss';
+@import '../../styles/bottom-bar.wxss';
+
+.nav-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.nav-bar-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: 88rpx;
+  padding: 0 24rpx;
+}
+
+.nav-back {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-back-icon {
+  font-size: 44rpx;
+  font-weight: 300;
+}
+
+.nav-title {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.nav-action {
+  min-width: 64rpx;
+}
+
+.page {
+  min-height: 100vh;
+}
+
+.form-item-row {
+  display: flex;
+  align-items: center;
+}
+
+.form-label {
+  font-size: 28rpx;
+  width: 160rpx;
+}
+
+.form-input {
+  font-size: 28rpx;
+  background: transparent;
+  border: none;
+  outline: none;
+}
