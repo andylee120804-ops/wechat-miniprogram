@@ -156,7 +156,7 @@
   height: 180rpx;
 }
 
-/* Fixed Bottom Bar */
+/* Fixed Bottom Bar - relies on global .bottom-bar from bottom-bar.wxss */
 .bottom-bar {
   position: fixed;
   left: 0;
