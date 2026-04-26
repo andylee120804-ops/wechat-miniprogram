@@ -30,6 +30,16 @@ Page({
     ]
   },
 
+  async getMinAmount(key) {
+    try {
+      const res = await db.queryAll(COLLECTIONS.SETTINGS, { key })
+      if (res.data && res.data.length > 0) {
+        return res.data[0].value
+      }
+    } catch (err) {}
+    return null
+  },
+
   onLoad(options) {
     const theme = app.getThemePageData()
     const today = formatDate(new Date())
@@ -140,6 +150,31 @@ Page({
         collectedBy: userInfo._id,
         collectedByName: userInfo.name,
         updatedAt: new Date()
+      }
+
+      // 最低消费软校验（仅关联预约时）
+      if (!noReservation && reservationId && this.data.selectedReservation) {
+        const et = this.data.selectedReservation.exclusiveType ||
+                   (this.data.selectedReservation.isExclusive ? 'full' : 'none')
+        const roomKey = et !== 'none' ? et : (this.data.selectedReservation.room || 'big')
+        const key = 'min_amount_' + roomKey
+        const minAmount = await this.getMinAmount(key)
+
+        if (minAmount && parseFloat(amount) < minAmount) {
+          wx.hideLoading()
+          const confirm = await new Promise(resolve => {
+            wx.showModal({
+              title: '金额低于最低消费',
+              content: `该包厢/包场最低消费为 ¥${minAmount}，当前金额 ¥${amount}，是否继续？`,
+              success: res => resolve(res.confirm)
+            })
+          })
+          if (!confirm) {
+            this.setData({ submitting: false })
+            return
+          }
+          wx.showLoading({ title: '保存中' })
+        }
       }
 
       // Sync fields from linked reservation so income-detail can display them
