@@ -173,3 +173,8 @@
 .safe-bottom-bar {
   height: env(safe-area-inset-bottom);
 }
+
+.room-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
