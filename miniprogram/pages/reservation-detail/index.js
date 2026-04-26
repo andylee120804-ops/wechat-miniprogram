@@ -34,7 +34,12 @@ Page({
 
       res.statusText = getReservationStatusText(res.status)
       res.dateDisplay = formatDate(res.date)
-      res.roomNameDisplay = res.isExclusive ? '包场' : getRoomName(res.room)
+      // exclusiveType兼容
+      const et = res.exclusiveType || (res.isExclusive ? 'full' : 'none')
+      res.roomNameDisplay = et === 'none' ? getRoomName(res.room) :
+                           (et === 'noon' ? '包场（午）' :
+                            et === 'night' ? '包场（晚）' : '包场（全体）')
+      res.exclusiveType = et
 
       this.setData({
         reservation: res,
