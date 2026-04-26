@@ -19,7 +19,8 @@ const COLLECTIONS = {
   LOG: 'log',
   OPERATION_LOG: 'operation_log',
   ANNOUNCEMENT: 'announcement',
-  NOTIFICATION_LOG: 'notification_log'
+  NOTIFICATION_LOG: 'notification_log',
+  SETTINGS: 'settings'
 }
 
 /**
