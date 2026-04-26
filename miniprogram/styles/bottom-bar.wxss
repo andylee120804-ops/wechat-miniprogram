@@ -60,11 +60,12 @@
   min-width: 0;
   max-width: none;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
   flex-shrink: 0;
+  display: flex !important;
   /* Override component padding to ensure fit */
-  padding-left: 16rpx !important;
-  padding-right: 16rpx !important;
+  padding-left: 8rpx !important;
+  padding-right: 8rpx !important;
 }
 
 /* Two buttons: ensure text doesn't overflow */
