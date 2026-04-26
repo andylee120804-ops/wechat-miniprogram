@@ -1,4 +1,5 @@
 @import '../../styles/mixins.wxss';
+@import '../../styles/bottom-bar.wxss';
 
 /* Navigation Bar */
 .nav-bar {
@@ -162,25 +163,6 @@
   right: 0;
   bottom: 0;
   z-index: 100;
-}
-
-.bottom-bar-inner {
-  display: flex;
-  justify-content: center;
-  padding: 20rpx 24rpx;
-}
-
-.bottom-bar-inner.single-btn {
-  justify-content: center;
-}
-
-.bottom-bar-inner.two-btns {
-  justify-content: space-between;
-}
-
-.bottom-bar-inner.two-btns .btn {
-  flex: 1;
-  max-width: 48%;
 }
 
 .bottom-btn-center {

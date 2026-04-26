@@ -1,0 +1,73 @@
+/**
+ * Bottom Bar Styles - Premium WeChat Mini-Program
+ *
+ * Unified bottom action bar styles for all pages.
+ * Import this file in any page/component wxss:
+ *   @import "../../styles/bottom-bar.wxss";
+ *
+ * Structure:
+ *   <view class="bottom-bar">
+ *     <view class="bottom-bar-inner single-btn|two-btns">
+ *       <theme-btn ... />
+ *       <theme-btn ... />
+ *     </view>
+ *   </view>
+ */
+
+/* Base bottom bar container */
+.bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(26, 26, 46, 0.95);
+  border-top: 1rpx solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 100;
+}
+
+/* Inner flex container - base styles */
+.bottom-bar-inner {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 32rpx;
+  gap: 16rpx;
+}
+
+/* Single button - center aligned */
+.bottom-bar-inner.single-btn {
+  justify-content: center;
+}
+
+/* Two buttons - space between */
+.bottom-bar-inner.two-btns {
+  justify-content: space-between;
+}
+
+/* Two buttons: child theme-btn takes full width */
+.bottom-bar-inner.two-btns > .theme-btn {
+  flex: 1;
+  min-width: 0;
+  max-width: 48%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Two buttons: ensure text doesn't overflow */
+.bottom-bar-inner.two-btns > .theme-btn .btn-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+/* Safe area bottom padding */
+.bottom-bar.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Alternative: two buttons equal width (no max-width cap) */
+.bottom-bar-inner.two-btns.equal-width > .theme-btn {
+  max-width: none;
+}
