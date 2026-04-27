@@ -3,7 +3,6 @@
   "usingComponents": {
     "glass-card": "/components/glass-card/index",
     "theme-badge": "/components/theme-badge/index",
-    "theme-btn": "/components/theme-btn/index",
-    "theme-switcher": "/components/theme-switcher/index"
+    "theme-btn": "/components/theme-btn/index"
   }
 }

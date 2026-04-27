@@ -9,7 +9,6 @@ Page({
     statusBarHeight: 0,
     userInfo: null,
     roleName: '',
-    showThemeSwitcher: false,
     managementGroup: [],
     featureGroup: [],
     settingsGroup: []
@@ -24,8 +23,7 @@ Page({
       theme,
       statusBarHeight: app.globalData.statusBarHeight || 44,
       userInfo,
-      roleName,
-      currentThemeId: app.getTheme() || 'ink-gold'
+      roleName
     })
 
     this.buildMenuGroups()
@@ -60,7 +58,6 @@ Page({
     }
 
     // Settings group
-    settingsGroup.push({ key: 'theme', icon: '🎨', text: '主题选择' })
     settingsGroup.push({ key: 'about', icon: 'ℹ️', text: '关于' })
 
     this.setData({
@@ -86,11 +83,6 @@ Page({
       about: ''
     }
 
-    if (key === 'theme') {
-      this.onThemeSwitch()
-      return
-    }
-
     if (key === 'about') {
       wx.showModal({
         title: '关于听澜轩',
@@ -108,19 +100,6 @@ Page({
         wx.showToast({ title: '页面加载失败', icon: 'none' })
       }
     }
-  },
-
-  onThemeSwitch() {
-    this.setData({ showThemeSwitcher: true })
-  },
-
-  onThemeChange() {
-    const theme = app.getThemePageData()
-    this.setData({ theme })
-  },
-
-  onThemeClose() {
-    this.setData({ showThemeSwitcher: false })
   },
 
   onLogout() {

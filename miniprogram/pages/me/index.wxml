@@ -87,13 +87,4 @@
 
   <!-- Bottom safe area -->
   <view class="safe-bottom"></view>
-
-  <!-- Theme Switcher Overlay -->
-  <theme-switcher
-    wx:if="{{showThemeSwitcher}}"
-    theme="{{theme}}"
-    themeId="{{currentThemeId}}"
-    bind:change="onThemeChange"
-    bind:close="onThemeClose"
-  />
 </view>
