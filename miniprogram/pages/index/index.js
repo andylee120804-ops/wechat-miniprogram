@@ -194,6 +194,14 @@ Page({
     wx.navigateTo({ url: `/pages/reservation-detail/index?id=${id}` })
   },
 
+  onIncomeTap() {
+    wx.switchTab({ url: '/pages/income/index' })
+  },
+
+  onExpenseTap() {
+    wx.switchTab({ url: '/pages/purchase/index' })
+  },
+
   onViewAllReservations() {
     wx.switchTab({ url: '/pages/reservation/index' })
   },

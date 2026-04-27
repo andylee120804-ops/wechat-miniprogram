@@ -114,14 +114,14 @@
           <text class="section-title" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">今日收支</text>
         </view>
         <view class="summary-row">
-          <view class="summary-item">
+          <view class="summary-item" bindtap="onIncomeTap">
             <text class="summary-value" style="color: {{theme.statusSuccess || '#4ADE80'}};">¥{{todayIncome}}</text>
-            <text class="summary-label" style="color: {{theme.textMuted || '#5C5C72'}};">收入</text>
+            <text class="summary-label" style="color: {{theme.textMuted || '#5C5C72'}};">收入 ›</text>
           </view>
           <view class="summary-divider"></view>
-          <view class="summary-item">
+          <view class="summary-item" bindtap="onExpenseTap">
             <text class="summary-value" style="color: {{theme.statusWarning || '#FBBF24'}};">¥{{todayExpense}}</text>
-            <text class="summary-label" style="color: {{theme.textMuted || '#5C5C72'}};">支出</text>
+            <text class="summary-label" style="color: {{theme.textMuted || '#5C5C72'}};">支出 ›</text>
           </view>
         </view>
         <view wx:if="{{monthlyFixedCost > 0}}" class="summary-row" style="margin-top: 12rpx;">
