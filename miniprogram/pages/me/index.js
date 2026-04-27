@@ -86,7 +86,7 @@ Page({
     if (key === 'about') {
       wx.showModal({
         title: '关于听澜轩',
-        content: '听澜轩智慧会所管理系统 v1.0.0\n专注高端会所的预约、采购、收入与客户管理',
+        content: '听澜轩智慧管理系统 v1.0.0',
         showCancel: false
       })
       return
