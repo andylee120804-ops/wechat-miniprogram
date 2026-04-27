@@ -61,28 +61,40 @@ App({
   getThemeColors() { return THEMES[this.globalData.theme] || THEMES['ink-gold'] },
   getThemePageData() { return getThemePageData(this.globalData.theme) },
 
-  checkForceRelogin(callback) {
+  onShow() {
+    this.refreshSession()
+  },
+
+  _lastRefreshTime: 0,
+
+  async refreshSession() {
     const userInfo = this.globalData.userInfo
     if (!userInfo) return
-    const db = wx.cloud.database()
-    db.collection(COLLECTIONS.STAFF).doc(userInfo._id).get().then(res => {
-      const staff = res.data
-      if (staff.permissionsUpdatedAt && (!userInfo.permissionsUpdatedAt ||
-          staff.permissionsUpdatedAt > userInfo.permissionsUpdatedAt)) {
-        wx.showModal({
-          title: '权限变更',
-          content: '您的权限已被更新，请重新登录',
-          showCancel: false,
-          success: () => {
-            this.logout()
-            wx.reLaunch({ url: '/pages/login/index' })
-          }
+    const now = Date.now()
+    if (now - this._lastRefreshTime < 30000) return
+    this._lastRefreshTime = now
+    try {
+      const permRes = await wx.cloud.callFunction({
+        name: 'getPermissions',
+        data: { staffId: userInfo._id }
+      })
+      if (permRes.result && permRes.result.success) {
+        this.globalData.permissions = permRes.result.data
+      }
+      const db = wx.cloud.database()
+      const staffRes = await db.collection(COLLECTIONS.STAFF).doc(userInfo._id).get()
+      if (staffRes.data) {
+        var updatedInfo = Object.assign({}, userInfo, {
+          name: staffRes.data.name,
+          role: staffRes.data.role,
+          phone: staffRes.data.phone || '',
+          permissionsUpdatedAt: staffRes.data.permissionsUpdatedAt || userInfo.permissionsUpdatedAt
         })
-      } else if (callback) callback()
-    }).catch(err => {
-      console.error('检查权限变更失败:', err)
-      if (callback) callback()
-    })
+        this.setUserInfo(updatedInfo)
+      }
+    } catch (err) {
+      console.error('[refreshSession] 刷新状态失败:', err)
+    }
   },
 
   checkLogin() {

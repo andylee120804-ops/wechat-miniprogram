@@ -1,6 +1,5 @@
 const app = getApp()
 const { formatAmount, formatDate } = require('../../utils/helpers')
-const { getLineChartConfig, getBarChartConfig, getIncomeTypeColors } = require('../../utils/chart-config')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 
@@ -13,8 +12,6 @@ Page({
     topIncomeSource: { type: '', amount: 0, typeName: '' },
     avgDailyRevenue: '0.00',
     topCustomer: { name: '', visits: 0 },
-    revenueChart: null,
-    weeklyChart: null,
     insights: []
   },
 
@@ -37,14 +34,10 @@ Page({
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
       // Call getInsights cloud function for aggregated data
-      const [busiestRes, trendRes, topSourceRes, customerRes] = await Promise.all([
+      const [busiestRes, topSourceRes, customerRes] = await Promise.all([
         wx.cloud.callFunction({
           name: 'getInsights',
           data: { action: 'busiestDays', startDate: formatDate(monthStart), endDate: formatDate(now), top: 1 }
-        }),
-        wx.cloud.callFunction({
-          name: 'getInsights',
-          data: { action: 'revenueTrend', period: 'month', months: 6 }
         }),
         wx.cloud.callFunction({
           name: 'getInsights',
@@ -103,9 +96,15 @@ Page({
         })
       }
 
-      const purchaseRes = await db.collection(COLLECTIONS.PURCHASE).where({
-        date: _.gte(monthStart)
-      }).get()
+      const [reservationRes, purchaseRes] = await Promise.all([
+        db.collection(COLLECTIONS.RESERVATION).where({
+          date: _.gte(monthStart),
+          status: _.neq('cancelled')
+        }).get(),
+        db.collection(COLLECTIONS.PURCHASE).where({
+          date: _.gte(monthStart)
+        }).get()
+      ])
 
       const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
       const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
@@ -125,15 +124,68 @@ Page({
         })
       }
 
-      // Revenue trend chart
-      let revenueChart = null
-      if (trendRes.result.success && trendRes.result.data.length > 0) {
-        const trendData = trendRes.result.data
-        const categories = trendData.map(d => d.month)
-        const series = [{ name: '收入', data: trendData.map(d => d.amount) }]
-        revenueChart = getLineChartConfig(this.data.theme, categories, series, {
-          canvasWidth: 650,
-          canvasHeight: 300
+      // Room utilization: count unique days per room
+      var roomDays = { big: 0, small: 0 }
+      var timeCount = { noon: 0, night: 0 }
+      var roomDateSet = { big: {}, small: {} }
+      var timeNameMap = { noon: '中午', night: '晚上' }
+      ;(reservationRes.data || []).forEach(function(r) {
+        var dateStr = formatDate(r.date)
+        var room = r.room || 'big'
+        var time = r.time
+        // Room utilization (count unique days per room)
+        if (room === 'big' || room === 'small') {
+          if (!roomDateSet[room][dateStr]) {
+            roomDateSet[room][dateStr] = true
+            roomDays[room]++
+          }
+        }
+        // Time slot preference
+        if (time === '中午' || time === '晚上') {
+          timeCount[time === '中午' ? 'noon' : 'night']++
+        }
+      })
+      var totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+      insights.push({
+        icon: '🚪',
+        title: '包厢利用率',
+        desc: '大包厢 ' + roomDays.big + '天 (' + Math.round(roomDays.big / totalDays * 100) + '%)  小包厢 ' + roomDays.small + '天 (' + Math.round(roomDays.small / totalDays * 100) + '%)',
+        color: 'accent'
+      })
+      var totalResTime = timeCount.noon + timeCount.night
+      if (totalResTime > 0) {
+        insights.push({
+          icon: '⏰',
+          title: '时段偏好',
+          desc: '中午 ' + Math.round(timeCount.noon / totalResTime * 100) + '% (' + timeCount.noon + '次)  晚上 ' + Math.round(timeCount.night / totalResTime * 100) + '% (' + timeCount.night + '次)',
+          color: 'warning'
+        })
+      }
+
+      // Most popular purchase category
+      var categoryNameMap = {
+        meat: '肉类', seafood: '海鲜', vegetable: '蔬菜', fruit: '水果',
+        drink: '饮品', seasoning: '调味品', supplies: '日用品', equipment: '设备', other: '其他'
+      }
+      var categoryCount = {}
+      ;(purchaseRes.data || []).forEach(function(p) {
+        var cat = p.category || 'other'
+        categoryCount[cat] = (categoryCount[cat] || 0) + 1
+      })
+      var topCat = ''
+      var topCatCount = 0
+      Object.keys(categoryCount).forEach(function(c) {
+        if (categoryCount[c] > topCatCount) {
+          topCat = c
+          topCatCount = categoryCount[c]
+        }
+      })
+      if (topCat) {
+        insights.push({
+          icon: '🛒',
+          title: '热购品类',
+          desc: (categoryNameMap[topCat] || topCat) + ' ' + topCatCount + '次',
+          color: 'success'
         })
       }
 
@@ -143,8 +195,7 @@ Page({
         topIncomeSource: topSourceRes.result.success ? (topSourceRes.result.data[0] || { type: '-', amount: 0, typeName: '-' }) : { type: '-', amount: 0, typeName: '-' },
         avgDailyRevenue: formatAmount(avgDaily),
         topCustomer: customerRes.result.success ? (customerRes.result.data[0] || { name: '-', visits: 0 }) : { name: '-', visits: 0 },
-        insights,
-        revenueChart
+        insights
       })
     } catch (err) {
       handleCloudError(err, '经营洞察')

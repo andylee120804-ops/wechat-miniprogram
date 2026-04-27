@@ -22,6 +22,12 @@ Page({
     this.loadData()
   },
 
+  onShow() {
+    if (this.data.id) {
+      this.loadData()
+    }
+  },
+
   async loadData() {
     try {
       this.setData({ loading: true })

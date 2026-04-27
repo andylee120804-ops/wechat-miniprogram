@@ -6,15 +6,51 @@
         <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
       </view>
       <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">出勤统计</text>
-      <view class="nav-action"></view>
+      <view class="nav-action" bindtap="toggleSettings">
+        <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 36rpx;">⚙️</text>
+      </view>
     </view>
   </view>
 
   <!-- Month Nav (kept below nav-bar) -->
-  <view class="month-nav" style="display: flex; align-items: center; justify-content: center; gap: 32rpx; padding: 24rpx;">
+  <view class="month-nav" style="display: flex; align-items: center; justify-content: center; gap: 32rpx; padding: 24rpx 24rpx 0;">
     <view class="nav-arrow" bindtap="prevMonth">‹</view>
     <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 32rpx; font-weight: 600; min-width: 160rpx; text-align: center;">{{currentMonth}}</text>
     <view class="nav-arrow" bindtap="nextMonth">›</view>
+  </view>
+
+  <!-- Work Time Settings Entry -->
+  <view bindtap="toggleSettings" style="display: flex; align-items: center; justify-content: center; gap: 8rpx; padding: 16rpx 24rpx;">
+    <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">⏰ 上下班时间</text>
+    <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 24rpx; font-weight: 600;">{{workStartTime}} ~ {{workEndTime}}</text>
+    <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">›</text>
+  </view>
+
+  <!-- Settings Panel -->
+  <view wx:if="{{showSettings}}" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; margin: 0 32rpx 24rpx; padding: 24rpx;">
+    <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 600; display: block; margin-bottom: 20rpx;">⏰ 上下班时间设置</text>
+    <view style="display: flex; align-items: center; gap: 16rpx; margin-bottom: 20rpx;">
+      <view style="flex: 1;">
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; display: block; margin-bottom: 6rpx;">上班时间</text>
+        <picker mode="time" value="{{settingsStartTime}}" bindchange="onSettingsStartChange">
+          <view style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 16rpx 24rpx; text-align: center;">
+            <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 32rpx; font-weight: 700;">{{settingsStartTime}}</text>
+          </view>
+        </picker>
+      </view>
+      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 28rpx; margin-top: 32rpx;">至</text>
+      <view style="flex: 1;">
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; display: block; margin-bottom: 6rpx;">下班时间</text>
+        <picker mode="time" value="{{settingsEndTime}}" bindchange="onSettingsEndChange">
+          <view style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 16rpx 24rpx; text-align: center;">
+            <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 32rpx; font-weight: 700;">{{settingsEndTime}}</text>
+          </view>
+        </picker>
+      </view>
+    </view>
+    <view bindtap="onSaveWorkTime" style="background: linear-gradient(135deg, #C9A96E, #E8D5A8); border-radius: 999rpx; padding: 18rpx; text-align: center;">
+      <text style="color: #0F0F1A; font-size: 28rpx; font-weight: 700;">保存设置</text>
+    </view>
   </view>
 
   <skeleton wx:if="{{loading}}" theme="{{theme}}" type="list" count="3" />
@@ -35,7 +71,7 @@
             <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">点击查看详情 ›</text>
           </view>
         </view>
-        <view class="toggle-btn" bindtap="toggleExpand" data-index="{{index}}">
+        <view class="toggle-btn" catchtap="toggleExpand" data-index="{{index}}">
           <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx;">{{item.expanded ? '收起' : '展开'}}</text>
         </view>
       </view>
@@ -54,15 +90,22 @@
           <text style="color: {{item.lates > 0 ? (theme.statusDanger || '#F87171') : (theme.textPrimary || '#F0F0F5')}}; font-size: 36rpx; font-weight: 700; display: block;">{{item.lates}}</text>
           <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">迟到</text>
         </view>
+        <view style="flex: 1; text-align: center;">
+          <text style="color: {{item.earlyLeaves > 0 ? (theme.statusWarning || '#FBBF24') : (theme.textPrimary || '#F0F0F5')}}; font-size: 36rpx; font-weight: 700; display: block;">{{item.earlyLeaves}}</text>
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">早退</text>
+        </view>
       </view>
 
       <!-- Expanded Records -->
       <view wx:if="{{item.expanded}}" style="border-top: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.04)'}}; padding: 20rpx 24rpx; max-height: 400rpx; overflow-y: auto;">
         <view class="record-row" wx:for="{{item.records}}" wx:key="dateStr" style="display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.03)'}};">
-          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; width: 140rpx; flex-shrink: 0;">{{item.dateStr}}</text>
-          <text style="color: {{theme.statusSuccess || '#4ADE80'}}; font-size: 26rpx; width: 80rpx; flex-shrink: 0;">{{item.clockInTimeStr}}</text>
-          <text style="color: {{theme.statusWarning || '#FBBF24'}}; font-size: 26rpx; width: 80rpx; flex-shrink: 0;">{{item.clockOutTimeStr}}</text>
-          <text style="color: {{item.isLate ? (theme.statusDanger || '#F87171') : (theme.textMuted || '#5C5C72')}}; font-size: 26rpx; flex: 1; text-align: right;">{{item.duration}}</text>
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; width: 130rpx; flex-shrink: 0;">{{item.dateStr}}</text>
+          <text style="color: {{theme.statusSuccess || '#4ADE80'}}; font-size: 26rpx; width: 70rpx; flex-shrink: 0;">{{item.clockInTimeStr}}</text>
+          <text style="color: {{theme.statusWarning || '#FBBF24'}}; font-size: 26rpx; width: 70rpx; flex-shrink: 0;">{{item.clockOutTimeStr}}</text>
+          <view style="flex: 1; text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 6rpx;">
+            <text style="color: {{item.isLate ? (theme.statusDanger || '#F87171') : (theme.textMuted || '#5C5C72')}}; font-size: 26rpx;">{{item.duration}}</text>
+            <text wx:if="{{item.isEarlyLeave}}" style="color: #FBBF24; font-size: 20rpx; background: rgba(251,191,36,0.15); padding: 2rpx 8rpx; border-radius: 6rpx;">早退</text>
+          </view>
         </view>
         <text wx:if="{{item.records.length === 0}}" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; display: block; text-align: center; padding: 20rpx 0;">本月暂无打卡记录</text>
       </view>

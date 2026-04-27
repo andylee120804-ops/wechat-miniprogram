@@ -1,5 +1,5 @@
 const app = getApp()
-const { getWeekRange, getMonthRange, getQuarterRange, getYearRange, getIncomeTypeText, getExpenseCategoryName } = require('../../../utils/helpers')
+const { getWeekRange, getMonthRange, getYearRange, getIncomeTypeText, getExpenseCategoryName, getWeekNumber } = require('../../../utils/helpers')
 const { handleCloudError } = require('../../../utils/error-handler')
 const { getRingChartConfig, getIncomeTypeColors, getExpenseTypeColors } = require('../../../utils/chart-config')
 const { checkPermission } = require('../../../utils/permission')
@@ -33,14 +33,18 @@ Page({
     showPicker: false,
     pickerYear: 2026,
     pickerMonth: 1,
-    pickerQuarter: 1,
+    pickerWeek: 1,
     pickerYears: [],
     pickerMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-    pickerQuarters: [1, 2, 3, 4]
+    pickerWeeks: []
   },
 
   onLoad: function() {
     this.setData({ statusBarHeight: app.globalData.statusBarHeight || 44 })
+    // Generate week numbers 1-53
+    var weeks = []
+    for (var i = 1; i <= 53; i++) weeks.push(i)
+    this.setData({ pickerWeeks: weeks })
     this.setPeriodRange()
   },
 
@@ -65,8 +69,6 @@ Page({
       range = getWeekRange(offset)
     } else if (type === 'month') {
       range = getMonthRange(offset)
-    } else if (type === 'quarter') {
-      range = getQuarterRange(offset)
     } else {
       range = getYearRange(offset)
     }
@@ -80,8 +82,7 @@ Page({
 
   formatPeriodLabel: function(label, type) {
     if (!label) return ''
-    // Always show the computed label from helpers (e.g. "2026-04" or "2026年Q1")
-    // No need to append "月报/季报" suffix — the period type tabs already indicate the mode
+    // Always show the computed label from helpers (e.g. "2026-04" or "本周")
     return label
   },
 
@@ -130,7 +131,14 @@ Page({
 
     var pickerYear = targetDate.getFullYear()
     var pickerMonth = targetDate.getMonth() + 1
-    var pickerQuarter = Math.floor(targetDate.getMonth() / 3) + 1
+
+    // For week type, compute the week number from current offset
+    var pickerWeek = 1
+    if (type === 'week') {
+      var weekRange = getWeekRange(offset)
+      pickerWeek = weekRange.weekNum || 1
+      pickerYear = weekRange.year || pickerYear
+    }
 
     // Build year list: current year ± 3
     var currentYear = now.getFullYear()
@@ -143,7 +151,7 @@ Page({
       showPicker: true,
       pickerYear: pickerYear,
       pickerMonth: pickerMonth,
-      pickerQuarter: pickerQuarter,
+      pickerWeek: pickerWeek,
       pickerYears: years
     })
   },
@@ -156,8 +164,8 @@ Page({
     this.setData({ pickerMonth: e.currentTarget.dataset.month })
   },
 
-  onPickerQuarterSelect: function(e) {
-    this.setData({ pickerQuarter: e.currentTarget.dataset.quarter })
+  onPickerWeekSelect: function(e) {
+    this.setData({ pickerWeek: e.currentTarget.dataset.week })
   },
 
   onPickerConfirm: function() {
@@ -168,18 +176,23 @@ Page({
 
     if (type === 'year') {
       offset = pickerYear - now.getFullYear()
-    } else if (type === 'quarter') {
-      // Calculate offset in quarters from current quarter
-      var currentQuarter = Math.floor(now.getMonth() / 3)
-      var targetQuarter = this.data.pickerQuarter - 1
-      offset = (pickerYear - now.getFullYear()) * 4 + (targetQuarter - currentQuarter)
     } else if (type === 'month') {
       // Calculate offset in months from current month
       offset = (pickerYear - now.getFullYear()) * 12 + (this.data.pickerMonth - 1 - now.getMonth())
     } else {
-      // week — just close, no picker for week
-      this.setData({ showPicker: false })
-      return
+      // week — compute offset from current ISO week
+      var currentWeekInfo = getWeekNumber(now)
+      var currentYear = currentWeekInfo.year
+      var currentWeek = currentWeekInfo.week
+      var targetYear = pickerYear
+      var targetWeek = this.data.pickerWeek
+      // Approximate week offset (years * 52 + week diff), then refine by checking Monday difference
+      var approxOffset = (targetYear - currentYear) * 52 + (targetWeek - currentWeek)
+      // Refine using actual Monday dates
+      var currentMonday = this.getMondayOfWeek(currentYear, currentWeek)
+      var targetMonday = this.getMondayOfWeek(targetYear, targetWeek)
+      var diffDays = (targetMonday.getTime() - currentMonday.getTime()) / 86400000
+      offset = Math.round(diffDays / 7)
     }
 
     this.setData({
@@ -188,6 +201,18 @@ Page({
     })
     this.setPeriodRange()
     this.loadData()
+  },
+
+  // Helper to get Monday of a given ISO year/week
+  getMondayOfWeek: function(year, week) {
+    var jan4 = new Date(year, 0, 4)
+    var jan4Day = jan4.getDay() || 7
+    var jan4Monday = new Date(jan4)
+    jan4Monday.setDate(jan4.getDate() - jan4Day + 1)
+    var target = new Date(jan4Monday)
+    target.setDate(jan4Monday.getDate() + (week - 1) * 7)
+    target.setHours(0, 0, 0, 0)
+    return target
   },
 
   onPickerCancel: function() {
@@ -247,10 +272,8 @@ Page({
       date: cmd.gte(startDate).and(cmd.lte(endDate))
     }).get()
 
-    var fixedExpensePromise = dbInstance.collection(COLLECTIONS.FIXED_EXPENSE).where({
-      date: cmd.gte(startDate).and(cmd.lte(endDate)),
-      status: cmd.neq('deleted')
-    }).get()
+    // Fixed expenses: new format (monthlyAmount items) + old format (date-based records)
+    var fixedExpensePromise = dbInstance.collection(COLLECTIONS.FIXED_EXPENSE).get()
 
     var salaryPromise = dbInstance.collection(COLLECTIONS.STAFF).where({
       status: cmd.neq('inactive')
@@ -291,25 +314,50 @@ Page({
         expenseByCategory[category] = (expenseByCategory[category] || 0) + amount
       })
 
+      // Fixed expenses: new format (monthlyAmount) scaled to period; old format (date) matched by range
+      var periodMonths = 1
+      if (that.data.periodType === 'year') periodMonths = 12
+      else if (that.data.periodType === 'week') periodMonths = 0.23
+
+      var fixedByName = {}
+
       fixedExpenseData.forEach(function(item) {
-        var amount = Number(item.amount) || 0
-        totalExpense += amount
-        var category = item.category || 'other'
-        expenseByCategory[category] = (expenseByCategory[category] || 0) + amount
+        if (item.monthlyAmount) {
+          // New format: recurring item with monthly amount — check active period
+          // Only include if item is active during the selected period
+          if (item.startDate && item.startDate > endDate) return
+          if (item.endDate && item.endDate < startDate) return
+
+          var monthlyVal = Number(item.monthlyAmount) || 0
+          var amount = monthlyVal * periodMonths
+          totalExpense += amount
+          var name = item.name || '固定成本'
+          fixedByName[name] = (fixedByName[name] || 0) + amount
+        } else if (item.date && item.date >= startDate && item.date <= endDate) {
+          // Old format: date-range matched record — use original category
+          var amount = Number(item.amount || 0)
+          totalExpense += amount
+          var cat = item.category || 'other'
+          expenseByCategory[cat] = (expenseByCategory[cat] || 0) + amount
+        }
       })
 
-      // Calculate salary totals
+      // Calculate salary totals (respect hireDate and scale by periodMonths)
       var totalSalary = 0
       staffData.forEach(function(item) {
-        totalSalary += Number(item.salary) || 0
+        // Only include salary if staff was hired on or before the period end date
+        if (item.hireDate && item.hireDate > endDate) return
+        totalSalary += (Number(item.salary) || 0) * periodMonths
       })
 
       var totalExpenseAll = totalPurchase + totalExpense + totalSalary
+      // Guard against NaN from bad data — prevents crash in .toFixed()
+      if (isNaN(totalExpenseAll)) totalExpenseAll = 0
       var profit = totalIncome - totalExpenseAll
 
       // Prepare chart data — pass purchase and salary for expense chart
       var incomeResult = that.prepareIncomeChart(incomeByType)
-      var expenseResult = that.prepareExpenseChart(expenseByCategory, totalPurchase, totalSalary)
+      var expenseResult = that.prepareExpenseChart(expenseByCategory, totalPurchase, totalSalary, fixedByName)
 
       var incomeChartData = incomeResult.chartConfig
       var incomeBreakdown = incomeResult.breakdown
@@ -381,7 +429,7 @@ Page({
     return { chartConfig: chartConfig, breakdown: breakdown }
   },
 
-  prepareExpenseChart: function(expenseByCategory, totalPurchase, totalSalary) {
+  prepareExpenseChart: function(expenseByCategory, totalPurchase, totalSalary, fixedByName) {
     var themeId = app.getTheme()
     var colors = getExpenseTypeColors(themeId)
     // Expense composition: 采购 + 各类支出 + 工资
@@ -394,6 +442,14 @@ Page({
       { key: 'other', name: '其他', value: expenseByCategory['other'] || 0 }
     ]
 
+    // Break down fixed costs by name into separate chart entries
+    if (fixedByName) {
+      var fixedNames = Object.keys(fixedByName).sort()
+      fixedNames.forEach(function(name) {
+        expenseItems.push({ key: 'fixed_' + name, name: name, value: fixedByName[name] })
+      })
+    }
+
     var series = []
     var breakdown = []
     var totalForPercent = 0
@@ -402,14 +458,14 @@ Page({
       totalForPercent += item.value
     })
 
-    // Use distinct colors for each expense item
-    var expenseColors = ['#F87171', '#C9A96E', '#60A5FA', '#4ADE80', '#FBBF24', '#6B7B8D']
+    // Use distinct colors for each expense item (base 6 + extended for fixed cost names)
+    var expenseColors = ['#F87171', '#C9A96E', '#60A5FA', '#4ADE80', '#FBBF24', '#6B7B8D', '#A78BFA', '#F472B6', '#34D399', '#FB923C', '#22D3EE', '#E879F9', '#FDE047']
     if (themeId === 'cloud-pearl') {
-      expenseColors = ['#DC2626', '#5B7FFF', '#D97706', '#16A34A', '#7C3AED', '#909399']
+      expenseColors = ['#DC2626', '#5B7FFF', '#D97706', '#16A34A', '#7C3AED', '#909399', '#8B5CF6', '#EC4899', '#10B981', '#F97316', '#06B6D4', '#D946EF', '#EAB308']
     } else if (themeId === 'neon-night') {
-      expenseColors = ['#F43F5E', '#8B5CF6', '#60A5FA', '#06D6A0', '#FBBF24', '#6B7B8D']
+      expenseColors = ['#F43F5E', '#8B5CF6', '#60A5FA', '#06D6A0', '#FBBF24', '#6B7B8D', '#A78BFA', '#F472B6', '#34D399', '#FB923C', '#22D3EE', '#E879F9', '#FDE047']
     } else if (themeId === 'zen-mist') {
-      expenseColors = ['#A0522D', '#8B7355', '#6B7B8D', '#5A7D4A', '#B8860B', '#909399']
+      expenseColors = ['#A0522D', '#8B7355', '#6B7B8D', '#5A7D4A', '#B8860B', '#909399', '#8B7355', '#CD5C5C', '#7B9A6B', '#C4A35A', '#5F9EA0', '#B07D6B', '#9B8E7A']
     }
 
     expenseItems.forEach(function(item, index) {

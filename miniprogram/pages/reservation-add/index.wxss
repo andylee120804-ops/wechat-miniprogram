@@ -85,25 +85,6 @@
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.15);
 }
 
-/* Room selector disabled state */
-.room-selector.room-disabled {
-  opacity: 0.35;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
-.room-selector {
-  transition: opacity 0.3s ease;
-}
-
-/* Exclusive Row */
-.exclusive-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16rpx;
-}
-
 /* Standard selector */
 .standard-selector .pill {
   min-width: 140rpx;
@@ -172,9 +153,4 @@
 
 .safe-bottom-bar {
   height: env(safe-area-inset-bottom);
-}
-
-.room-disabled {
-  opacity: 0.4;
-  pointer-events: none;
 }

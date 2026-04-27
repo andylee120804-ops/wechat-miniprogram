@@ -1,52 +1,86 @@
-<view class="page" style="background: {{theme.surfaceColor || '#1A1A2E'}}; min-height: 100vh;">
+<view class="page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh;">
+  <!-- Custom Navigation Bar -->
   <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
     <view class="nav-bar-content">
       <view class="nav-back" bindtap="onBack">
-        <text class="nav-back-icon" style="color: {{theme.textPrimary}}">❮</text>
+        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
       </view>
-      <text class="nav-title" style="color: {{theme.textPrimary}};">最低消费设置</text>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}}">最低消费设置</text>
       <view class="nav-action"></view>
     </view>
   </view>
 
-  <view style="padding-top: {{statusBarHeight + 44}}px; padding: 32rpx;">
-    <theme-card theme="{{theme}}" padding="32rpx">
-      <view class="section-title" style="color: {{theme.textPrimary}}; margin-bottom: 24rpx;">包厢最低消费</view>
-      <view class="form-item-row">
-        <text class="form-label" style="color: {{theme.textSecondary}};">大包厢</text>
-        <input class="form-input" type="number" value="{{min_big}}" bindinput="onBigInput" placeholder="请输入金额" placeholder-style="color: {{theme.textMuted}}" style="color: {{theme.textPrimary}}; flex: 1; text-align: right;" />
-        <text style="color: {{theme.textSecondary}}; margin-left: 8rpx;">元</text>
-      </view>
-      <view class="form-item-row" style="margin-top: 20rpx;">
-        <text class="form-label" style="color: {{theme.textSecondary}};">小包厢</text>
-        <input class="form-input" type="number" value="{{min_small}}" bindinput="onSmallInput" placeholder="请输入金额" placeholder-style="color: {{theme.textMuted}}" style="color: {{theme.textPrimary}}; flex: 1; text-align: right;" />
-        <text style="color: {{theme.textSecondary}}; margin-left: 8rpx;">元</text>
-      </view>
-    </theme-card>
+  <view class="page-content" style="padding-top: {{statusBarHeight + 44}}px;">
+    <!-- Room Min Amount -->
+    <view class="section-wrapper" style="padding: 32rpx 32rpx 0;">
+      <theme-card theme="{{theme}}" padding="32rpx">
+        <view class="card-header" style="display: flex; align-items: center; margin-bottom: 28rpx;">
+          <view style="width: 8rpx; height: 32rpx; background: {{theme.accentColor || '#C9A96E'}}; border-radius: 4rpx; margin-right: 16rpx;"></view>
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600;">包厢最低消费</text>
+        </view>
 
-    <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;">
-      <view class="section-title" style="color: {{theme.textPrimary}}; margin-bottom: 24rpx;">包场最低消费</view>
-      <view class="form-item-row">
-        <text class="form-label" style="color: {{theme.textSecondary}};">午包场</text>
-        <input class="form-input" type="number" value="{{min_noon}}" bindinput="onNoonInput" placeholder="请输入金额" placeholder-style="color: {{theme.textMuted}}" style="color: {{theme.textPrimary}}; flex: 1; text-align: right;" />
-        <text style="color: {{theme.textSecondary}}; margin-left: 8rpx;">元</text>
-      </view>
-      <view class="form-item-row" style="margin-top: 20rpx;">
-        <text class="form-label" style="color: {{theme.textSecondary}};">晚包场</text>
-        <input class="form-input" type="number" value="{{min_night}}" bindinput="onNightInput" placeholder="请输入金额" placeholder-style="color: {{theme.textMuted}}" style="color: {{theme.textPrimary}}; flex: 1; text-align: right;" />
-        <text style="color: {{theme.textSecondary}}; margin-left: 8rpx;">元</text>
-      </view>
-      <view class="form-item-row" style="margin-top: 20rpx;">
-        <text class="form-label" style="color: {{theme.textSecondary}};">全体包场</text>
-        <input class="form-input" type="number" value="{{min_full}}" bindinput="onFullInput" placeholder="请输入金额" placeholder-style="color: {{theme.textMuted}}" style="color: {{theme.textPrimary}}; flex: 1; text-align: right;" />
-        <text style="color: {{theme.textSecondary}}; margin-left: 8rpx;">元</text>
-      </view>
-    </theme-card>
+        <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx;">
+          <view style="flex: 1;">
+            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">包厢（大/小）</text>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">按包厢设置</text>
+          </view>
+          <input type="number" value="{{min_room}}" bindinput="onRoomInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
+        </view>
+      </theme-card>
+    </view>
+
+    <!-- Exclusive Min Amount -->
+    <view class="section-wrapper" style="padding: 24rpx 32rpx 0;">
+      <theme-card theme="{{theme}}" padding="32rpx">
+        <view class="card-header" style="display: flex; align-items: center; margin-bottom: 28rpx;">
+          <view style="width: 8rpx; height: 32rpx; background: {{theme.amountPositive || '#4ADE80'}}; border-radius: 4rpx; margin-right: 16rpx;"></view>
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600;">包场最低消费</text>
+        </view>
+
+        <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx;">
+          <view style="flex: 1;">
+            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">午包场</text>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">中午时段</text>
+          </view>
+          <input type="number" value="{{min_noon}}" bindinput="onNoonInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
+        </view>
+
+        <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx;">
+          <view style="flex: 1;">
+            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">晚包场</text>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">晚上时段</text>
+          </view>
+          <input type="number" value="{{min_night}}" bindinput="onNightInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
+        </view>
+
+        <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx;">
+          <view style="flex: 1;">
+            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">包场全天</text>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">全日包场</text>
+          </view>
+          <input type="number" value="{{min_full}}" bindinput="onFullInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
+        </view>
+      </theme-card>
+    </view>
+
+    <!-- Helper text -->
+    <view style="padding: 24rpx 32rpx;">
+      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; line-height: 1.5;">
+        设置各时段最低消费金额，收入录入时将自动校验。输入 0 表示不限制。
+      </text>
+    </view>
   </view>
 
+  <!-- Bottom Save Bar -->
   <view class="bottom-bar">
     <view class="bottom-bar-inner single-btn">
-      <view class="bar-btn bar-btn-primary" bindtap="onSave">保存设置</view>
+      <view class="bar-btn bar-btn-primary" bindtap="onSave" style="background: linear-gradient(135deg, {{theme.accentColor || '#C9A96E'}}, {{theme.accentLight || '#E8D5A8'}}); border-radius: 999rpx; padding: 24rpx; text-align: center;">
+        <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 30rpx; font-weight: 700;">保存设置</text>
+      </view>
     </view>
   </view>
 </view>

@@ -1,5 +1,5 @@
 const app = getApp()
-const { formatDate, formatAmount, getExpenseCategoryName, getMonthRange } = require('../../../utils/helpers')
+const { formatAmount, formatDate } = require('../../../utils/helpers')
 const { log, LOG_TYPES } = require('../../../utils/logger')
 const { handleCloudError } = require('../../../utils/error-handler')
 const { checkPermission } = require('../../../utils/permission')
@@ -10,220 +10,219 @@ Page({
     theme: {},
     statusBarHeight: 44,
     loading: true,
-    currentMonth: 0,
-    monthStr: '',
-    monthLabel: '',
-    expenses: [],
-    totalAmount: 0,
+    items: [],
+    totalMonthly: 0,
+    totalMonthlyFormatted: '0.00',
     showModal: false,
     isEdit: false,
     editId: '',
-    category: 'salary',
+    name: '',
     amount: '',
+    cycle: 'monthly',
     description: '',
-    categoryOptions: [
-      { id: 'salary', name: '工资' },
-      { id: 'rent', name: '房租' },
-      { id: 'utilities', name: '水电' },
-      { id: 'supplies', name: '物资' },
-      { id: 'other', name: '其他' }
-    ]
+    splitHint: '',
+    startDate: '',
+    endDate: ''
   },
 
-  onShow: function() {
+  onShow() {
     if (!checkPermission('expense', 'view')) {
       wx.navigateBack()
       return
     }
-    const sysInfo = wx.getWindowInfo()
     this.setData({
       theme: app.getThemePageData(),
-      statusBarHeight: sysInfo.statusBarHeight || 44
+      statusBarHeight: app.globalData.statusBarHeight || 44
     })
     this.loadData()
   },
 
-  loadData: function() {
-    var that = this
-    that.setData({ loading: true })
+  async loadData() {
+    this.setData({ loading: true })
+    try {
+      const db = wx.cloud.database()
+      const res = await db.collection(COLLECTIONS.FIXED_EXPENSE)
+        .orderBy('createdAt', 'desc')
+        .get()
 
-    var range = getMonthRange(that.data.currentMonth)
-    var dbInstance = wx.cloud.database()
-
-    dbInstance.collection(COLLECTIONS.FIXED_EXPENSE).where({
-      date: dbInstance.command.gte(range.start).and(dbInstance.command.lte(range.end))
-    }).orderBy('date', 'desc').orderBy('createdAt', 'desc').get().then(function(res) {
-      var expenses = res.data || []
-      var totalAmount = 0
-
-      expenses.forEach(function(e) {
-        e.categoryName = getExpenseCategoryName(e.category)
-        e.formattedAmount = formatAmount(e.amount)
-        e.formattedDate = formatDate(e.date)
-        totalAmount += Number(e.amount) || 0
+      const items = (res.data || []).map(item => {
+        const monthlyAmount = Number(item.monthlyAmount || item.amount || 0)
+        return Object.assign({}, item, {
+          monthlyAmount,
+          formattedMonthly: formatAmount(monthlyAmount),
+          formattedOriginal: formatAmount(item.amount || 0)
+        })
       })
 
-      that.setData({
-        expenses: expenses,
-        totalAmount: totalAmount,
-        monthStr: range.monthStr,
-        monthLabel: range.label,
+      let totalMonthly = 0
+      items.forEach(item => { totalMonthly += item.monthlyAmount })
+
+      this.setData({
+        items,
+        totalMonthly,
+        totalMonthlyFormatted: formatAmount(totalMonthly),
         loading: false
       })
-    }).catch(function(err) {
-      that.setData({ loading: false })
-      handleCloudError(err, '加载支出记录')
-    })
+    } catch (err) {
+      this.setData({ loading: false })
+      handleCloudError(err, '加载固定成本')
+    }
   },
 
-  onMonthChange: function(e) {
-    var offset = e.currentTarget.dataset.offset
-    var newMonth = this.data.currentMonth + (offset || 0)
-    this.setData({ currentMonth: newMonth })
-    this.loadData()
-  },
-
-  onPrevMonth: function() {
-    this.setData({ currentMonth: this.data.currentMonth - 1 })
-    this.loadData()
-  },
-
-  onNextMonth: function() {
-    this.setData({ currentMonth: this.data.currentMonth + 1 })
-    this.loadData()
-  },
-
-  onAddExpense: function() {
-    if (!checkPermission('expense', 'add')) return
+  onAdd() {
     this.setData({
       showModal: true,
       isEdit: false,
       editId: '',
-      category: 'salary',
+      name: '',
       amount: '',
-      description: ''
+      cycle: 'monthly',
+      description: '',
+      splitHint: '',
+      startDate: formatDate(new Date()),
+      endDate: ''
     })
   },
 
-  onExpenseTap: function(e) {
-    if (!checkPermission('expense', 'edit')) return
-    var id = e.currentTarget.dataset.id
-    var expense = null
-    for (var i = 0; i < this.data.expenses.length; i++) {
-      if (this.data.expenses[i]._id === id) {
-        expense = this.data.expenses[i]
-        break
-      }
-    }
-    if (!expense) return
+  onItemTap(e) {
+    const id = e.currentTarget.dataset.id
+    const item = this.data.items.find(i => i._id === id)
+    if (!item) return
+    const amountStr = String(item.amount || '')
     this.setData({
       showModal: true,
       isEdit: true,
       editId: id,
-      category: expense.category || 'salary',
-      amount: String(expense.amount || ''),
-      description: expense.description || ''
+      name: item.name || '',
+      amount: amountStr,
+      cycle: item.cycle || 'monthly',
+      description: item.description || '',
+      splitHint: this.calcSplitHint(amountStr, item.cycle || 'monthly'),
+      startDate: item.startDate || formatDate(new Date()),
+      endDate: item.endDate || ''
     })
   },
 
-  onCategoryChange: function(e) {
-    this.setData({ category: e.detail.value })
+  onNameInput(e) {
+    this.setData({ name: e.detail.value })
   },
 
-  onCategoryTap: function(e) {
-    var cat = e.currentTarget.dataset.cat
-    this.setData({ category: cat })
+  onAmountInput(e) {
+    const amount = e.detail.value
+    this.setData({ amount, splitHint: this.calcSplitHint(amount, this.data.cycle) })
   },
 
-  onAmountInput: function(e) {
-    this.setData({ amount: e.detail.value })
-  },
-
-  onDescriptionInput: function(e) {
+  onDescriptionInput(e) {
     this.setData({ description: e.detail.value })
   },
 
-  onSaveExpense: function() {
-    var that = this
-    var amount = parseFloat(that.data.amount)
-    if (!amount || amount <= 0) {
+  onCycleChange(e) {
+    const cycle = e.currentTarget.dataset.cycle
+    this.setData({ cycle, splitHint: this.calcSplitHint(this.data.amount, cycle) })
+  },
+
+  calcSplitHint(amount, cycle) {
+    if (cycle === 'yearly' && amount) {
+      const num = parseFloat(amount)
+      if (num > 0) return '每月分摊: ¥' + (num / 12).toFixed(2)
+    }
+    return ''
+  },
+
+  onSave() {
+    const { name, amount, cycle, description, startDate, endDate } = this.data
+    if (!name.trim()) {
+      wx.showToast({ title: '请输入项目名称', icon: 'none' })
+      return
+    }
+    const numAmount = parseFloat(amount)
+    if (!numAmount || numAmount <= 0) {
       wx.showToast({ title: '请输入有效金额', icon: 'none' })
       return
     }
-    if (!that.data.category) {
-      wx.showToast({ title: '请选择分类', icon: 'none' })
-      return
-    }
+
+    const monthlyAmount = cycle === 'yearly' ? numAmount / 12 : numAmount
 
     wx.showLoading({ title: '保存中...' })
-    var dbInstance = wx.cloud.database()
-    var now = formatDate(new Date())
-    var data = {
-      category: that.data.category,
-      amount: amount,
-      description: that.data.description || '',
-      date: now,
-      updatedAt: dbInstance.serverDate()
+    const db = wx.cloud.database()
+    const data = {
+      name: name.trim(),
+      amount: numAmount,
+      cycle,
+      monthlyAmount,
+      description: description || '',
+      startDate: startDate || formatDate(new Date()),
+      endDate: endDate || '',
+      updatedAt: db.serverDate()
     }
 
-    if (that.data.isEdit && that.data.editId) {
-      dbInstance.collection(COLLECTIONS.FIXED_EXPENSE).doc(that.data.editId).update({
-        data: data
-      }).then(function() {
-        wx.hideLoading()
-        log(LOG_TYPES.EXPENSE_UPDATE, '更新支出: ' + getExpenseCategoryName(data.category) + ' ¥' + amount)
-        wx.showToast({ title: '保存成功', icon: 'success' })
-        that.setData({ showModal: false })
-        that.loadData()
-      }).catch(function(err) {
-        wx.hideLoading()
-        handleCloudError(err, '更新支出')
-      })
+    if (this.data.isEdit && this.data.editId) {
+      db.collection(COLLECTIONS.FIXED_EXPENSE).doc(this.data.editId).update({ data })
+        .then(() => {
+          wx.hideLoading()
+          log(LOG_TYPES.EXPENSE_UPDATE, '更新固定成本: ' + data.name + ' ¥' + numAmount + '/' + (cycle === 'yearly' ? '年' : '月'))
+          wx.showToast({ title: '保存成功', icon: 'success' })
+          this.setData({ showModal: false })
+          this.loadData()
+        })
+        .catch(err => {
+          wx.hideLoading()
+          handleCloudError(err, '更新固定成本')
+        })
     } else {
-      data.createdAt = dbInstance.serverDate()
-      dbInstance.collection(COLLECTIONS.FIXED_EXPENSE).add({
-        data: data
-      }).then(function() {
-        wx.hideLoading()
-        log(LOG_TYPES.EXPENSE_CREATE, '新增支出: ' + getExpenseCategoryName(data.category) + ' ¥' + amount)
-        wx.showToast({ title: '添加成功', icon: 'success' })
-        that.setData({ showModal: false })
-        that.loadData()
-      }).catch(function(err) {
-        wx.hideLoading()
-        handleCloudError(err, '添加支出')
-      })
+      data.createdAt = db.serverDate()
+      db.collection(COLLECTIONS.FIXED_EXPENSE).add({ data })
+        .then(() => {
+          wx.hideLoading()
+          log(LOG_TYPES.EXPENSE_CREATE, '新增固定成本: ' + data.name + ' ¥' + numAmount + '/' + (cycle === 'yearly' ? '年' : '月'))
+          wx.showToast({ title: '添加成功', icon: 'success' })
+          this.setData({ showModal: false })
+          this.loadData()
+        })
+        .catch(err => {
+          wx.hideLoading()
+          handleCloudError(err, '添加固定成本')
+        })
     }
   },
 
-  onDeleteExpense: function() {
-    var that = this
+  onDelete() {
     wx.showModal({
       title: '确认删除',
-      content: '确定要删除这条支出记录吗？',
-      confirmColor: that.data.theme.statusDanger || '#F87171',
-      success: function(res) {
+      content: '确定要删除「' + this.data.name + '」吗？',
+      confirmColor: '#F87171',
+      success: (res) => {
         if (!res.confirm) return
         wx.showLoading({ title: '删除中...' })
-        wx.cloud.database().collection(COLLECTIONS.FIXED_EXPENSE).doc(that.data.editId).remove().then(function() {
-          wx.hideLoading()
-          log(LOG_TYPES.EXPENSE_DELETE, '删除支出: ' + getExpenseCategoryName(that.data.category))
-          wx.showToast({ title: '已删除', icon: 'success' })
-          that.setData({ showModal: false })
-          that.loadData()
-        }).catch(function(err) {
-          wx.hideLoading()
-          handleCloudError(err, '删除支出')
-        })
+        wx.cloud.database().collection(COLLECTIONS.FIXED_EXPENSE).doc(this.data.editId).remove()
+          .then(() => {
+            wx.hideLoading()
+            log(LOG_TYPES.EXPENSE_DELETE, '删除固定成本: ' + this.data.name)
+            wx.showToast({ title: '已删除', icon: 'success' })
+            this.setData({ showModal: false })
+            this.loadData()
+          })
+          .catch(err => {
+            wx.hideLoading()
+            handleCloudError(err, '删除固定成本')
+          })
       }
     })
   },
 
-  onModalClose: function() {
+  onModalClose() {
     this.setData({ showModal: false })
   },
 
-  onBack: function() {
+  onBack() {
     wx.navigateBack()
+  },
+
+  onStartDateChange(e) {
+    this.setData({ startDate: e.detail.value })
+  },
+
+  onEndDateChange(e) {
+    this.setData({ endDate: e.detail.value })
   }
 })

@@ -25,6 +25,13 @@
       <theme-form-item theme="{{theme}}" label="月工资">
         <input type="digit" placeholder="请输入月工资" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{salary}}" bindinput="onSalaryInput" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; height: 48rpx;" />
       </theme-form-item>
+      <theme-form-item theme="{{theme}}" label="入职日期">
+        <picker mode="date" value="{{hireDate}}" bindchange="onHireDateChange">
+          <view style="color: {{hireDate ? (theme.textPrimary || '#F0F0F5') : (theme.textMuted || '#5C5C72')}}; font-size: 28rpx;">
+            {{hireDate || '请选择入职日期'}}
+          </view>
+        </picker>
+      </theme-form-item>
     </theme-card>
 
     <!-- Role -->
@@ -57,8 +64,8 @@
   <!-- Bottom Bar -->
   <view class="bottom-bar safe-bottom">
     <view class="bottom-bar-inner {{isEdit ? 'two-btns' : 'single-btn'}}">
-      <theme-btn wx:if="{{isEdit}}" theme="{{theme}}" type="danger" text="删除员工" size="xs" bind:tap="onDelete" />
-      <theme-btn theme="{{theme}}" type="primary" text="{{isEdit ? '保存修改' : '添加员工'}}" size="xs" loading="{{submitting}}" bind:tap="onSubmit" />
+      <view wx:if="{{isEdit}}" class="bar-btn bar-btn-danger" bindtap="onDelete">删除员工</view>
+      <view class="bar-btn bar-btn-primary" bindtap="onSubmit">{{isEdit ? '保存修改' : '添加员工'}}</view>
     </view>
   </view>
 

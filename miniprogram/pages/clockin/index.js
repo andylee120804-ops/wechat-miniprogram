@@ -186,15 +186,28 @@ Page({
   },
 
   updateMakeupCanSubmit() {
-    const { makeupClockInTime, makeupClockOutTime, makeupReason } = this.data
-    const canSubmit = !!(makeupClockInTime && makeupClockOutTime && makeupReason && makeupReason.trim().length > 0)
-    this.setData({ makeupCanSubmit: canSubmit })
+    const { makeupClockInTime, makeupClockOutTime, makeupReason, hasClockedIn, hasClockedOut } = this.data
+    const needClockIn = !hasClockedIn
+    const needClockOut = !hasClockedOut
+    const hasClockIn = !!makeupClockInTime
+    const hasClockOut = !!makeupClockOutTime
+    const hasReason = !!(makeupReason && makeupReason.trim().length > 0)
+    const timeFilled = (!needClockIn || hasClockIn) && (!needClockOut || hasClockOut)
+    this.setData({ makeupCanSubmit: timeFilled && hasReason })
   },
 
   onMakeupSubmit() {
-    const { makeupClockInTime, makeupClockOutTime, makeupReason, selectedDate } = this.data
-    if (!makeupClockInTime || !makeupClockOutTime || !makeupReason || !makeupReason.trim()) {
-      wx.showToast({ title: '请填写完整信息', icon: 'none' })
+    const { makeupClockInTime, makeupClockOutTime, makeupReason, selectedDate, hasClockedIn, hasClockedOut } = this.data
+    if (hasClockedIn && hasClockedOut) {
+      wx.showToast({ title: '当日已完成打卡', icon: 'none' })
+      return
+    }
+    if (!hasClockedIn && !hasClockedOut && (!makeupClockInTime || !makeupClockOutTime)) {
+      wx.showToast({ title: '请选择上下班时间', icon: 'none' })
+      return
+    }
+    if ((!hasClockedIn || !hasClockedOut) && (!makeupReason || !makeupReason.trim())) {
+      wx.showToast({ title: '请填写补卡原因', icon: 'none' })
       return
     }
     this.doMakeupClock()
@@ -250,32 +263,57 @@ Page({
   },
 
   async doMakeupClock() {
-    const { makeupClockInTime, makeupClockOutTime, makeupReason, selectedDate } = this.data
+    const { makeupClockInTime, makeupClockOutTime, makeupReason, selectedDate, recordId, hasClockedIn, hasClockedOut } = this.data
     try {
       wx.showLoading({ title: '提交中...' })
       const userInfo = app.globalData.userInfo
 
-      // Parse selected times
-      const [inH, inM] = (makeupClockInTime || '09:00').split(':')
-      const [outH, outM] = (makeupClockOutTime || '18:00').split(':')
-      const clockInDate = new Date(selectedDate + 'T' + makeupClockInTime + ':00')
-      const clockOutDate = new Date(selectedDate + 'T' + makeupClockOutTime + ':00')
+      // 场景A: 已有记录（补漏打卡）
+      if (recordId) {
+        const updateData = {}
+        if (!hasClockedIn && makeupClockInTime) {
+          const clockInDate = new Date(selectedDate + 'T' + makeupClockInTime + ':00')
+          updateData.clockInTime = clockInDate
+          updateData.clockInLocation = ''
+          updateData.clockInLocationText = '补打卡（' + makeupReason.trim() + '）'
+        }
+        if (!hasClockedOut && makeupClockOutTime) {
+          const clockOutDate = new Date(selectedDate + 'T' + makeupClockOutTime + ':00')
+          updateData.clockOutTime = clockOutDate
+          updateData.clockOutLocation = ''
+          updateData.clockOutLocationText = '补打卡（' + makeupReason.trim() + '）'
+        }
+        updateData.isMakeUp = true
+        updateData.makeupReason = makeupReason.trim()
 
-      const res = await db.addDoc(COLLECTIONS.CLOCKIN, {
-        staffId: userInfo._id,
-        staffName: userInfo.name || '',
-        date: new Date(selectedDate + 'T12:00:00'),
-        clockInTime: clockInDate,
-        clockOutTime: clockOutDate,
-        clockInLocation: '',
-        clockInLocationText: '补打卡（' + makeupReason + '）',
-        clockOutLocation: '',
-        clockOutLocationText: '补打卡（下班）',
-        isMakeUp: true,
-        makeupReason: makeupReason.trim()
-      })
+        await db.updateDoc(COLLECTIONS.CLOCKIN, recordId, updateData)
+        log(LOG_TYPES.ATTENDANCE_CLOCK_IN, userInfo.name + ' 补打卡 ' + selectedDate + ' 更新记录')
+      } else {
+        // 场景B: 无记录（新建完整记录）
+        const clockInDate = new Date(selectedDate + 'T' + (makeupClockInTime || '09:00') + ':00')
+        const clockOutDate = new Date(selectedDate + 'T' + (makeupClockOutTime || '18:00') + ':00')
 
-      log(LOG_TYPES.ATTENDANCE_CLOCK_IN, userInfo.name + ' 补打卡 ' + selectedDate + ' ' + makeupClockInTime + '-' + makeupClockOutTime)
+        const newData = {
+          staffId: userInfo._id,
+          staffName: userInfo.name || '',
+          date: new Date(selectedDate + 'T12:00:00'),
+          clockInTime: clockInDate,
+          clockOutTime: clockOutDate,
+          clockInLocation: '',
+          clockInLocationText: '补打卡（' + makeupReason.trim() + '）',
+          clockOutLocation: '',
+          clockOutLocationText: '补打卡（下班）',
+          isMakeUp: true,
+          makeupReason: makeupReason.trim()
+        }
+
+        // 只写入实际填写的时间
+        if (!makeupClockInTime) delete newData.clockInTime
+        if (!makeupClockOutTime) delete newData.clockOutTime
+
+        await db.addDoc(COLLECTIONS.CLOCKIN, newData)
+        log(LOG_TYPES.ATTENDANCE_CLOCK_IN, userInfo.name + ' 补打卡 ' + selectedDate + ' ' + (makeupClockInTime || '--') + '-' + (makeupClockOutTime || '--'))
+      }
 
       wx.vibrateShort({ type: 'medium' })
       wx.hideLoading()

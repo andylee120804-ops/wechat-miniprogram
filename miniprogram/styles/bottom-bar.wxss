@@ -8,8 +8,8 @@
  * Structure:
  *   <view class="bottom-bar">
  *     <view class="bottom-bar-inner single-btn|two-btns">
- *       <theme-btn ... />
- *       <theme-btn ... />
+ *       <view class="bar-btn bar-btn-primary">确认</view>
+ *       <view class="bar-btn bar-btn-danger">删除</view>
  *     </view>
  *   </view>
  */
@@ -21,67 +21,70 @@
   right: 0;
   bottom: 0;
   width: 100vw;
-  background: rgba(26, 26, 46, 0.95);
-  border-top: 1rpx solid rgba(255, 255, 255, 0.08);
+  background: rgba(26, 26, 46, 0.4);
+  border-top: 1rpx solid rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   z-index: 100;
   box-sizing: border-box;
-  padding: 16rpx 24rpx;
-  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  padding: 24rpx 24rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
 }
 
 /* Inner flex container - base styles */
 .bottom-bar-inner {
   display: flex;
   align-items: center;
-  padding: 0;
-  gap: 12rpx;
+  justify-content: center;
+  gap: 16rpx;
+  width: 100%;
 }
 
 /* Single button - center aligned */
 .bottom-bar-inner.single-btn {
   justify-content: center;
-  width: 100vw;
-  box-sizing: border-box;
 }
 
-/* Two buttons: fixed width distribution */
+/* Two buttons - space between */
 .bottom-bar-inner.two-btns {
   justify-content: space-between;
-  width: 100vw;
-  box-sizing: border-box;
-  overflow: hidden;
 }
 
-/* Two buttons: child theme-btn - fixed half width */
-.bottom-bar-inner.two-btns > .theme-btn {
-  width: 48%;
+/* Bar button - matches section block style */
+.bar-btn {
+  flex: 1;
+  text-align: center;
+  padding: 22rpx 24rpx;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  transition: all 0.2s ease;
   min-width: 0;
-  max-width: none;
   box-sizing: border-box;
-  overflow: visible;
-  flex-shrink: 0;
-  display: flex !important;
-  /* Override component padding to ensure fit */
-  padding-left: 8rpx !important;
-  padding-right: 8rpx !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Two buttons: ensure text doesn't overflow */
-.bottom-bar-inner.two-btns > .theme-btn .btn-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
+.bar-btn:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+.bar-btn-primary {
+  background: rgba(201, 169, 110, 0.15);
+  color: #C9A96E;
+  border: 1rpx solid rgba(201, 169, 110, 0.3);
+}
+
+.bar-btn-danger {
+  background: rgba(248, 113, 113, 0.12);
+  color: #F87171;
+  border: 1rpx solid rgba(248, 113, 113, 0.25);
 }
 
 /* Safe area bottom padding */
-.bottom-bar.safe-bottom {
+.bottom-bar.safe-bottom,
+.action-bar.safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
-}
-
-/* Alternative: two buttons equal width (no max-width cap) */
-.bottom-bar-inner.two-btns.equal-width > .theme-btn {
-  max-width: none;
 }

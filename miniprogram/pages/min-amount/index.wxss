@@ -1,6 +1,16 @@
 @import '../../styles/mixins.wxss';
 @import '../../styles/bottom-bar.wxss';
 
+.page {
+  min-height: 100vh;
+}
+
+.page-content {
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 120rpx;
+}
+
 .nav-bar {
   position: fixed;
   top: 0;
@@ -40,23 +50,10 @@
   min-width: 64rpx;
 }
 
-.page {
-  min-height: 100vh;
+.form-item {
+  transition: border-color 0.2s;
 }
 
-.form-item-row {
-  display: flex;
-  align-items: center;
-}
-
-.form-label {
-  font-size: 28rpx;
-  width: 160rpx;
-}
-
-.form-input {
-  font-size: 28rpx;
-  background: transparent;
-  border: none;
-  outline: none;
+.form-item:active {
+  border-color: rgba(201, 169, 110, 0.4);
 }

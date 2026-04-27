@@ -84,8 +84,8 @@
   <!-- Fixed Bottom Action Bar -->
   <view class="bottom-bar">
     <view class="bottom-bar-inner {{isEdit ? 'two-btns' : 'single-btn'}}">
-      <theme-btn wx:if="{{isEdit}}" theme="{{theme}}" type="danger" text="删除" size="xs" bind:tap="onDelete" />
-      <theme-btn theme="{{theme}}" type="primary" text="{{isEdit ? '保存修改' : '确认添加'}}" size="xs" loading="{{submitting}}" bind:tap="onSubmit" />
+      <view wx:if="{{isEdit}}" class="bar-btn bar-btn-danger" bindtap="onDelete">删除</view>
+      <view class="bar-btn bar-btn-primary" bindtap="onSubmit">{{isEdit ? '保存修改' : '确认添加'}}</view>
     </view>
   </view>
 

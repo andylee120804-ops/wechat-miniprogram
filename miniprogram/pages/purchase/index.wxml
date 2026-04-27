@@ -21,7 +21,7 @@
       <view class="month-arrow" bindtap="onMonthNext" style="color: {{theme.textSecondary || '#9A9AB0'}};">›</view>
     </view>
     <!-- Category Filter Chips -->
-    <filter-chips theme="{{theme}}" items="{{categories}}" activeId="{{activeCategory}}" bind:change="onCategoryChange" />
+    <filter-chips style="position: relative; border-radius: 18rpx; left: 8rpx;top: 6rpx" theme="{{theme}}" items="{{categories}}" activeId="{{activeCategory}}" bind:change="onCategoryChange" />
     <!-- Search Bar -->
     <view class="search-wrapper px-md">
       <search-bar theme="{{theme}}" placeholder="搜索采购项..." value="{{searchKeyword}}" bind:search="onSearch" bind:clear="onSearchClear" />
@@ -30,19 +30,17 @@
 
   <!-- Monthly Summary Card -->
   <view class="summary-card mx-lg mt-md" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
-    <view class="summary-inner p-lg">
+    <view class="summary-inner p-lg" style="width: 705rpx; display: flex; box-sizing: content-box">
       <text class="text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">本月采购总额</text>
-      <view class="summary-amount-row flex-row flex-between mt-xs">
-        <text class="text-display font-mono" style="color: {{theme.amountNegative || '#F87171'}};">¥{{totalAmount.toFixed ? totalAmount.toFixed(2) : '0.00'}}</text>
-        <view class="summary-count px-sm py-2xs" style="background: {{theme.amountNegativeBg || 'rgba(248,113,113,0.10)'}}; border-radius: 12rpx;">
-          <text class="text-bodySmall" style="color: {{theme.amountNegative || '#F87171'}};">{{totalCount}}笔</text>
-        </view>
+      <view class="summary-amount-row flex-row flex-between mt-xs" style="width: 576rpx; display: flex; box-sizing: border-box">
+        <text class="text-display font-mono" style="color: {{theme.amountNegative || '#F87171'}};">¥{{totalFormatted}}</text>
+        
       </view>
     </view>
   </view>
 
   <!-- Purchase List -->
-  <view class="purchase-list px-lg mt-md" wx:if="{{!loading}}">
+  <view class="purchase-list px-lg mt-md" wx:if="{{!loading}}" style="position: relative; left: 0rpx; top: 17rpx">
     <view class="purchase-card stagger-item mx-xs mb-md {{index > 0 ? 'mt-md' : ''}}"
       wx:for="{{filteredPurchases}}" wx:key="_id"
       style="animation-delay: {{index * 60}}ms; background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};"

@@ -1,4 +1,4 @@
-<view class="detail-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx; padding-top: {{statusBarHeight + 44}}px;">
+<view class="detail-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-top: {{statusBarHeight + 44}}px;">
   <!-- Custom Navigation Bar -->
   <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor || '#1A1A2E'}}; padding-top: {{statusBarHeight}}px;">
     <view class="nav-bar-content">
@@ -56,9 +56,11 @@
     </view>
 
     <!-- Action Bar -->
-    <view class="action-bar safe-bottom">
-      <theme-btn theme="{{theme}}" type="outline" text="编辑" size="xs" bind:tap="onEdit" />
-      <theme-btn theme="{{theme}}" type="danger" text="删除" size="xs" bind:tap="onDelete" />
+    <view class="bottom-bar">
+      <view class="bottom-bar-inner two-btns">
+        <view wx:if="{{canDelete}}" class="bar-btn bar-btn-danger" bindtap="onDelete">删除</view>
+        <view wx:if="{{canEdit}}" class="bar-btn bar-btn-primary" bindtap="onEdit">编辑</view>
+      </view>
     </view>
 
     <!-- Delete Modal -->

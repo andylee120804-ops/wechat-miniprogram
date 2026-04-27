@@ -46,7 +46,7 @@
   </block>
 
   <!-- Day Navigation Strip -->
-  <view style="margin: 40rpx 32rpx 0; padding: 24rpx; background: {{theme.elevated || '#252540'}}; border-radius: 16rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+  <view style="margin: 40rpx 32rpx 0; padding: 24rpx; background: {{theme.elevated || '#252540'}}; border-radius: 16rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; position: relative; left: 0rpx; top: 558rpx">
     <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 16rpx;">当日其他公告 ({{dayAnnouncements.length}}条)</text>
     <view wx:for="{{dayAnnouncements}}" wx:key="_id" style="margin-bottom: 10rpx;">
       <view bindtap="onDayAnnouncementTap" data-id="{{item._id}}" style="background: {{item._id === announcement._id ? 'rgba(201,169,110,0.15)' : (theme.surface || '#1A1A2E')}}; border-radius: 10rpx; padding: 14rpx 18rpx; display: flex; align-items: center; gap: 10rpx; border: 1rpx solid {{item._id === announcement._id ? 'rgba(201,169,110,0.4)' : (theme.borderColor || 'rgba(255,255,255,0.10)')}};">

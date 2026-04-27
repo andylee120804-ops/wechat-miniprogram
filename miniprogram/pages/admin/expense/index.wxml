@@ -1,135 +1,162 @@
-<view class="page" style="background: {{theme.surfaceColor || '#1A1A2E'}};">
-  <!-- Custom Navigation Bar -->
+<view class="page" style="background: {{theme.surfaceColor || '#1A1A2E'}}; min-height: 100vh;">
+  <!-- Navigation Bar -->
   <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
     <view class="nav-bar-content">
       <view class="nav-back" bindtap="onBack">
         <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
       </view>
-      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">支出管理</text>
-      <view class="nav-action">
-        <text class="text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">{{monthLabel}}</text>
-      </view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">固定成本</text>
+      <view class="nav-action"></view>
     </view>
   </view>
 
-  <!-- Sticky Filter Bar -->
-  <view class="filter-bar" style="background: {{theme.surfaceColor || '#1A1A2E'}};">
-    <view class="month-picker flex-row flex-between">
-      <view class="month-arrow" bindtap="onPrevMonth" style="color: {{theme.textSecondary || '#9A9AB0'}};">&#x2039;</view>
-      <text class="month-label text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{monthStr}}</text>
-      <view class="month-arrow" bindtap="onNextMonth" style="color: {{theme.textSecondary || '#9A9AB0'}};">&#x203A;</view>
-    </view>
-  </view>
-
-  <!-- Monthly Total Card -->
-  <view class="summary-card mx-lg mt-md" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
-    <view class="summary-inner p-lg">
-      <text class="text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">本月支出总额</text>
-      <view class="summary-amount-row flex-row flex-between mt-xs">
-        <text class="text-display font-mono" style="color: {{theme.amountNegative || '#F87171'}};">-¥{{totalAmount.toFixed ? totalAmount.toFixed(2) : '0.00'}}</text>
-        <view class="summary-count px-sm py-2xs" style="background: {{theme.amountNegativeBg || 'rgba(248,113,113,0.10)'}}; border-radius: 12rpx;">
-          <text class="text-bodySmall" style="color: {{theme.amountNegative || '#F87171'}};">{{expenses.length}}笔</text>
+  <view class="page-content" style="padding-top: {{statusBarHeight + 44}}px;">
+    <!-- Total Monthly Card -->
+    <view class="total-card mx-lg mt-lg" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx;">
+      <view class="total-inner p-lg">
+        <text class="total-label" style="color: {{theme.textMuted || '#5C5C72'}};">每月固定成本</text>
+        <view class="total-row" style="display: flex; align-items: flex-end; justify-content: space-between; margin-top: 8rpx;">
+          <text class="total-amount" style="color: {{theme.amountNegative || '#F87171'}}; font-size: 48rpx; font-weight: 800; font-family: 'DIN Alternate', monospace;">¥{{totalMonthlyFormatted}}</text>
+          <text class="total-count" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx;">{{items.length}}项</text>
         </view>
       </view>
     </view>
-  </view>
 
-  <!-- Expense List -->
-  <view class="expense-list px-lg mt-md" wx:if="{{!loading}}">
-    <view class="expense-card stagger-item mb-md"
-      wx:for="{{expenses}}" wx:key="_id"
-      style="animation-delay: {{index * 60}}ms; background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};"
-      data-id="{{item._id}}" bindtap="onExpenseTap">
-      <view class="card-inner p-lg">
-        <view class="card-header flex-row flex-between">
-          <theme-badge theme="{{theme}}" status="{{item.category}}" type="expense" text="{{item.categoryName}}" size="sm" />
-          <text class="card-amount font-mono text-title2" style="color: {{theme.amountNegative || '#F87171'}};">-¥{{item.formattedAmount}}</text>
-        </view>
-        <view class="card-body mt-sm" wx:if="{{item.description}}">
-          <text class="text-bodySmall ellipsis" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{item.description}}</text>
-        </view>
-        <view class="card-footer mt-sm">
-          <text class="text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.formattedDate}}</text>
+    <!-- Item List -->
+    <view class="list px-lg mt-md" wx:if="{{!loading && items.length > 0}}">
+      <view class="item-card mb-md" wx:for="{{items}}" wx:key="_id"
+        style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 16rpx;"
+        data-id="{{item._id}}" bindtap="onItemTap">
+        <view class="item-inner p-lg">
+          <view class="item-header" style="display: flex; align-items: center; justify-content: space-between;">
+            <text class="item-name" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600;">{{item.name}}</text>
+            <theme-badge theme="{{theme}}" status="{{item.cycle === 'yearly' ? 'other' : 'salary'}}" type="expense" text="{{item.cycle === 'yearly' ? '按年' : '按月'}}" size="sm" />
+          </view>
+          <view class="item-body" style="margin-top: 12rpx;">
+            <text class="item-amount" style="color: {{theme.amountNegative || '#F87171'}}; font-size: 36rpx; font-weight: 700; font-family: 'DIN Alternate', monospace;">
+              ¥{{item.formattedMonthly}}<text class="item-unit" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; font-weight: 400;">/月</text>
+            </text>
+            <text wx:if="{{item.cycle === 'yearly'}}" class="item-original" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; margin-left: 16rpx;">
+              ¥{{item.formattedOriginal}}/年
+            </text>
+          </view>
+          <view wx:if="{{item.description}}" class="item-desc" style="margin-top: 8rpx;">
+            <text class="item-desc-text" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx;">{{item.description}}</text>
+          </view>
+          <view wx:if="{{item.startDate || item.endDate}}" class="item-dates" style="margin-top: 6rpx;">
+            <text class="item-dates-text" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">
+              {{item.startDate || '...'}} ~ {{item.endDate || '长期'}}
+            </text>
+          </view>
         </view>
       </view>
     </view>
 
     <!-- Empty State -->
-    <empty-state wx:if="{{expenses.length === 0}}" theme="{{theme}}" type="no-data" title="暂无支出记录" description="点击下方按钮添加支出" actionText="添加支出" bind:action="onAddExpense" />
-  </view>
+    <empty-state wx:if="{{!loading && items.length === 0}}" theme="{{theme}}" type="no-data" title="暂无固定成本" description="点击下方按钮添加固定成本项目" actionText="添加项目" bind:action="onAdd" />
 
-  <!-- Skeleton Loading -->
-  <view class="px-lg mt-md" wx:if="{{loading}}">
-    <skeleton theme="{{theme}}" type="card" count="4" />
+    <!-- Loading -->
+    <view class="px-lg mt-lg" wx:if="{{loading}}">
+      <skeleton theme="{{theme}}" type="card" count="3" />
+    </view>
   </view>
 
   <!-- FAB -->
-  <view class="fab press-scale" bindtap="onAddExpense"
+  <view class="fab press-scale" bindtap="onAdd"
     style="background: {{theme.gradientFab || 'linear-gradient(135deg, #C9A96E 0%, #D4B87A 100%)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
     <text class="fab-icon" style="color: {{theme.textInverse || '#0F0F1A'}};">+</text>
   </view>
 
   <!-- Bottom Sheet Modal -->
-  <view class="modal-overlay" wx:if="{{showModal}}" bindtap="onModalClose"
-    style="background: rgba(0,0,0,0.50);"></view>
+  <view class="modal-overlay" wx:if="{{showModal}}" bindtap="onModalClose" style="background: rgba(0,0,0,0.50);"></view>
   <view class="modal-sheet {{showModal ? 'modal-show' : ''}}" wx:if="{{showModal}}"
-    style="background: {{theme.elevatedColor || '#252540'}}; border-top: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+    style="background: {{theme.elevatedColor || '#252540'}}; border-top: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 32rpx 32rpx 0 0;">
     <view class="modal-handle-bar" style="background: {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};"></view>
-    <view class="modal-header flex-row flex-between p-lg">
-      <text class="text-title3" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{isEdit ? '编辑支出' : '新增支出'}}</text>
-      <view class="modal-close" bindtap="onModalClose">
-        <text class="text-title2" style="color: {{theme.textMuted || '#5C5C72'}};">&#x2715;</text>
+    <view class="modal-header p-lg" style="display: flex; align-items: center; justify-content: space-between;">
+      <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 34rpx; font-weight: 600;">{{isEdit ? '编辑' : '添加'}}固定成本</text>
+      <view class="modal-close" bindtap="onModalClose" style="width: 56rpx; height: 56rpx; display: flex; align-items: center; justify-content: center;">
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 36rpx;">✕</text>
       </view>
     </view>
 
-    <scroll-view class="modal-body" scroll-y="true">
-      <!-- Category Picker -->
+    <scroll-view class="modal-body" scroll-y="true" style="max-height: 60vh;">
+      <!-- Name -->
       <view class="form-section p-lg pt-xs">
-        <text class="form-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">分类</text>
-        <view class="category-grid flex-row flex-wrap mt-sm">
-          <view class="category-chip {{category === item.id ? 'category-active' : ''}}"
-            wx:for="{{categoryOptions}}" wx:key="id"
-            data-cat="{{item.id}}" bindtap="onCategoryTap"
-            style="background: {{category === item.id ? (theme.accentColor || '#C9A96E') : (theme.glassBg || 'rgba(255,255,255,0.06)')}}; color: {{category === item.id ? (theme.textInverse || '#0F0F1A') : (theme.textSecondary || '#9A9AB0')}}; border: 1rpx solid {{category === item.id ? (theme.accentColor || '#C9A96E') : (theme.borderColor || 'rgba(255,255,255,0.10)')}};">
-            <text class="text-bodySmall">{{item.name}}</text>
-          </view>
-        </view>
+        <text class="form-label" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; font-weight: 500; display: block;">项目名称</text>
+        <input class="form-input" placeholder="如：房租、网络、水电" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
+          value="{{name}}" bindinput="onNameInput" style="color: {{theme.textPrimary || '#F5F0E8'}}; height: 88rpx; font-size: 28rpx;" />
       </view>
 
-      <!-- Amount Input -->
+      <!-- Cycle -->
       <view class="form-section px-lg">
-        <text class="form-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">金额</text>
-        <view class="input-wrap mt-sm" style="border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; background: {{theme.glassBg || 'rgba(255,255,255,0.06)'}}; border-radius: 12rpx;">
-          <text class="input-prefix font-mono text-title2" style="color: {{theme.textMuted || '#5C5C72'}};">¥</text>
-          <input class="amount-input font-mono" type="digit" placeholder="0.00" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
-            value="{{amount}}" bindinput="onAmountInput" style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+        <text class="form-label" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; font-weight: 500; display: block;">维护周期</text>
+        <view class="cycle-row" style="display: flex; gap: 16rpx; margin-top: 16rpx;">
+          <view class="cycle-btn {{cycle === 'monthly' ? 'cycle-active' : ''}}"
+            data-cycle="monthly" bindtap="onCycleChange"
+            style="flex: 1; padding: 20rpx 0; text-align: center; border-radius: 12rpx; font-size: 28rpx; background: {{cycle === 'monthly' ? (theme.accentColor || '#C9A96E') : (theme.glassBg || 'rgba(255,255,255,0.06)')}}; color: {{cycle === 'monthly' ? (theme.textInverse || '#0F0F1A') : (theme.textSecondary || '#9A9AB0')}};">
+            按月</view>
+          <view class="cycle-btn {{cycle === 'yearly' ? 'cycle-active' : ''}}"
+            data-cycle="yearly" bindtap="onCycleChange"
+            style="flex: 1; padding: 20rpx 0; text-align: center; border-radius: 12rpx; font-size: 28rpx; background: {{cycle === 'yearly' ? (theme.accentColor || '#C9A96E') : (theme.glassBg || 'rgba(255,255,255,0.06)')}}; color: {{cycle === 'yearly' ? (theme.textInverse || '#0F0F1A') : (theme.textSecondary || '#9A9AB0')}};">
+            按年</view>
         </view>
       </view>
 
-      <!-- Description Input -->
-      <view class="form-section p-lg">
-        <text class="form-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">备注</text>
-        <view class="input-wrap mt-sm" style="border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; background: {{theme.glassBg || 'rgba(255,255,255,0.06)'}}; border-radius: 12rpx;">
-          <input class="desc-input" placeholder="请输入备注说明" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
-            value="{{description}}" bindinput="onDescriptionInput" style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+      <!-- Start Date -->
+      <view class="form-section px-lg" style="margin-top: 16rpx;">
+        <text class="form-label" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; font-weight: 500; display: block;">起始日期</text>
+        <picker mode="date" value="{{startDate}}" bindchange="onStartDateChange">
+          <view class="date-picker-value" style="display: flex; align-items: center; height: 80rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; background: {{theme.glassBg || 'rgba(255,255,255,0.06)'}}; border-radius: 12rpx; padding: 0 24rpx; margin-top: 16rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx;">
+            <text>{{startDate || '请选择起始日期'}}</text>
+          </view>
+        </picker>
+      </view>
+
+      <!-- End Date -->
+      <view class="form-section px-lg">
+        <text class="form-label" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; font-weight: 500; display: block; margin-top: 8rpx;">截至日期（选填）</text>
+        <picker mode="date" value="{{endDate}}" bindchange="onEndDateChange">
+          <view class="date-picker-value" style="display: flex; align-items: center; height: 80rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; background: {{theme.glassBg || 'rgba(255,255,255,0.06)'}}; border-radius: 12rpx; padding: 0 24rpx; margin-top: 16rpx; color: {{theme.textMuted || '#5C5C72'}}; font-size: 28rpx;">
+            <text>{{endDate || '不设截至日期（持续有效）'}}</text>
+          </view>
+        </picker>
+      </view>
+
+      <!-- Amount -->
+      <view class="form-section px-lg">
+        <text class="form-label" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; font-weight: 500; display: block; margin-top: 8rpx;">{{cycle === 'yearly' ? '年' : '月'}}度金额</text>
+        <view class="input-wrap" style="display: flex; align-items: center; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; background: {{theme.glassBg || 'rgba(255,255,255,0.06)'}}; border-radius: 12rpx; padding: 0 24rpx; height: 88rpx; margin-top: 16rpx;">
+          <text class="input-prefix" style="margin-right: 12rpx; font-size: 36rpx; color: {{theme.textMuted || '#5C5C72'}};">¥</text>
+          <input class="amount-input" type="digit" placeholder="0.00" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
+            value="{{amount}}" bindinput="onAmountInput" style="flex: 1; font-size: 36rpx; color: {{theme.textPrimary || '#F5F0E8'}}; height: 88rpx;" />
         </view>
+        <text wx:if="{{splitHint}}" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; margin-top: 8rpx; display: block;">
+          {{splitHint}}
+        </text>
+      </view>
+
+      <!-- Description -->
+      <view class="form-section p-lg">
+        <text class="form-label" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; font-weight: 500; display: block;">备注</text>
+        <input class="form-input" placeholder="选填" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
+          value="{{description}}" bindinput="onDescriptionInput" style="color: {{theme.textPrimary || '#F5F0E8'}}; height: 88rpx; font-size: 28rpx;" />
       </view>
     </scroll-view>
 
-    <!-- Modal Actions -->
+    <!-- Actions -->
     <view class="modal-actions p-lg" style="border-top: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
-      <view class="action-row flex-row">
-        <view class="delete-btn {{isEdit ? '' : 'btn-hidden'}}" wx:if="{{isEdit}}" bindtap="onDeleteExpense"
-          style="background: {{theme.statusDangerBg || 'rgba(248,113,113,0.12)'}}; border: 1rpx solid {{theme.statusDanger || '#F87171'}};">
-          <text class="text-bodySmall" style="color: {{theme.statusDanger || '#F87171'}};">删除</text>
+      <view class="action-row" style="display: flex; gap: 16rpx;">
+        <view wx:if="{{isEdit}}" class="delete-btn" bindtap="onDelete"
+          style="padding: 20rpx 32rpx; border-radius: 12rpx; display: flex; align-items: center; justify-content: center; background: {{theme.statusDangerBg || 'rgba(248,113,113,0.12)'}}; border: 1rpx solid {{theme.statusDanger || '#F87171'}};">
+          <text style="color: {{theme.statusDanger || '#F87171'}}; font-size: 28rpx;">删除</text>
         </view>
-        <view class="save-btn flex-1" bindtap="onSaveExpense"
-          style="background: {{theme.gradientButton || 'linear-gradient(135deg, #C9A96E 0%, #E8D5A8 100%)'}};">
-          <text class="text-body" style="color: {{theme.textInverse || '#0F0F1A'}}; font-weight: 600;">保存</text>
+        <view class="save-btn" bindtap="onSave"
+          style="flex: 1; padding: 20rpx 0; border-radius: 12rpx; display: flex; align-items: center; justify-content: center; background: {{theme.gradientButton || 'linear-gradient(135deg, #C9A96E 0%, #E8D5A8 100%)'}};">
+          <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 28rpx; font-weight: 600;">保存</text>
         </view>
       </view>
     </view>
-    <view class="safe-bottom"></view>
+    <view class="safe-bottom" style="height: env(safe-area-inset-bottom);"></view>
   </view>
 
   <!-- Bottom Spacer -->

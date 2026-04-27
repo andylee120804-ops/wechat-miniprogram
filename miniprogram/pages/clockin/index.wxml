@@ -15,11 +15,11 @@
 
     <!-- Date Selector: Past = make-up clock, Today = normal -->
     <view class="date-selector">
-      <view class="date-display-card" style="background: {{theme.elevated || '#252540'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 16rpx; padding: 20rpx 28rpx;">
-        <view class="date-row">
-          <text class="date-icon">📅</text>
+      <view class="date-display-card" style="background: {{theme.elevated || '#252540'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 16rpx; padding: 20rpx 28rpx; position: relative; left: -3rpx; top: 48rpx; width: 523rpx; display: block; box-sizing: border-box">
+        <view class="date-row" style="width: 289rpx; display: flex; box-sizing: border-box; position: relative; left: 16rpx; top: 0rpx">
+          <text class="date-icon" style="position: relative; left: 76rpx; top: -4rpx">📅</text>
           <picker mode="date" value="{{selectedDate}}" end="{{maxDate}}" bindchange="onDateChange" fields="day">
-            <text class="date-main-text" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 36rpx; font-weight: 700;">{{isToday ? '今天' : selectedDate}}</text>
+            <text class="date-main-text" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 36rpx; font-weight: 700; position: relative; left: 144rpx; top: -1rpx">{{isToday ? '今天' : selectedDate}}</text>
           </picker>
           <text class="date-arrow" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">▾</text>
         </view>
@@ -35,7 +35,7 @@
     <!-- Status Indicator -->
     <view class="status-indicator-wrap mt-lg">
       <view class="status-indicator {{hasClockedIn ? 'active' : ''}} {{!hasClockedIn && isToday ? 'pulse' : ''}}"
-        style="background: {{hasClockedIn ? (theme.statusSuccessBg || 'rgba(74,222,128,0.12)') : 'transparent'}}; border: 4rpx solid {{hasClockedIn ? (theme.statusSuccess || '#4ADE80') : (theme.borderColor || 'rgba(255,255,255,0.10)')}};">
+        style="background: {{hasClockedIn ? (theme.statusSuccessBg || 'rgba(74,222,128,0.12)') : 'transparent'}}; border: 4rpx solid {{hasClockedIn ? (theme.statusSuccess || '#4ADE80') : (theme.borderColor || 'rgba(255,255,255,0.10)')}}; position: relative; left: 0rpx; top: 66rpx">
         <view class="status-dot" wx:if="{{hasClockedIn}}" style="background: {{theme.statusSuccess || '#4ADE80'}};"></view>
       </view>
     </view>
@@ -91,24 +91,34 @@
 
         <!-- Time Pickers Row -->
         <view class="time-picker-row mb-md">
-          <view class="time-picker-item flex-1">
+          <view class="time-picker-item flex-1" wx:if="{{!hasClockedIn}}">
             <text class="time-picker-label" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 8rpx;">上班时间</text>
             <picker mode="time" value="{{makeupClockInTime}}" bindchange="onMakeUpClockInTimeChange">
-              <view class="time-picker-box flex-row flex-center" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 20rpx 24rpx;">
-                <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; flex: 1;">{{makeupClockInTime || '选择时间'}}</text>
-                <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">⏰</text>
+              <view class="time-picker-box" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx 32rpx;">
+                <text class="time-picker-text" style="color: {{theme.accentColor || '#C9A96E'}};">{{makeupClockInTime || '选择时间'}}</text>
               </view>
             </picker>
           </view>
+          <view wx:elif="{{hasClockedIn}}" class="flex-1">
+            <text class="time-picker-label" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 8rpx;">上班时间</text>
+            <view class="time-picker-box" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx 32rpx;">
+              <text class="time-picker-text" style="color: {{theme.accentColor || '#C9A96E'}};">{{clockInTimeStr}}</text>
+            </view>
+          </view>
           <view style="width: 24rpx;"></view>
-          <view class="time-picker-item flex-1">
+          <view class="time-picker-item flex-1" wx:if="{{!hasClockedOut}}">
             <text class="time-picker-label" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 8rpx;">下班时间</text>
             <picker mode="time" value="{{makeupClockOutTime}}" bindchange="onMakeUpClockOutTimeChange">
-              <view class="time-picker-box flex-row flex-center" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 20rpx 24rpx;">
-                <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; flex: 1;">{{makeupClockOutTime || '选择时间'}}</text>
-                <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">⏰</text>
+              <view class="time-picker-box" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx 32rpx;">
+                <text class="time-picker-text" style="color: {{theme.accentColor || '#C9A96E'}};">{{makeupClockOutTime || '选择时间'}}</text>
               </view>
             </picker>
+          </view>
+          <view wx:elif="{{hasClockedOut}}" class="flex-1">
+            <text class="time-picker-label" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 8rpx;">下班时间</text>
+            <view class="time-picker-box" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx 32rpx;">
+              <text class="time-picker-text" style="color: {{theme.accentColor || '#C9A96E'}};">{{clockOutTimeStr}}</text>
+            </view>
           </view>
         </view>
 

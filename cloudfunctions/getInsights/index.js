@@ -78,7 +78,13 @@ async function revenueTrend(event) {
     const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59)
     const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 
-    const incomes = await fetchAll('income', { date: _.gte(start).and(_.lte(end)) })
+    // income dates are "YYYY-MM-DD" strings — format as strings
+    const startStr = start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0') + '-01'
+    var endMonth = end.getMonth() + 1
+    var endYear = end.getFullYear()
+    if (endMonth > 12) { endMonth = 1; endYear++ }
+    const endStr = endYear + '-' + String(endMonth).padStart(2, '0') + '-' + String(end.getDate()).padStart(2, '0')
+    const incomes = await fetchAll('income', { date: _.gte(startStr).and(_.lte(endStr)) })
     const total = incomes.reduce((s, inc) => s + (inc.amount || 0), 0)
 
     data.push({ month: monthStr, amount: total })

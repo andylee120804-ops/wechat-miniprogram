@@ -1,4 +1,7 @@
 {
-  "usingComponents": {},
+  "usingComponents": {
+    "theme-card": "/components/theme-card/index"
+  },
+  "navigationStyle": "custom",
   "navigationBarTitleText": "最低消费设置"
 }

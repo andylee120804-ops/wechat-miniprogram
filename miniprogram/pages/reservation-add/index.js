@@ -16,7 +16,9 @@ Page({
     time: '中午',
     exclusiveType: 'none',
     room: 'big',
-    standard: 300,
+    standard: 500,
+    isPartner: false,
+    standardPicked: false,
     customerName: '',
     phone: '',
     guestCount: '',
@@ -27,7 +29,7 @@ Page({
       { value: 'big', label: '大包厢' },
       { value: 'small', label: '小包厢' }
     ],
-    standardOptions: [300, 500, 600, 800],
+    standardOptions: [500, 600, 800],
     errors: {},
     showDeleteModal: false
   },
@@ -64,7 +66,9 @@ Page({
         time: res.time || '中午',
         exclusiveType: res.exclusiveType || (res.isExclusive ? 'full' : 'none'),
         room: res.room || 'big',
-        standard: res.standard || 300,
+        standard: res.standard || 500,
+        isPartner: res.isPartner || false,
+        standardPicked: true,
         customerName: res.customerName || '',
         phone: res.phone || '',
         guestCount: res.guestCount ? String(res.guestCount) : '',
@@ -91,15 +95,11 @@ Page({
   selectExclusive(e) {
     wx.vibrateShort({ type: 'light' })
     const value = e.currentTarget.dataset.value
-    this.setData({
-      exclusiveType: value,
-      room: value === 'none' ? this.data.room : ''
-    })
+    this.setData({ exclusiveType: value })
     this.clearError('room')
   },
 
   selectRoom(e) {
-    if (this.data.exclusiveType !== 'none') return
     wx.vibrateShort({ type: 'light' })
     this.setData({ room: e.currentTarget.dataset.value })
     this.clearError('room')
@@ -107,7 +107,26 @@ Page({
 
   selectStandard(e) {
     wx.vibrateShort({ type: 'light' })
-    this.setData({ standard: e.currentTarget.dataset.value })
+    const value = Number(e.currentTarget.dataset.value)
+    if (this.data.standard === value && this.data.standardPicked) {
+      // Toggle off — allow deselection for flexibility with partner/shareholder option
+      this.setData({ standard: 0, standardPicked: false })
+    } else {
+      this.setData({ standard: value, standardPicked: true })
+    }
+    this.clearError('standard')
+  },
+
+  togglePartner(e) {
+    wx.vibrateShort({ type: 'light' })
+    const newVal = !this.data.isPartner
+    const updates = { isPartner: newVal }
+    if (newVal && !this.data.standardPicked) {
+      updates.standard = 300
+    } else if (!newVal && this.data.standard === 300) {
+      updates.standard = 500
+    }
+    this.setData(updates)
     this.clearError('standard')
   },
 
@@ -202,13 +221,14 @@ Page({
       } else if (et === 'night') {
         roomName = '包场（晚上）'
       } else if (et === 'full') {
-        roomName = '包场'
+        roomName = '包场全天'
       }
 
       const docData = {
         date: new Date(this.data.date + 'T00:00:00'),
         time: this.data.time,
         exclusiveType: this.data.exclusiveType,
+        isPartner: this.data.isPartner,
         room: et === 'none' ? this.data.room : 'big',
         roomName: roomName,
         standard: Number(this.data.standard),
@@ -220,8 +240,24 @@ Page({
       }
 
       if (this.data.isEdit) {
+        // Load old data for change tracking
+        const oldData = await db.getDoc(COLLECTIONS.RESERVATION, this.data.id)
         await db.updateDoc(COLLECTIONS.RESERVATION, this.data.id, docData)
-        log(LOG_TYPES.RESERVATION_UPDATE, '更新预约: ' + docData.customerName, { id: this.data.id })
+        // Log changes with before/after details
+        if (oldData) {
+          var changes = {}
+          var trackedFields = { standard: '餐标', roomName: '包厢', time: '时段', customerName: '客户', phone: '电话', guestCount: '人数', date: '日期', exclusiveType: '包场类型', remark: '备注', isPartner: '股东' }
+          Object.keys(trackedFields).forEach(function(f) {
+            var oldVal = oldData[f]
+            var newVal = docData[f]
+            if (String(oldVal) !== String(newVal)) {
+              changes[trackedFields[f]] = { from: oldVal, to: newVal }
+            }
+          })
+          log(LOG_TYPES.RESERVATION_UPDATE, docData.customerName + ' 修改预约', { id: this.data.id, changes: changes })
+        } else {
+          log(LOG_TYPES.RESERVATION_UPDATE, '更新预约: ' + docData.customerName, { id: this.data.id })
+        }
         wx.showToast({ title: '更新成功', icon: 'success' })
       } else {
         docData.status = 'confirmed'
@@ -236,7 +272,11 @@ Page({
     } catch (err) {
       wx.hideLoading()
       this.setData({ submitting: false })
-      handleCloudError(err, '保存预约')
+      if (err.message && (err.message.indexOf('已被包场') !== -1 || err.message.indexOf('已有预约') !== -1)) {
+        wx.showModal({ title: '已被预约！', content: '时间有冲突了哦！', showCancel: false })
+      } else {
+        handleCloudError(err, '保存预约')
+      }
     }
   },
 
@@ -251,40 +291,48 @@ Page({
 
       const et = this.data.exclusiveType
 
-      let where
+      // Build conditions
+      var conditions = [
+        { date: _.gte(dayStart).and(_.lte(dayEnd)) },
+        { status: _.neq('cancelled') }
+      ]
 
-      if (et === 'full') {
-        where = { date: _.gte(dayStart).and(_.lte(dayEnd)), status: _.neq('cancelled') }
-      } else if (et === 'noon') {
-        const noonConflict = await db.queryAll(COLLECTIONS.RESERVATION, {
-          date: _.gte(dayStart).and(_.lte(dayEnd)),
-          time: '中午',
-          status: _.neq('cancelled')
-        })
-        if (noonConflict.data && noonConflict.data.length > 0) {
-          throw new Error('该时段已被包场（中午），请更换时间')
-        }
-        return
-      } else if (et === 'night') {
-        const nightConflict = await db.queryAll(COLLECTIONS.RESERVATION, {
-          date: _.gte(dayStart).and(_.lte(dayEnd)),
-          time: '晚上',
-          status: _.neq('cancelled')
-        })
-        if (nightConflict.data && nightConflict.data.length > 0) {
-          throw new Error('该时段已被包场（晚上），请更换时间')
-        }
-        return
-      } else {
-        where = { date: _.gte(dayStart).and(_.lte(dayEnd)), time: this.data.time, room: this.data.room, status: _.neq('cancelled') }
+      // When editing, exclude self
+      if (this.data.isEdit) {
+        conditions.push({ _id: _.neq(this.data.id) })
       }
 
-      if (this.data.isEdit) { where._id = _.neq(this.data.id) }
+      if (et === 'none') {
+        // Regular room: same time + same room, OR any full-day exclusive
+        conditions.push(_.or([
+          { time: this.data.time, room: this.data.room },
+          { exclusiveType: 'full' }
+        ]))
+      } else if (et === 'noon') {
+        // Noon exclusive: same time slot, OR any full-day exclusive
+        conditions.push(_.or([
+          { time: '中午' },
+          { exclusiveType: 'full' }
+        ]))
+      } else if (et === 'night') {
+        // Night exclusive: same time slot, OR any full-day exclusive
+        conditions.push(_.or([
+          { time: '晚上' },
+          { exclusiveType: 'full' }
+        ]))
+      }
+      // 'full': check ALL reservations on this date (no extra filter needed)
+
+      var where = _.and(conditions)
 
       const res = await db.queryAll(COLLECTIONS.RESERVATION, where)
       if (res.data && res.data.length > 0) {
         if (et === 'full') {
           throw new Error('该时段已被包场（全天），请更换时间')
+        } else if (et === 'noon') {
+          throw new Error('该时段已被包场（中午），请更换时间')
+        } else if (et === 'night') {
+          throw new Error('该时段已被包场（晚上），请更换时间')
         }
         throw new Error('该时段【' + getRoomName(this.data.room) + '】已有预约，请更换时间或包厢')
       }

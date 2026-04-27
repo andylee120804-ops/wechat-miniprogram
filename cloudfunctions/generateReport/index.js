@@ -43,12 +43,15 @@ async function monthlySummary(event) {
   const { month } = event
   if (!month) return { success: false, message: '请提供月份' }
 
-  const startDate = new Date(month + '-01')
-  const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0, 23, 59, 59)
+  // Income/purchase dates stored as "YYYY-MM-DD" strings — query with strings
+  const startDateStr = month + '-01'
+  const d = new Date(month + '-01')
+  const endDateObj = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+  const endDateStr = endDateObj.getFullYear() + '-' + String(endDateObj.getMonth() + 1).padStart(2, '0') + '-' + String(endDateObj.getDate()).padStart(2, '0')
 
   const [incomes, purchases, expenses] = await Promise.all([
-    fetchAll('income', { date: _.gte(startDate).and(_.lte(endDate)) }),
-    fetchAll('purchase', { date: _.gte(startDate).and(_.lte(endDate)) }),
+    fetchAll('income', { date: _.gte(startDateStr).and(_.lte(endDateStr)) }),
+    fetchAll('purchase', { date: _.gte(startDateStr).and(_.lte(endDateStr)) }),
     fetchAll('expense', { month })
   ])
 
@@ -87,13 +90,11 @@ async function periodReport(event) {
   const { startDate, endDate } = event
   if (!startDate || !endDate) return { success: false, message: '请提供日期范围' }
 
-  const start = new Date(startDate)
-  const end = new Date(endDate + 'T23:59:59')
-
+  // income/purchase dates are "YYYY-MM-DD" strings
   const [incomes, purchases, expenses] = await Promise.all([
-    fetchAll('income', { date: _.gte(start).and(_.lte(end)) }),
-    fetchAll('purchase', { date: _.gte(start).and(_.lte(end)) }),
-    fetchAll('expense', { createdAt: _.gte(start).and(_.lte(end)) })
+    fetchAll('income', { date: _.gte(startDate).and(_.lte(endDate)) }),
+    fetchAll('purchase', { date: _.gte(startDate).and(_.lte(endDate)) }),
+    fetchAll('expense', { createdAt: _.gte(new Date(startDate + 'T00:00:00')).and(_.lte(new Date(endDate + 'T23:59:59'))) })
   ])
 
   const totalIncome = incomes.reduce((s, i) => s + (i.amount || 0), 0)

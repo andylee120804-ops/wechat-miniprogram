@@ -1,5 +1,5 @@
 const app = getApp()
-const { formatDate, formatAmount, getIncomeTypeText } = require('../../utils/helpers')
+const { formatDate } = require('../../utils/helpers')
 const { log, LOG_TYPES } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
@@ -18,6 +18,8 @@ Page({
     reservationId: '',
     selectedReservation: null,
     recentReservations: [],
+    pickerIndex: -1,
+    pickerItems: [],
     remark: '',
     submitting: false,
     typeOptions: [
@@ -72,12 +74,12 @@ Page({
   async loadRecentReservations() {
     try {
       var that = this
-      var today = formatDate(new Date())
-      var sevenDaysAgo = formatDate(new Date(Date.now() - 7 * 86400000))
-      var sevenDaysLater = formatDate(new Date(Date.now() + 7 * 86400000))
+      var now = new Date()
+      var todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+      var thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000)
 
       var results = await db.queryAll(COLLECTIONS.RESERVATION, {
-        date: db.getDb().command.gte(sevenDaysAgo).and(db.getDb().command.lte(sevenDaysLater)),
+        date: db.getDb().command.gte(thirtyDaysAgo).and(db.getDb().command.lte(todayEnd)),
         status: db.getDb().command.in(['reserved', 'confirmed'])
       })
 
@@ -86,9 +88,19 @@ Page({
       var available = allReservations.filter(function(r) { return r.hasIncome !== true })
 
       // Sort by date descending
-      available.sort(function(a, b) { return (b.date || '').localeCompare(a.date || '') })
+      available.sort(function(a, b) { return (b.date || 0) - (a.date || 0) })
 
-      that.setData({ recentReservations: available })
+      // Build picker items: "M月D日：time customerName roomName"
+      var items = available.map(function(r) {
+        var dateStr = formatDate(r.date)
+        var parts = dateStr.split('-')
+        var month = parseInt(parts[1]) || 0
+        var day = parseInt(parts[2]) || 0
+        var room = r.roomName || (r.room === 'big' ? '大包厢' : '小包厢')
+        return month + '月' + day + '日：' + (r.time || '') + ' ' + (r.customerName || '') + ' ' + room
+      })
+
+      that.setData({ recentReservations: available, pickerItems: items, pickerIndex: -1 })
     } catch (err) {
       console.error('加载最近预约失败:', err)
     }
@@ -107,16 +119,53 @@ Page({
   },
 
   toggleNoReservation() {
-    this.setData({ noReservation: !this.data.noReservation, reservationId: '', selectedReservation: null })
+    this.setData({ noReservation: !this.data.noReservation, reservationId: '', selectedReservation: null, pickerIndex: -1 })
   },
 
-  onReservationSelect(e) {
-    const res = e.currentTarget.dataset.res
-    const estimatedAmount = (res.standard || 0) * (res.guestCount || 0)
+  onReservationPickerChange(e) {
+    const index = e.detail.value
+    const res = this.data.recentReservations[index]
+    if (!res) return
+
+    // Calculate with partner discount
+    let unitPrice = res.standard || 0
+    if (res.isPartner && unitPrice > 300) {
+      unitPrice = unitPrice * 0.8
+    }
+    let estimatedAmount = Math.round(unitPrice * (res.guestCount || 0))
+
+    // Check minimum amount and auto-adjust
+    this.calculateFinalAmount(res, estimatedAmount, index)
+  },
+
+  async calculateFinalAmount(res, estimatedAmount, index) {
+    // Partner-only pricing (standard=300, no meal price selected) — skip minimum amount
+    if (res.isPartner && res.standard === 300) {
+      this.setData({
+        reservationId: res._id,
+        selectedReservation: res,
+        pickerIndex: index,
+        amount: String(estimatedAmount)
+      })
+      return
+    }
+
+    const et = res.exclusiveType || (res.isExclusive ? 'full' : 'none')
+    const roomKey = et !== 'none' ? et : 'room'
+    const key = 'min_amount_' + roomKey
+    const minAmount = await this.getMinAmount(key)
+
+    let finalAmount = estimatedAmount
+    if (minAmount && estimatedAmount < minAmount) {
+      finalAmount = minAmount
+      wx.showToast({ title: '已按最低消费 ¥' + minAmount + ' 计算', icon: 'none' })
+    }
+
     this.setData({
       reservationId: res._id,
       selectedReservation: res,
-      amount: String(estimatedAmount)
+      pickerIndex: index,
+      amount: String(finalAmount)
     })
   },
 
@@ -152,30 +201,7 @@ Page({
         updatedAt: new Date()
       }
 
-      // 最低消费软校验（仅关联预约时）
-      if (!noReservation && reservationId && this.data.selectedReservation) {
-        const et = this.data.selectedReservation.exclusiveType ||
-                   (this.data.selectedReservation.isExclusive ? 'full' : 'none')
-        const roomKey = et !== 'none' ? et : (this.data.selectedReservation.room || 'big')
-        const key = 'min_amount_' + roomKey
-        const minAmount = await this.getMinAmount(key)
-
-        if (minAmount && parseFloat(amount) < minAmount) {
-          wx.hideLoading()
-          const confirm = await new Promise(resolve => {
-            wx.showModal({
-              title: '金额低于最低消费',
-              content: `该包厢/包场最低消费为 ¥${minAmount}，当前金额 ¥${amount}，是否继续？`,
-              success: res => resolve(res.confirm)
-            })
-          })
-          if (!confirm) {
-            this.setData({ submitting: false })
-            return
-          }
-          wx.showLoading({ title: '保存中' })
-        }
-      }
+      // 最低消费已在选择预约时自动计算，无需重复校验
 
       // Sync fields from linked reservation so income-detail can display them
       if (!noReservation && reservationId && this.data.selectedReservation) {

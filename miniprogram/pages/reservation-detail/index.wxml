@@ -64,9 +64,11 @@
     </view>
 
     <!-- Action Bar - only for non-cancelled -->
-    <view class="action-bar safe-bottom" wx:if="{{reservation.status !== 'cancelled'}}">
-      <view class="bar-btn bar-btn-primary" bindtap="onEdit">编辑</view>
-      <view class="bar-btn bar-btn-danger" bindtap="onCancel">取消预约</view>
+    <view class="bottom-bar" wx:if="{{reservation.status !== 'cancelled'}}">
+      <view class="bottom-bar-inner two-btns">
+        <view class="bar-btn bar-btn-danger" bindtap="onCancel">取消预约</view>
+        <view class="bar-btn bar-btn-primary" bindtap="onEdit">编辑</view>
+      </view>
     </view>
 
     <!-- Cancel Modal -->

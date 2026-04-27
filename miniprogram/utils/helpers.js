@@ -55,12 +55,17 @@ function getWeekRange(offset) {
   sunday.setDate(monday.getDate() + 6)
   sunday.setHours(23, 59, 59, 999)
 
-  const label = offset === 0 ? '本周' : offset === -1 ? '上周' : `${monday.getMonth() + 1}/${monday.getDate()}-${sunday.getMonth() + 1}/${sunday.getDate()}`
+  const weekInfo = getWeekNumber(monday)
+  const weekNum = weekInfo.week
+  const year = weekInfo.year
+  const label = offset === 0 ? '本周' : offset === -1 ? '上周' : `${year}年第${weekNum}周`
 
   return {
     start: formatDate(monday),
     end: formatDate(sunday),
-    label: label
+    label: label,
+    weekNum: weekNum,
+    year: year
   }
 }
 
@@ -92,35 +97,6 @@ function getMonthRange(offset) {
 }
 
 /**
- * Get quarter range with offset (0 = current quarter, -1 = last quarter, etc.)
- * Returns {start, end, label}
- */
-function getQuarterRange(offset) {
-  offset = offset || 0
-  const now = new Date()
-  const year = now.getFullYear()
-  const currentQuarter = Math.floor(now.getMonth() / 3)
-  const targetQuarter = currentQuarter + offset
-
-  const actualYear = year + Math.floor(targetQuarter / 4)
-  const actualQuarter = ((targetQuarter % 4) + 4) % 4
-
-  const start = new Date(actualYear, actualQuarter * 3, 1)
-  start.setHours(0, 0, 0, 0)
-  const end = new Date(actualYear, actualQuarter * 3 + 3, 0)
-  end.setHours(23, 59, 59, 999)
-
-  const quarterNum = actualQuarter + 1
-  const label = `${actualYear}年Q${quarterNum}`
-
-  return {
-    start: formatDate(start),
-    end: formatDate(end),
-    label: label
-  }
-}
-
-/**
  * Get year range with offset (0 = current year, -1 = last year, etc.)
  * Returns {start, end, label}
  */
@@ -131,8 +107,15 @@ function getYearRange(offset) {
 
   const start = new Date(year, 0, 1)
   start.setHours(0, 0, 0, 0)
-  const end = new Date(year, 11, 31)
-  end.setHours(23, 59, 59, 999)
+  // For current year, use today as end date (YTD); for past years, use Dec 31
+  var end
+  if (offset === 0) {
+    end = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    end.setHours(23, 59, 59, 999)
+  } else {
+    end = new Date(year, 11, 31)
+    end.setHours(23, 59, 59, 999)
+  }
 
   const label = `${year}年`
 
@@ -238,41 +221,28 @@ function getRoomName(room) {
   return roomMap[room] || room || '未知'
 }
 
-// ==================== NEW Enhancements ====================
+// ==================== ISO Week ====================
 
 /**
- * Get greeting based on current hour
+ * Get ISO week number for a given date
+ * Returns { year, week } where week is 1-53
  */
-function getGreeting() {
-  const hour = new Date().getHours()
-  if (hour >= 6 && hour < 12) return '早上好'
-  if (hour >= 12 && hour < 18) return '下午好'
-  return '晚上好'
-}
-
-/**
- * Format relative time (e.g. "刚刚", "5分钟前", "2小时前", "昨天", "3天前")
- */
-function formatRelativeTime(date) {
-  if (!date) return ''
+function getWeekNumber(date) {
   const d = date instanceof Date ? date : new Date(date)
-  if (isNaN(d.getTime())) return ''
-
-  const now = new Date()
-  const diffMs = now.getTime() - d.getTime()
-  const diffSeconds = Math.floor(diffMs / 1000)
-  const diffMinutes = Math.floor(diffSeconds / 60)
-  const diffHours = Math.floor(diffMinutes / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffSeconds < 60) return '刚刚'
-  if (diffMinutes < 60) return `${diffMinutes}分钟前`
-  if (diffHours < 24) return `${diffHours}小时前`
-  if (diffDays === 1) return '昨天'
-  if (diffDays < 30) return `${diffDays}天前`
-
-  // Beyond 30 days, return formatted date
-  return formatDate(d)
+  if (isNaN(d.getTime())) return { year: 0, week: 0 }
+  const temp = new Date(d.getTime())
+  temp.setHours(0, 0, 0, 0)
+  // Thursday of the same week determines the ISO year
+  const thursday = new Date(temp.getTime())
+  thursday.setDate(temp.getDate() + (4 - (temp.getDay() || 7)))
+  const year = thursday.getFullYear()
+  // January 4th is always in week 1
+  const jan4 = new Date(year, 0, 4)
+  const jan4Day = jan4.getDay() || 7
+  const jan4Monday = new Date(jan4)
+  jan4Monday.setDate(jan4.getDate() - jan4Day + 1)
+  const week = Math.round((thursday.getTime() - jan4Monday.getTime()) / (7 * 86400000)) + 1
+  return { year, week }
 }
 
 /**
@@ -325,8 +295,8 @@ module.exports = {
   formatTime,
   getWeekRange,
   getMonthRange,
-  getQuarterRange,
   getYearRange,
+  getWeekNumber,
   formatAmount,
   getRoleName,
   getCategoryName,
@@ -334,8 +304,6 @@ module.exports = {
   getReservationStatusText,
   getExpenseCategoryName,
   getRoomName,
-  getGreeting,
-  formatRelativeTime,
   calcWorkDuration,
   isLate
 }

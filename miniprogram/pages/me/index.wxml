@@ -47,7 +47,7 @@
 
     <!-- Feature Group -->
     <view class="menu-group mt-lg" wx:if="{{featureGroup.length > 0}}">
-      <text class="menu-group-title text-overline" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">功能</text>
+      <text class="menu-group-title text-overline" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">汇报</text>
       <view class="menu-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx; overflow: hidden; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};">
         <view class="menu-item flex-row flex-between" wx:for="{{featureGroup}}" wx:key="key"
           data-key="{{item.key}}" bindtap="onMenuTap"

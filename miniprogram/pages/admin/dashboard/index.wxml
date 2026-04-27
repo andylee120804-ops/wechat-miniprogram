@@ -31,11 +31,6 @@
             style="{{periodType === 'month' ? 'background: ' + (theme.accentColor || '#C9A96E') + '; color: ' + (theme.textInverse || '#0F0F1A') + ';' : 'color: ' + (theme.textSecondary || '#9A9AB0') + ';'}}">
             <text>月</text>
           </view>
-          <view class="period-tab {{periodType === 'quarter' ? 'period-tab-active' : ''}}"
-            data-type="quarter" bindtap="switchPeriodType"
-            style="{{periodType === 'quarter' ? 'background: ' + (theme.accentColor || '#C9A96E') + '; color: ' + (theme.textInverse || '#0F0F1A') + ';' : 'color: ' + (theme.textSecondary || '#9A9AB0') + ';'}}">
-            <text>季</text>
-          </view>
           <view class="period-tab {{periodType === 'year' ? 'period-tab-active' : ''}}"
             data-type="year" bindtap="switchPeriodType"
             style="{{periodType === 'year' ? 'background: ' + (theme.accentColor || '#C9A96E') + '; color: ' + (theme.textInverse || '#0F0F1A') + ';' : 'color: ' + (theme.textSecondary || '#9A9AB0') + ';'}}">
@@ -44,7 +39,7 @@
         </view>
 
         <!-- Quick Period Chips -->
-        <view class="quick-chips mt-sm">
+        <view class="quick-chips mt-sm" style="display: flex; justify-content: center; gap: 12rpx; position: relative; top: 5rpx">
           <view class="quick-chip {{periodType === 'month' ? (periodOffset === 0 ? 'quick-chip-active' : '') : ''}}" bindtap="quickSelect" data-offset="0" data-type="month"
             style="{{periodType === 'month' && periodOffset === 0 ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
             <text>本月</text>
@@ -52,14 +47,6 @@
           <view class="quick-chip {{periodType === 'month' ? (periodOffset === -1 ? 'quick-chip-active' : '') : ''}}" bindtap="quickSelect" data-offset="-1" data-type="month"
             style="{{periodType === 'month' && periodOffset === -1 ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
             <text>上月</text>
-          </view>
-          <view class="quick-chip {{periodType === 'quarter' ? 'quick-chip-active' : ''}}" bindtap="quickSelect" data-offset="0" data-type="quarter"
-            style="{{periodType === 'quarter' && periodOffset === 0 ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
-            <text>本季</text>
-          </view>
-          <view class="quick-chip {{periodType === 'quarter' ? (periodOffset === -1 ? 'quick-chip-active' : '') : ''}}" bindtap="quickSelect" data-offset="-1" data-type="quarter"
-            style="{{periodType === 'quarter' && periodOffset === -1 ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
-            <text>上季</text>
           </view>
           <view class="quick-chip {{periodType === 'year' ? 'quick-chip-active' : ''}}" bindtap="quickSelect" data-offset="0" data-type="year"
             style="{{periodType === 'year' && periodOffset === 0 ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
@@ -78,8 +65,7 @@
               <text class="period-label text-body" style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 32rpx; font-weight: 600;">{{periodLabel}}</text>
               <text class="period-range" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; margin-top: 2rpx;">{{startDate}} ~ {{endDate}}</text>
             </view>
-            <text class="period-dropdown-icon" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; margin-left: 8rpx;">&#9660;</text>
-          </view>
+            </view>
           <view class="period-arrow press-scale {{periodOffset >= 0 ? 'period-arrow-disabled' : ''}}" bindtap="nextPeriod"
             style="color: {{periodOffset >= 0 ? theme.textMuted || '#5C5C72' : theme.textSecondary || '#9A9AB0'}}; width: 64rpx; height: 64rpx; display: flex; align-items: center; justify-content: center; font-size: 40rpx;">
             <text decode="true">&gt;</text>
@@ -99,7 +85,7 @@
                 style="{{pickerYear === item ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">{{item}}年</view>
             </view>
           </view>
-          <!-- Month selector (only for month/quarter mode) -->
+          <!-- Month selector (only for month mode) -->
           <view class="picker-section mt-lg" wx:if="{{periodType === 'month'}}">
             <text class="picker-section-title" style="color: {{theme.textSecondary || '#9A9AB0'}};">月份</text>
             <view class="picker-chips flex-row flex-wrap">
@@ -108,13 +94,13 @@
                 style="{{pickerMonth === item ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">{{item}}月</view>
             </view>
           </view>
-          <!-- Quarter selector (only for quarter mode) -->
-          <view class="picker-section mt-lg" wx:if="{{periodType === 'quarter'}}">
-            <text class="picker-section-title" style="color: {{theme.textSecondary || '#9A9AB0'}};">季度</text>
+          <!-- Week selector (only for week mode) -->
+          <view class="picker-section mt-lg" wx:if="{{periodType === 'week'}}">
+            <text class="picker-section-title" style="color: {{theme.textSecondary || '#9A9AB0'}};">周数</text>
             <view class="picker-chips flex-row flex-wrap">
-              <view class="picker-chip {{pickerQuarter === item ? 'picker-chip-active' : ''}}" wx:for="{{pickerQuarters}}" wx:key="*this"
-                data-quarter="{{item}}" bindtap="onPickerQuarterSelect"
-                style="{{pickerQuarter === item ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">Q{{item}}</view>
+              <view class="picker-chip {{pickerWeek === item ? 'picker-chip-active' : ''}}" wx:for="{{pickerWeeks}}" wx:key="*this"
+                data-week="{{item}}" bindtap="onPickerWeekSelect"
+                style="{{pickerWeek === item ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">第{{item}}周</view>
             </view>
           </view>
         </view>

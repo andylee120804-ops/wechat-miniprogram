@@ -15,13 +15,13 @@
     </view>
 
     <!-- Main Content -->
-    <view class="home-content" style="padding-top: {{statusBarHeight + 44}}px; height: 1419rpx; display: block; box-sizing: border-box">
+    <view class="home-content" style="padding-top: {{statusBarHeight + 44}}px;">
 
       <!-- Announcement Marquee -->
-      <view wx:if="{{latestAnnouncement}}" class="announcement-marquee {{marqueePaused ? 'paused' : ''}}" style="margin: 0 8rpx 16rpx; height: 103rpx; display: flex; box-sizing: border-box; position: relative; left: -7rpx; top: 9rpx; width: 701rpx" bindtap="onAnnouncementTap" bindtouchstart="onMarqueeTouchStart" bindtouchend="onMarqueeTouchEnd">
-        <view class="marquee-icon">📢</view>
+      <view wx:if="{{announcements.length > 0}}" class="announcement-marquee" bindtap="onAnnouncementTap" bindtouchstart="onMarqueeTouchStart" bindtouchend="onMarqueeTouchEnd">
+        <view class="marquee-icon">{{announcementEmoji}}</view>
         <view class="marquee-content">
-          <view class="marquee-text">{{latestAnnouncement.title}}</view>
+          <view wx:if="{{!marqueeReset}}" class="marquee-text-wrap" style="animation: marquee-scroll 15s ease-out both;">{{currentAnnouncement.title}}</view>
         </view>
         <view class="marquee-arrow">›</view>
       </view>
@@ -42,7 +42,7 @@
           <view wx:for="{{lunchReservations}}" wx:key="_id" class="res-card" bindtap="onReservationTap" data-id="{{item._id}}">
             <view class="res-card-main">
               <view class="res-card-left">
-                <text class="res-card-room" style="color: {{theme.accentColor || '#C9A96E'}};">{{item.room === 'big' ? '大包厢' : '小包厢'}}</text>
+                <text class="res-card-room" style="color: {{theme.accentColor || '#C9A96E'}};">{{item.roomName || (item.room === 'big' ? '大包厢' : '小包厢')}}</text>
                 <text class="res-card-price" style="color: {{theme.textMuted || '#5C5C72'}};">¥{{item.standard || 300}}/人</text>
               </view>
               <text class="res-card-customer" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{item.customerName}}</text>
@@ -63,7 +63,7 @@
           <view wx:for="{{dinnerReservations}}" wx:key="_id" class="res-card" bindtap="onReservationTap" data-id="{{item._id}}">
             <view class="res-card-main">
               <view class="res-card-left">
-                <text class="res-card-room" style="color: {{theme.accentColor || '#C9A96E'}};">{{item.room === 'big' ? '大包厢' : '小包厢'}}</text>
+                <text class="res-card-room" style="color: {{theme.accentColor || '#C9A96E'}};">{{item.roomName || (item.room === 'big' ? '大包厢' : '小包厢')}}</text>
                 <text class="res-card-price" style="color: {{theme.textMuted || '#5C5C72'}};">¥{{item.standard || 300}}/人</text>
               </view>
               <text class="res-card-customer" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{item.customerName}}</text>
@@ -95,7 +95,7 @@
               <view class="tomorrow-customer" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{item.customerName}}</view>
             </view>
             <view class="tomorrow-right">
-              <view class="tomorrow-room">{{item.room === 'big' ? '大包厢' : '小包厢'}}</view>
+              <view class="tomorrow-room">{{item.roomName || (item.room === 'big' ? '大包厢' : '小包厢')}}</view>
               <view class="tomorrow-price" style="color: {{theme.textMuted || '#5C5C72'}};">¥{{item.standard || 300}}/人</view>
             </view>
           </view>
@@ -123,6 +123,9 @@
             <text class="summary-value" style="color: {{theme.statusWarning || '#FBBF24'}};">¥{{todayExpense}}</text>
             <text class="summary-label" style="color: {{theme.textMuted || '#5C5C72'}};">支出</text>
           </view>
+        </view>
+        <view wx:if="{{monthlyFixedCost > 0}}" class="summary-row" style="margin-top: 12rpx;">
+          
         </view>
       </view>
 

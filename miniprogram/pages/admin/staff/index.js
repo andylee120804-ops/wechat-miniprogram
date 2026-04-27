@@ -17,7 +17,8 @@ Page({
   },
 
   onShow() {
-    // No permission check here - menu already validated permission before navigation
+    // Refresh list when returning from add/edit
+    this.loadData()
   },
 
   onBack: function() {

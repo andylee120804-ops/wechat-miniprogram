@@ -45,87 +45,14 @@
   min-width: 64rpx;
 }
 
-/* Filter Bar */
-.filter-bar {
-  position: sticky;
-  top: 0;
-  z-index: 90;
-  padding-top: calc(var(--status-bar-height, 44px) + 88rpx);
-}
-
-.month-picker {
-  padding: 16rpx 32rpx;
-  align-items: center;
-}
-
-.month-arrow {
-  font-size: 40rpx;
-  font-weight: 300;
-  padding: 8rpx 16rpx;
-}
-
-.month-label {
-  font-weight: 500;
-}
-
-/* Summary Card */
-.summary-card {
-  border-radius: 20rpx;
-  overflow: hidden;
-}
-
-.summary-inner {
-  display: flex;
-  flex-direction: column;
-}
-
-.summary-amount-row {
-  align-items: flex-end;
-}
-
-.summary-count {
-  display: inline-flex;
-  align-items: center;
-}
-
-/* Expense List */
-.expense-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.expense-card {
-  border-radius: 16rpx;
+/* Item Card */
+.item-card {
   overflow: hidden;
   transition: transform 0.15s ease;
 }
 
-.expense-card:active {
+.item-card:active {
   transform: scale(0.98);
-}
-
-.card-inner {
-  display: flex;
-  flex-direction: column;
-}
-
-.card-header {
-  align-items: center;
-}
-
-.card-amount {
-  flex-shrink: 0;
-  margin-left: 16rpx;
-}
-
-.card-body {
-  padding-top: 4rpx;
-}
-
-.card-footer {
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
 }
 
 /* FAB */
@@ -169,12 +96,11 @@
   right: 0;
   bottom: 0;
   z-index: 210;
-  border-radius: 32rpx 32rpx 0 0;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  transform: translateY(100%);
-  transition: transform 0.3s ease;
 }
 
 .modal-show {
@@ -188,107 +114,22 @@
   margin: 16rpx auto 0;
 }
 
-.modal-header {
-  flex-shrink: 0;
-}
-
-.modal-close {
-  width: 56rpx;
-  height: 56rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .modal-body {
   flex: 1;
-  max-height: 50vh;
 }
 
-/* Form Sections */
 .form-section {
   margin-bottom: 8rpx;
 }
 
-.form-label {
-  display: block;
-  font-weight: 500;
-  letter-spacing: 1rpx;
+.form-input {
+  border-bottom: 1rpx solid rgba(255,255,255,0.06);
+  padding: 8rpx 0;
 }
 
-.category-grid {
-  gap: 16rpx;
-}
-
-.category-chip {
-  padding: 12rpx 28rpx;
-  border-radius: 32rpx;
-  transition: all 0.2s ease;
-}
-
-.category-chip:active {
-  transform: scale(0.96);
-}
-
-.category-active {
-  font-weight: 600;
-}
-
-.input-wrap {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: 0 24rpx;
-  height: 88rpx;
-}
-
-.input-prefix {
-  margin-right: 12rpx;
-}
-
-.amount-input {
-  flex: 1;
-  font-size: 36rpx;
-  height: 88rpx;
-}
-
-.desc-input {
-  flex: 1;
-  font-size: 28rpx;
-  height: 88rpx;
-}
-
-/* Modal Actions */
-.modal-actions {
-  flex-shrink: 0;
-}
-
-.action-row {
-  gap: 16rpx;
-}
-
-.delete-btn {
-  padding: 20rpx 32rpx;
-  border-radius: 12rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-hidden {
-  display: none;
-}
-
-.save-btn {
-  padding: 20rpx 0;
-  border-radius: 12rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.save-btn:active {
-  opacity: 0.85;
+/* Cycle selector */
+.cycle-btn:active {
+  opacity: 0.8;
 }
 
 /* Stagger animation */

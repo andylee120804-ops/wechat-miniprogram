@@ -39,13 +39,15 @@
       </view>
 
       <block wx:if="{{!noReservation}}">
-        <view class="reservation-list" wx:if="{{recentReservations.length > 0}}">
-          <view class="res-item {{reservationId === item._id ? 'selected' : ''}}" wx:for="{{recentReservations}}" wx:key="_id" data-res="{{item}}" bindtap="onReservationSelect" style="{{reservationId === item._id ? 'border-color:' + (theme.accentColor || '#C9A96E') + ';background:rgba(201,169,110,0.08);' : ''}}">
-            <view class="res-info">
-              <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 600;">{{item.customerName}}</text>
-              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; margin-left: 12rpx;">{{item.roomName || item.room}} · {{item.guestCount}}人</text>
+        <view class="picker-wrap" wx:if="{{recentReservations.length > 0}}">
+          <picker mode="selector" range="{{pickerItems}}" bindchange="onReservationPickerChange">
+            <view class="picker-display" style="background: {{theme.elevated || '#252540'}}; border-radius: 12rpx; padding: 20rpx 24rpx; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}}; display: flex; justify-content: space-between; align-items: center;">
+              <text style="color: {{pickerIndex >= 0 ? theme.textPrimary || '#F0F0F5' : theme.textMuted || '#5C5C72'}}; font-size: 28rpx;">{{pickerIndex >= 0 ? pickerItems[pickerIndex] : '请选择预约'}}</text>
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; margin-left: 8rpx;">▾</text>
             </view>
-            <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 26rpx;">¥{{(item.standard || 0) * (item.guestCount || 0)}}</text>
+          </picker>
+          <view wx:if="{{selectedReservation}}" class="selected-res-info" style="margin-top: 16rpx; padding: 16rpx 20rpx; background: rgba(201,169,110,0.08); border-radius: 12rpx; border: 1rpx solid {{theme.accentColor || '#C9A96E'}};">
+            <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 26rpx;">{{selectedReservation.customerName}} · {{selectedReservation.guestCount}}人 · ¥{{selectedReservation.standard}}/人</text>
           </view>
         </view>
         <text wx:else style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; display: block; margin-top: 16rpx;">暂无可关联的预约</text>
@@ -70,7 +72,7 @@
   <!-- Fixed Bottom Bar -->
   <view class="bottom-bar safe-bottom">
     <view class="bottom-bar-inner single-btn">
-      <theme-btn theme="{{theme}}" type="primary" text="{{isEdit ? '保存修改' : '记录收入'}}" size="xs" loading="{{submitting}}" bind:tap="onSubmit" />
+      <view class="bar-btn bar-btn-primary" bindtap="onSubmit" style="position: relative; left: -3rpx; top: -13rpx">{{isEdit ? '保存修改' : '记录收入'}}</view>
     </view>
   </view>
 </view>

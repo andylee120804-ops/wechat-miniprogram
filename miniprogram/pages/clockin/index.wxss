@@ -266,6 +266,7 @@
 .makeup-tag-row {
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
 .makeup-hint {
@@ -313,6 +314,20 @@
 .time-picker-box {
   align-items: center;
   justify-content: space-between;
+}
+
+.time-picker-box {
+  align-items: center;
+  justify-content: center;
+}
+
+.time-picker-text {
+  font-size: 40rpx;
+  font-weight: 700;
+  text-align: center;
+  flex: none;
+  display: block;
+  width: 100%;
 }
 
 .reason-input-wrap {

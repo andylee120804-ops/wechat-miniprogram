@@ -15,6 +15,7 @@ Page({
     wechatId: '',
     phone: '',
     salary: '',
+    hireDate: '',
     submitting: false,
     permissions: {
       purchase: { view: false, add: false, edit: false, delete: false },
@@ -72,6 +73,7 @@ Page({
   },
 
   async loadExisting() {
+    this.setData({ loading: true })
     try {
       const db = wx.cloud.database()
       const [staffRes, permRes] = await Promise.all([
@@ -112,9 +114,11 @@ Page({
         wechatId: s.wechatId || '',
         phone: s.phone || '',
         salary: s.salary ? String(s.salary) : '',
+        hireDate: s.hireDate || '',
         permissions: defaultPerms
       })
     } catch (err) {
+      this.setData({ loading: false })
       handleCloudError(err, '加载员工')
     }
   },
@@ -123,6 +127,7 @@ Page({
   onWechatIdInput(e) { this.setData({ wechatId: e.detail.value }) },
   onPhoneInput(e) { this.setData({ phone: e.detail.value }) },
   onSalaryInput(e) { this.setData({ salary: e.detail.value }) },
+  onHireDateChange(e) { this.setData({ hireDate: e.detail.value }) },
   onRoleChange(e) { this.setData({ role: e.currentTarget.dataset.value }) },
 
   onPermChange(e) {
@@ -159,6 +164,7 @@ Page({
         wechatId: wechatId.trim(),
         phone: phone.trim(),
         salary: salary ? parseFloat(salary) : 0,
+        hireDate: this.data.hireDate,
         updatedAt: new Date()
       }
       if (!this.data.isEdit) {

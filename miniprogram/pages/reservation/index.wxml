@@ -105,7 +105,7 @@
     <block wx:if="{{groupedReservations.full.length > 0}}">
       <view class="room-group">
         <view class="room-pill" style="background: {{theme.tagCompletedBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.tagCompletedText || '#C9A96E'}};">
-          全体包场
+          包场全天
         </view>
         <view class="reservation-cards">
           <view

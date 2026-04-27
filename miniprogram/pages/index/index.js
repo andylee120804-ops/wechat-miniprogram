@@ -8,7 +8,10 @@ Page({
     statusBarHeight: 0,
     loading: true,
     todayDate: '',
-    latestAnnouncement: null,
+    announcements: [],
+    currentAnnouncementIndex: 0,
+    currentAnnouncement: null,
+    announcementEmoji: '📢',
     marqueePaused: false,
     lunchReservations: [],
     dinnerReservations: [],
@@ -16,23 +19,23 @@ Page({
     tomorrowPreview: [],
     todayIncome: '0.00',
     todayExpense: '0.00',
+    monthlyFixedCost: 0,
     showSummary: false,
     canAddReservation: false,
     canAddPurchase: false,
     canAddIncome: false,
     unreadAnnouncementCount: 0,
-    hasUrgentUnread: false
+    hasUrgentUnread: false,
+    marqueeReset: false
   },
 
   onShow() {
     const theme = app.getThemePageData()
-    const userInfo = app.globalData.userInfo
-    const isBoss = userInfo && userInfo.role === 'boss'
     this.setData({
       theme,
       statusBarHeight: app.globalData.statusBarHeight || 44,
       todayDate: formatDate(new Date()),
-      showSummary: isBoss,
+      showSummary: app.hasPermission('income', 'view'),
       canAddReservation: app.hasPermission('reservation', 'add'),
       canAddPurchase: app.hasPermission('purchase', 'add'),
       canAddIncome: app.hasPermission('income', 'add')
@@ -67,7 +70,7 @@ Page({
       const tomorrowEnd = new Date(tomorrowDate.getFullYear(), tomorrowDate.getMonth(), tomorrowDate.getDate(), 23, 59, 59)
 
       // Query core data first (parallel)
-      const [todayRes, tomorrowRes, todayIncomeRes, todayExpenseRes] = await Promise.all([
+      const [todayRes, tomorrowRes, todayIncomeRes, todayExpenseRes, todayPurchaseRes, fixedExpenseItemsRes] = await Promise.all([
         db.collection(COLLECTIONS.RESERVATION).where({
           date: _.gte(todayStart).and(_.lte(todayEnd)),
           status: _.neq('cancelled')
@@ -76,16 +79,23 @@ Page({
           date: _.gte(tomorrowStart).and(_.lte(tomorrowEnd)),
           status: _.neq('cancelled')
         }).orderBy('time', 'asc').get(),
+        // Income/expense dates stored as "YYYY-MM-DD" strings — use exact string match
         db.collection(COLLECTIONS.INCOME).where({
-          date: _.gte(todayStart).and(_.lte(todayEnd))
+          date: today
         }).get(),
         db.collection(COLLECTIONS.EXPENSE).where({
-          date: _.gte(todayStart).and(_.lte(todayEnd))
-        }).get()
+          date: today
+        }).get(),
+        // Today's purchase costs
+        db.collection(COLLECTIONS.PURCHASE).where({
+          date: today
+        }).get(),
+        // Fixed expense items (new format: monthlyAmount items; old format: date-based)
+        db.collection(COLLECTIONS.FIXED_EXPENSE).get()
       ])
 
       // Query announcement separately (non-blocking) - don't let it block the page
-      let latestAnnouncement = null
+      let announcementsData = []
       let unreadAnnouncementCount = 0
       let hasUrgentUnread = false
       try {
@@ -93,16 +103,15 @@ Page({
         const announcementRes = await db.collection(COLLECTIONS.ANNOUNCEMENT).where({
           active: true
         }).orderBy('createdAt', 'desc').limit(50).get()
-        const announcements = announcementRes.data || []
-        latestAnnouncement = announcements.length > 0 ? announcements[0] : null
+        announcementsData = announcementRes.data || []
         // Count unread announcements and check for urgent unread
         if (userInfo && userInfo._id) {
-          unreadAnnouncementCount = announcements.filter(a => !(a.readBy || []).includes(userInfo._id)).length
-          hasUrgentUnread = announcements.some(a => !(a.readBy || []).includes(userInfo._id) && a.priority === 'urgent')
+          unreadAnnouncementCount = announcementsData.filter(a => !(a.readBy || []).includes(userInfo._id)).length
+          hasUrgentUnread = announcementsData.some(a => !(a.readBy || []).includes(userInfo._id) && a.priority === 'urgent')
         }
       } catch (e) {
         console.log('公告查询失败，不影响首页显示:', e.errMsg)
-        latestAnnouncement = null
+        announcementsData = []
       }
 
       const lunchRes = (todayRes.data || []).filter(r => r.time === '中午')
@@ -111,12 +120,23 @@ Page({
       const tomorrowPreview = tomorrowData.slice(0, 3)
 
       const todayIncomeTotal = (todayIncomeRes.data || []).reduce((sum, item) => sum + (item.amount || 0), 0)
-      const todayExpenseTotal = (todayExpenseRes.data || []).reduce((sum, item) => sum + (item.amount || 0), 0)
+      const todayExpenseTotal = (todayExpenseRes.data || []).reduce((sum, item) => sum + (item.amount || 0), 0) +
+        (todayPurchaseRes.data || []).reduce((sum, item) => sum + (item.amount || 0), 0)
+      // Fixed costs: sum monthlyAmount (new format), only include currently active items
+      let monthlyFixedCostTotal = 0
+      ;(fixedExpenseItemsRes.data || []).forEach(item => {
+        if (item.monthlyAmount) {
+          // Only include items active today (with startDate/endDate filtering)
+          if (item.startDate && item.startDate > today) return
+          if (item.endDate && item.endDate < today) return
+          monthlyFixedCostTotal += Number(item.monthlyAmount) || 0
+        }
+      })
 
       console.log('首页数据:', {
         todayCount: todayRes.data?.length || 0,
         tomorrowCount: tomorrowData.length,
-        hasAnnouncement: !!latestAnnouncement
+        announcementCount: announcementsData.length
       })
 
       this.setData({
@@ -127,10 +147,16 @@ Page({
         tomorrowPreview: tomorrowPreview,
         todayIncome: todayIncomeTotal.toFixed(2),
         todayExpense: todayExpenseTotal.toFixed(2),
-        latestAnnouncement: latestAnnouncement,
+        monthlyFixedCost: monthlyFixedCostTotal,
+        monthlyFixedCostStr: monthlyFixedCostTotal.toFixed(2),
+        announcements: announcementsData,
+        currentAnnouncementIndex: 0,
+        currentAnnouncement: announcementsData.length > 0 ? announcementsData[0] : null,
+        announcementEmoji: announcementsData.length > 0 ? this.getPriorityEmoji(announcementsData[0].priority) : '📢',
         unreadAnnouncementCount: unreadAnnouncementCount,
         hasUrgentUnread: hasUrgentUnread
       })
+      this.startMarqueeCycle()
     } catch (err) {
       console.error('加载首页数据失败:', err)
       this.setData({ loading: false })
@@ -173,7 +199,7 @@ Page({
   },
 
   onAnnouncementTap() {
-    const ann = this.data.latestAnnouncement
+    const ann = this.data.currentAnnouncement
     if (ann && ann._id) {
       wx.navigateTo({ url: `/pages/announcement-detail/index?id=${ann._id}` })
     } else {
@@ -182,7 +208,7 @@ Page({
   },
 
   onNotificationTap() {
-    const ann = this.data.latestAnnouncement
+    const ann = this.data.currentAnnouncement
     if (this.data.unreadAnnouncementCount > 0 && ann && ann._id) {
       wx.navigateTo({ url: `/pages/announcement-detail/index?id=${ann._id}` })
     } else {
@@ -192,14 +218,51 @@ Page({
 
   onMarqueeTouchStart() {
     this.setData({ marqueePaused: true })
+    if (this._marqueeTimer) {
+      clearInterval(this._marqueeTimer)
+      this._marqueeTimer = null
+    }
   },
 
   onMarqueeTouchEnd() {
-    // Debounce: delay resuming animation to prevent flickering
     clearTimeout(this._marqueeResumeTimer)
     this._marqueeResumeTimer = setTimeout(() => {
       this.setData({ marqueePaused: false })
+      this.startMarqueeCycle()
     }, 300)
+  },
+
+  getPriorityEmoji(priority) {
+    const map = { urgent: '🚨', important: '⚠️', normal: '📢' }
+    return map[priority] || '📢'
+  },
+
+  startMarqueeCycle() {
+    if (this._marqueeTimer) clearInterval(this._marqueeTimer)
+    const announcements = this.data.announcements
+    if (announcements.length <= 1) return
+
+    this._marqueeTimer = setInterval(() => {
+      const nextIndex = (this.data.currentAnnouncementIndex + 1) % announcements.length
+      const next = announcements[nextIndex]
+      // Restart CSS marquee animation by briefly removing the element
+      this.setData({ marqueeReset: true })
+      setTimeout(() => {
+        this.setData({
+          currentAnnouncementIndex: nextIndex,
+          currentAnnouncement: next,
+          announcementEmoji: this.getPriorityEmoji(next.priority),
+          marqueeReset: false
+        })
+      }, 60)
+    }, 15000)
+  },
+
+  onHide() {
+    if (this._marqueeTimer) {
+      clearInterval(this._marqueeTimer)
+      this._marqueeTimer = null
+    }
   },
 
   onPullDownRefresh() {

@@ -36,6 +36,7 @@ Page({
       canEdit: checkPermission('purchase', 'edit'),
       canDelete: checkPermission('purchase', 'delete')
     })
+    if (this.data.id) this.loadPurchase(this.data.id)
   },
 
   loadPurchase: function(id) {

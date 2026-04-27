@@ -3,6 +3,7 @@ const { formatDateTime } = require('../../../utils/helpers')
 const { LOG_TYPE_NAMES } = require('../../../utils/logger')
 const { handleCloudError } = require('../../../utils/error-handler')
 const { checkPermission } = require('../../../utils/permission')
+const { COLLECTIONS } = require('../../../utils/db')
 
 Page({
   data: {
@@ -31,6 +32,9 @@ Page({
       { id: 'ATTENDANCE_CLOCK_OUT', name: '打卡签退' },
       { id: 'ANNOUNCEMENT_CREATE', name: '创建公告' },
       { id: 'ANNOUNCEMENT_DELETE', name: '删除公告' },
+      { id: 'STAFF_CREATE', name: '新增员工' },
+      { id: 'STAFF_UPDATE', name: '更新员工' },
+      { id: 'STAFF_DELETE', name: '删除员工' },
       { id: 'SEARCH', name: '搜索' },
       { id: 'EXPORT', name: '导出' },
       { id: 'LOGIN', name: '登录' },
@@ -80,7 +84,7 @@ Page({
     }
 
     var skip = (page - 1) * that.data.pageSize
-    dbInstance.collection('logs').where(where)
+    dbInstance.collection(COLLECTIONS.OPERATION_LOG).where(where)
       .orderBy('timestamp', 'desc')
       .skip(skip)
       .limit(that.data.pageSize)
@@ -105,6 +109,11 @@ Page({
       })
       .catch(function(err) {
         that.setData({ loading: false })
+        // If collection doesn't exist yet, show empty state (first use)
+        if (err.errCode === -502005) {
+          console.warn('operation_log 集合不存在，请先在云开发控制台创建')
+          return
+        }
         handleCloudError(err, '加载操作日志')
       })
   },

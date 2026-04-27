@@ -6,6 +6,19 @@ const { hasPermission, checkPermission } = require('../../utils/permission')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 
+const ALL_CATEGORIES = [
+  { id: '', name: '全部', count: 0 },
+  { id: 'meat', name: '肉类', count: 0 },
+  { id: 'seafood', name: '海鲜', count: 0 },
+  { id: 'vegetable', name: '蔬菜', count: 0 },
+  { id: 'fruit', name: '水果', count: 0 },
+  { id: 'drink', name: '饮品', count: 0 },
+  { id: 'seasoning', name: '调味品', count: 0 },
+  { id: 'supplies', name: '日用品', count: 0 },
+  { id: 'equipment', name: '设备', count: 0 },
+  { id: 'other', name: '其他', count: 0 }
+]
+
 Page({
   data: {
     theme: {},
@@ -17,20 +30,10 @@ Page({
     purchases: [],
     filteredPurchases: [],
     totalAmount: 0,
+    totalFormatted: '0.00',
     totalCount: 0,
     activeCategory: '',
-    categories: [
-      { id: '', name: '全部', count: 0 },
-      { id: 'meat', name: '肉类', count: 0 },
-      { id: 'seafood', name: '海鲜', count: 0 },
-      { id: 'vegetable', name: '蔬菜', count: 0 },
-      { id: 'fruit', name: '水果', count: 0 },
-      { id: 'drink', name: '饮品', count: 0 },
-      { id: 'seasoning', name: '调味品', count: 0 },
-      { id: 'supplies', name: '日用品', count: 0 },
-      { id: 'equipment', name: '设备', count: 0 },
-      { id: 'other', name: '其他', count: 0 }
-    ],
+    categories: ALL_CATEGORIES.map(function(c) { return Object.assign({}, c) }),
     searchKeyword: '',
     // Pagination
     page: 1,
@@ -43,6 +46,9 @@ Page({
     const sysInfo = wx.getWindowInfo()
     this.setData({ statusBarHeight: sysInfo.statusBarHeight || 44 })
     this.setData({ theme: app.getThemePageData() })
+  },
+
+  onShow: function() {
     this.loadData()
   },
 
@@ -52,9 +58,22 @@ Page({
 
     var range = getMonthRange(that.data.currentMonth)
 
-    db.queryPage(COLLECTIONS.PURCHASE, {
+    // Query all records in month for accurate total amount
+    var totalPromise = db.queryAll(COLLECTIONS.PURCHASE, {
       date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
-    }, 1, that.data.pageSize, 'date', 'desc').then(function(res) {
+    })
+
+    // Query first page for display
+    var pagePromise = db.queryPage(COLLECTIONS.PURCHASE, {
+      date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
+    }, 1, that.data.pageSize, 'date', 'desc')
+
+    Promise.all([totalPromise, pagePromise]).then(function(results) {
+      var allData = results[0].data || []
+      var totalAmount = 0
+      allData.forEach(function(p) { totalAmount += Number(p.amount) || 0 })
+
+      var res = results[1]
       var purchases = (res.data || []).map(function(p) {
         p.categoryName = getCategoryName(p.category)
         p.formattedAmount = formatAmount(p.amount)
@@ -62,17 +81,18 @@ Page({
         return p
       })
 
-      var totalAmount = 0
       var categoryCounts = {}
-      that.data.categories.forEach(function(cat) { categoryCounts[cat.id] = 0 })
+      ALL_CATEGORIES.forEach(function(cat) { categoryCounts[cat.id] = 0 })
 
-      purchases.forEach(function(p) {
-        totalAmount += Number(p.amount) || 0
+      allData.forEach(function(p) {
         if (p.category && categoryCounts[p.category] !== undefined) categoryCounts[p.category]++
       })
-      categoryCounts[''] = purchases.length
+      categoryCounts[''] = allData.length
 
-      var updatedCategories = that.data.categories.map(function(cat) {
+      // Only show categories that have records, plus "全部" (all)
+      var updatedCategories = ALL_CATEGORIES.filter(function(cat) {
+        return cat.id === '' || (categoryCounts[cat.id] || 0) > 0
+      }).map(function(cat) {
         return Object.assign({}, cat, { count: categoryCounts[cat.id] || 0 })
       })
 
@@ -80,6 +100,7 @@ Page({
         purchases: purchases,
         filteredPurchases: purchases,
         totalAmount: totalAmount,
+        totalFormatted: formatAmount(totalAmount),
         totalCount: res.total,
         categories: updatedCategories,
         monthStr: range.monthStr,
@@ -112,12 +133,9 @@ Page({
         return p
       })
       var allItems = that.data.purchases.concat(newItems)
-      var totalAmount = 0
-      allItems.forEach(function(p) { totalAmount += Number(p.amount) || 0 })
       that.setData({
         purchases: allItems,
         filteredPurchases: allItems,
-        totalAmount: totalAmount,
         hasMore: res.hasMore,
         page: that.data.page + 1,
         loadingMore: false

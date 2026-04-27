@@ -12,8 +12,6 @@ Page({
     formattedTime: '',
     needsConfirm: false,
     confirming: false,
-    prevAnn: null,
-    nextAnn: null,
     dayAnnouncements: []
   },
 
@@ -53,9 +51,8 @@ Page({
       const needsConfirm = !!(announcement.needsConfirm === true && !isRead)
 
 
-      // Load all same-day announcements for navigation
-      const annDate = announcement.createdAt
-      const dateStr = formatDate(annDate) // "YYYY-MM-DD" in local time
+      // Always show today's announcements in the "当日其他公告" section
+      const dateStr = formatDate(new Date())
 
       // Query all active announcements and filter by date in JavaScript
       const allRes = await db.collection(COLLECTIONS.ANNOUNCEMENT).where({ active: true }).orderBy('createdAt', 'desc').get()
@@ -63,17 +60,12 @@ Page({
 
       // Filter same day in local time
       const dayList = allAnnouncements.filter(a => formatDate(a.createdAt) === dateStr)
-      const currentIndex = dayList.findIndex(a => a._id === id)
-      const prevAnn = currentIndex < dayList.length - 1 ? dayList[currentIndex + 1] : null
-      const nextAnn = currentIndex > 0 ? dayList[currentIndex - 1] : null
 
       this.setData({
         loading: false,
         announcement,
         formattedTime: formatDateTime(announcement.createdAt),
         needsConfirm,
-        prevAnn,
-        nextAnn,
         dayAnnouncements: dayList
       })
     } catch (err) {
@@ -84,22 +76,6 @@ Page({
 
   onBack() {
     wx.navigateBack()
-  },
-
-  onPrevAnnouncement() {
-    const { prevAnn } = this.data
-    if (prevAnn) {
-      this.setData({ announcementId: prevAnn._id })
-      this.loadData(prevAnn._id)
-    }
-  },
-
-  onNextAnnouncement() {
-    const { nextAnn } = this.data
-    if (nextAnn) {
-      this.setData({ announcementId: nextAnn._id })
-      this.loadData(nextAnn._id)
-    }
   },
 
   async onConfirmRead() {

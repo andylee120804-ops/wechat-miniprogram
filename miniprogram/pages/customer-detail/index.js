@@ -1,5 +1,5 @@
 const app = getApp()
-const { formatDate, formatAmount, getIncomeTypeText } = require('../../utils/helpers')
+const { formatDate, formatAmount } = require('../../utils/helpers')
 const { COLLECTIONS } = require('../../utils/db')
 
 Page({

@@ -37,9 +37,6 @@ Page({
     const settingsGroup = []
 
     // Management group
-    if (hasPermission('dashboard', ACTIONS.VIEW)) {
-      managementGroup.push({ key: 'dashboard', icon: '📊', text: '经营报表' })
-    }
     if (hasPermission('staff', ACTIONS.VIEW)) {
       managementGroup.push({ key: 'staff', icon: '👥', text: '员工管理' })
     }
@@ -48,23 +45,23 @@ Page({
     }
     managementGroup.push({ key: 'clockin', icon: '🕐', text: '打卡' })
     managementGroup.push({ key: 'announcements', icon: '📢', text: '公告通知' })
+    if (hasPermission('staff', ACTIONS.VIEW)) {
+      managementGroup.push({ key: 'logs', icon: '📋', text: '操作日志' })
+    }
 
-    // Feature group (boss only)
+    // Feature group (boss only) - renamed to 汇报
     const userInfo = app.globalData.userInfo
     if (userInfo && userInfo.role === 'boss') {
+      featureGroup.push({ key: 'dashboard', icon: '📊', text: '经营报表' })
       featureGroup.push({ key: 'customer', icon: '👤', text: '客户管理' })
       featureGroup.push({ key: 'insights', icon: '🔍', text: '经营洞察' })
+      managementGroup.push({ key: 'minAmount', icon: '💰', text: '最低消费设置' })
+      managementGroup.push({ key: 'fixedExpense', icon: '🏠', text: '固定成本' })
     }
 
     // Settings group
     settingsGroup.push({ key: 'theme', icon: '🎨', text: '主题选择' })
     settingsGroup.push({ key: 'about', icon: 'ℹ️', text: '关于' })
-
-    // Boss-only settings
-    const userInfo = app.globalData.userInfo
-    if (userInfo && userInfo.role === 'boss') {
-      settingsGroup.push({ key: 'minAmount', icon: '💰', text: '最低消费设置' })
-    }
 
     this.setData({
       managementGroup,
@@ -84,6 +81,8 @@ Page({
       customer: '/pages/customer/index',
       insights: '/pages/insights/index',
       minAmount: '/pages/min-amount/index',
+      fixedExpense: '/pages/admin/expense/index',
+      logs: '/pages/admin/logs/index',
       about: ''
     }
 

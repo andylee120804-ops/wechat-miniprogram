@@ -1,5 +1,6 @@
 const app = getApp()
 const { formatDate, formatAmount, getIncomeTypeText } = require('../../utils/helpers')
+const { checkPermission } = require('../../utils/permission')
 const { log, LOG_TYPES } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
@@ -11,7 +12,9 @@ Page({
     id: '',
     income: null,
     loading: true,
-    showDeleteModal: false
+    showDeleteModal: false,
+    canEdit: false,
+    canDelete: false
   },
 
   onLoad(options) {
@@ -24,11 +27,20 @@ Page({
     try {
       const db = wx.cloud.database()
       const res = await db.collection(COLLECTIONS.INCOME).doc(this.data.id).get()
-      this.setData({ income: res.data, loading: false })
+      this.setData({
+        income: res.data,
+        loading: false,
+        canEdit: checkPermission('income', 'edit'),
+        canDelete: checkPermission('income', 'delete')
+      })
     } catch (err) {
       handleCloudError(err, '加载收入详情')
       this.setData({ loading: false })
     }
+  },
+
+  onShow() {
+    if (this.data.id) this.loadData()
   },
 
   onBack() {
@@ -36,7 +48,7 @@ Page({
   },
 
   onEdit() {
-    if (!app.hasPermission('income', 'edit')) {
+    if (!checkPermission('income', 'edit')) {
       wx.showToast({ title: '无权限', icon: 'none' })
       return
     }
@@ -44,6 +56,10 @@ Page({
   },
 
   onDelete() {
+    if (!checkPermission('income', 'delete')) {
+      wx.showToast({ title: '无权限', icon: 'none' })
+      return
+    }
     this.setData({ showDeleteModal: true })
   },
 

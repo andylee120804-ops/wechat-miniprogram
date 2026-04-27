@@ -64,6 +64,12 @@
   background: rgba(26,26,46,0.6);
 }
 
+@keyframes marquee-scroll {
+  0% { margin-left: 100%; }
+  33% { margin-left: 0; }
+  100% { margin-left: 0; }
+}
+
 .marquee-icon {
   font-size: 26rpx;
   margin-right: 12rpx;
@@ -74,25 +80,15 @@
   flex: 1;
   overflow: hidden;
   position: relative;
+  height: 54rpx;
 }
 
-.marquee-text {
+.marquee-text-wrap {
+  display: inline-block;
+  white-space: nowrap;
   font-size: 26rpx;
   color: #F5F0E8;
-  white-space: nowrap;
-}
-
-@keyframes marquee {
-  0% {
-    transform: translateX(100%);
-  }
-  100% {
-    transform: translateX(-100%);
-  }
-}
-
-.announcement-marquee.paused .marquee-text {
-  animation-play-state: paused;
+  line-height: 54rpx;
 }
 
 .marquee-arrow {
