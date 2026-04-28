@@ -1,6 +1,7 @@
 const app = getApp()
 const { getRoleName } = require('../../../utils/helpers')
 const { COLLECTIONS } = require('../../../utils/db')
+const { handleCloudError } = require('../../../utils/error-handler')
 
 Page({
   data: {
@@ -31,7 +32,7 @@ Page({
       const db = wx.cloud.database()
       const [staffRes, permRes] = await Promise.all([
         db.collection(COLLECTIONS.STAFF).where({ status: 'active' }).get(),
-        db.collection('permissions').get()
+        db.collection(COLLECTIONS.PERMISSIONS).get()
       ])
 
       const permMap = {}
@@ -45,6 +46,7 @@ Page({
 
       this.setData({ loading: false, staffList })
     } catch (err) {
+      handleCloudError(err, '加载员工列表')
       this.setData({ loading: false })
     }
   },

@@ -4,6 +4,7 @@ const { log, LOG_TYPES } = require('../../../utils/logger')
 const { handleCloudError } = require('../../../utils/error-handler')
 const { checkPermission } = require('../../../utils/permission')
 const { COLLECTIONS } = require('../../../utils/db')
+const db = require('../../../utils/db')
 
 Page({
   data: {
@@ -40,10 +41,7 @@ Page({
   async loadData() {
     this.setData({ loading: true })
     try {
-      const db = wx.cloud.database()
-      const res = await db.collection(COLLECTIONS.FIXED_EXPENSE)
-        .orderBy('createdAt', 'desc')
-        .get()
+      const res = await db.queryAll(COLLECTIONS.FIXED_EXPENSE, {}, 'createdAt', 'desc')
 
       const items = (res.data || []).map(item => {
         const monthlyAmount = Number(item.monthlyAmount || item.amount || 0)

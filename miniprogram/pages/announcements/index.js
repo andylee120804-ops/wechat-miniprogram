@@ -1,6 +1,5 @@
 const app = getApp()
-const { formatDateTime } = require('../../utils/helpers')
-const { log, LOG_TYPES } = require('../../utils/logger')
+const { log } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { hasPermission } = require('../../utils/permission')
 

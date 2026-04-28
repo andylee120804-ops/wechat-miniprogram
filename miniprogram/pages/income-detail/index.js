@@ -1,7 +1,6 @@
 const app = getApp()
-const { formatDate, formatAmount, getIncomeTypeText } = require('../../utils/helpers')
 const { checkPermission } = require('../../utils/permission')
-const { log, LOG_TYPES } = require('../../utils/logger')
+const { log } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 

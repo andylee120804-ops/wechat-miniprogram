@@ -44,7 +44,7 @@
         <text wx:for="{{['日','一','二','三','四','五','六']}}" wx:key="*this" style="text-align: center; color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; font-weight: 500;">{{item}}</text>
       </view>
       <view style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8rpx;">
-        <view wx:for="{{calendarDays}}" wx:key="dateStr" style="aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 50%; {{item.isToday ? 'border: 2rpx solid ' + (theme.accentColor || '#C9A96E') + ';' : ''}} {{item.isClocked ? 'background:' + (theme.statusSuccessBg || 'rgba(74,222,128,0.15)') + ';' : ''}}">
+        <view wx:for="{{calendarDays}}" wx:key="key" style="aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 50%; {{item.isToday ? 'border: 2rpx solid ' + (theme.accentColor || '#C9A96E') + ';' : ''}} {{item.isClocked ? 'background:' + (theme.statusSuccessBg || 'rgba(74,222,128,0.15)') + ';' : ''}}">
           <text wx:if="{{item.day}}" style="font-size: 26rpx; color: {{item.isClocked ? (theme.statusSuccess || '#4ADE80') : (theme.textPrimary || '#F0F0F5')}}; font-weight: {{item.isClocked ? '600' : '400'}};">{{item.day}}</text>
           <text wx:if="{{item.isClocked && item.day}}" style="font-size: 16rpx; color: {{theme.statusSuccess || '#4ADE80'}}; margin-top: 2rpx;">✓</text>
         </view>
@@ -57,7 +57,7 @@
     <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600; display: block; margin-bottom: 16rpx;">打卡记录</text>
     <skeleton wx:if="{{loading}}" theme="{{theme}}" type="list" count="5" />
     <view wx:else>
-      <view wx:for="{{records}}" wx:key="dateStr" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 16rpx; padding: 20rpx 24rpx; margin-bottom: 12rpx;">
+      <view wx:for="{{records}}" wx:key="_id" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 16rpx; padding: 20rpx 24rpx; margin-bottom: 12rpx;">
         <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8rpx;">
           <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 600;">{{item.dateStr}}</text>
           <view style="display: flex; gap: 8rpx;">

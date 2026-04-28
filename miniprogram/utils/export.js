@@ -3,8 +3,6 @@
  * Generates structured monthly summaries and formats amounts for export.
  */
 
-var { formatAmount } = require('./helpers')
-
 /**
  * Generate a monthly summary data object for export/canvas rendering.
  * Aggregates income, purchase, and expense data for a given month.

@@ -78,6 +78,7 @@ function incrementUnread(delta) {
  * @returns {Promise<Array>} Array of upcoming reservation objects
  */
 function checkUpcomingReservations() {
+  var { COLLECTIONS } = require('./db')
   var db = wx.cloud.database({ env: 'cloud1-d9gwvttcr864f8021' })
   var now = new Date()
   var todayStr = _formatDate(now)
@@ -85,7 +86,7 @@ function checkUpcomingReservations() {
   var twoHoursStr = _formatTime(twoHoursLater)
   var nowStr = _formatTime(now)
 
-  return db.collection('reservation')
+  return db.collection(COLLECTIONS.RESERVATION)
     .where({
       date: todayStr,
       time: db.command.gte(nowStr).and(db.command.lte(twoHoursStr)),

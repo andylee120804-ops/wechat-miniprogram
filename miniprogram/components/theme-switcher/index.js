@@ -1,4 +1,4 @@
-const { getThemeList, getCurrentThemeId } = require('../../styles/themes.js')
+const { THEMES, getCurrentThemeId } = require('../../styles/themes.js')
 
 Component({
   properties: {
@@ -22,7 +22,7 @@ Component({
   },
   lifetimes: {
     attached() {
-      const themeList = getThemeList()
+      const themeList = Object.values(THEMES).map(t => ({ id: t.id, name: t.name, description: t.description }))
       const currentTheme = this.data.themeId || getCurrentThemeId()
       this.setData({ themeList, currentTheme })
     }

@@ -20,7 +20,8 @@ const COLLECTIONS = {
   OPERATION_LOG: 'operation_log',
   ANNOUNCEMENT: 'announcement',
   NOTIFICATION_LOG: 'notification_log',
-  SETTINGS: 'settings'
+  SETTINGS: 'settings',
+  PERMISSIONS: 'permissions'
 }
 
 /**

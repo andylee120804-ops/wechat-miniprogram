@@ -1,6 +1,6 @@
 const app = getApp()
-const { formatDate, formatAmount } = require('../../utils/helpers')
 const { COLLECTIONS } = require('../../utils/db')
+const db = require('../../utils/db')
 
 Page({
   data: {
@@ -26,10 +26,10 @@ Page({
   async loadCustomers() {
     this.setData({ loading: true })
     try {
-      const db = wx.cloud.database()
-      const res = await db.collection(COLLECTIONS.RESERVATION).where({
-        status: db.command.neq('cancelled')
-      }).get()
+      const dbInst = wx.cloud.database()
+      const res = await db.queryAll(COLLECTIONS.RESERVATION, {
+        status: dbInst.command.neq('cancelled')
+      })
 
       // Aggregate by customerName
       const map = {}
@@ -46,7 +46,7 @@ Page({
       })
 
       // Also query income to get spending
-      const incomeRes = await db.collection(COLLECTIONS.INCOME).where({}).get()
+      const incomeRes = await db.queryAll(COLLECTIONS.INCOME, {})
       incomeRes.data.forEach(i => {
         const name = i.source
         if (map[name]) {
@@ -59,6 +59,7 @@ Page({
       this.setData({ loading: false, customers, filteredCustomers: customers })
       this.applyFilter()
     } catch (err) {
+      console.error('[Customer] 加载客户数据失败:', err)
       this.setData({ loading: false })
     }
   },

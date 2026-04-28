@@ -2,6 +2,7 @@ const app = getApp()
 const { formatDateTime, formatDate } = require('../../utils/helpers')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
+const db = require('../../utils/db')
 
 Page({
   data: {
@@ -37,8 +38,8 @@ Page({
     }
     this.setData({ loading: true })
     try {
-      const db = wx.cloud.database()
-      const res = await db.collection(COLLECTIONS.ANNOUNCEMENT).doc(id).get()
+      const dbInst = wx.cloud.database()
+      const res = await dbInst.collection(COLLECTIONS.ANNOUNCEMENT).doc(id).get()
       if (!res.data) {
         wx.showToast({ title: '公告不存在', icon: 'none' })
         setTimeout(() => wx.navigateBack(), 1500)
@@ -55,7 +56,7 @@ Page({
       const dateStr = formatDate(new Date())
 
       // Query all active announcements and filter by date in JavaScript
-      const allRes = await db.collection(COLLECTIONS.ANNOUNCEMENT).where({ active: true }).orderBy('createdAt', 'desc').get()
+      const allRes = await db.queryAll(COLLECTIONS.ANNOUNCEMENT, { active: true }, 'createdAt', 'desc')
       const allAnnouncements = allRes.data || []
 
       // Filter same day in local time

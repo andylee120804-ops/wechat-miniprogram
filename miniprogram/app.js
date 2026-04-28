@@ -84,7 +84,7 @@ App({
       const db = wx.cloud.database()
       const staffRes = await db.collection(COLLECTIONS.STAFF).doc(userInfo._id).get()
       if (staffRes.data) {
-        var updatedInfo = Object.assign({}, userInfo, {
+        let updatedInfo = Object.assign({}, userInfo, {
           name: staffRes.data.name,
           role: staffRes.data.role,
           phone: staffRes.data.phone || '',

@@ -1,6 +1,5 @@
 const app = getApp()
-const { getRoleName } = require('../../../utils/helpers')
-const { log, LOG_TYPES } = require('../../../utils/logger')
+const { log } = require('../../../utils/logger')
 const { handleCloudError } = require('../../../utils/error-handler')
 const { COLLECTIONS } = require('../../../utils/db')
 
@@ -78,7 +77,7 @@ Page({
       const db = wx.cloud.database()
       const [staffRes, permRes] = await Promise.all([
         db.collection(COLLECTIONS.STAFF).doc(this.data.id).get(),
-        db.collection('permissions').where({ staffId: this.data.id }).get()
+        db.collection(COLLECTIONS.PERMISSIONS).where({ staffId: this.data.id }).get()
       ])
       const s = staffRes.data
       const perms = permRes.data[0]?.permissions || []
@@ -185,13 +184,13 @@ Page({
         .filter(([key, vals]) => Object.values(vals).some(v => v))
         .map(([module, actions]) => ({ module, actions: Object.entries(actions).filter(([, v]) => v).map(([a]) => a) }))
 
-      const existingPerm = await db.collection('permissions').where({ staffId: this.data.id }).get()
+      const existingPerm = await db.collection(COLLECTIONS.PERMISSIONS).where({ staffId: this.data.id }).get()
       if (existingPerm.data.length > 0) {
-        await db.collection('permissions').doc(existingPerm.data[0]._id).update({
+        await db.collection(COLLECTIONS.PERMISSIONS).doc(existingPerm.data[0]._id).update({
           data: { permissions: permArray, updatedBy: userInfo._id, updatedAt: new Date() }
         })
       } else {
-        await db.collection('permissions').add({
+        await db.collection(COLLECTIONS.PERMISSIONS).add({
           data: { staffId: this.data.id, permissions: permArray, updatedBy: userInfo._id, updatedAt: new Date() }
         })
       }

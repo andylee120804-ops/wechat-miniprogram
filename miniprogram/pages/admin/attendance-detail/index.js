@@ -57,13 +57,12 @@ Page({
   async loadData() {
     this.setData({ loading: true })
     try {
-      const cloudDb = wx.cloud.database()
       const range = getMonthRange(this.data.monthOffset || 0)
 
-      const res = await cloudDb.collection(COLLECTIONS.CLOCKIN).where({
+      const res = await db.queryAll(COLLECTIONS.CLOCKIN, {
         staffId: this.data.staffId,
-        date: cloudDb.command.gte(new Date(range.start + 'T00:00:00')).and(cloudDb.command.lte(new Date(range.end + 'T23:59:59')))
-      }).orderBy('date', 'asc').get()
+        date: db.getDb().command.gte(new Date(range.start + 'T00:00:00')).and(db.getDb().command.lte(new Date(range.end + 'T23:59:59')))
+      }, 'date', 'asc')
 
       const { workStartTime, workEndTime } = this.data
       const startMinutes = this.getTimeMinutes(workStartTime)
@@ -146,10 +145,11 @@ Page({
     records.forEach(r => { clockedDates[formatDate(r.date)] = true })
 
     const days = []
-    for (let i = 0; i < firstDay; i++) days.push({ day: '', empty: true })
+    for (let i = 0; i < firstDay; i++) days.push({ key: 'empty-' + i, day: '', empty: true })
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
       days.push({
+        key: 'day-' + dateStr,
         day,
         dateStr,
         isToday: dateStr === today,

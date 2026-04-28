@@ -2,6 +2,7 @@ const app = getApp()
 const { formatAmount, formatDate } = require('../../utils/helpers')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
+const db = require('../../utils/db')
 
 Page({
   data: {
@@ -9,9 +10,7 @@ Page({
     statusBarHeight: 0,
     loading: true,
     busiestDay: { date: '', count: 0 },
-    topIncomeSource: { type: '', amount: 0, typeName: '' },
     avgDailyRevenue: '0.00',
-    topCustomer: { name: '', visits: 0 },
     insights: []
   },
 
@@ -50,9 +49,9 @@ Page({
       ])
 
       // Monthly revenue for avg daily calculation
-      const monthIncome = await db.collection(COLLECTIONS.INCOME).where({
+      const monthIncome = await db.queryAll(COLLECTIONS.INCOME, {
         date: _.gte(monthStart)
-      }).get()
+      })
 
       const totalMonthIncome = monthIncome.data.reduce((s, i) => s + (i.amount || 0), 0)
       const daysInMonth = now.getDate()
@@ -97,20 +96,20 @@ Page({
       }
 
       const [reservationRes, purchaseRes] = await Promise.all([
-        db.collection(COLLECTIONS.RESERVATION).where({
+        db.queryAll(COLLECTIONS.RESERVATION, {
           date: _.gte(monthStart),
           status: _.neq('cancelled')
-        }).get(),
-        db.collection(COLLECTIONS.PURCHASE).where({
+        }),
+        db.queryAll(COLLECTIONS.PURCHASE, {
           date: _.gte(monthStart)
-        }).get()
+        })
       ])
 
       const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
       const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
-      const lastPurchase = await db.collection(COLLECTIONS.PURCHASE).where({
+      const lastPurchase = await db.queryAll(COLLECTIONS.PURCHASE, {
         date: _.gte(lastMonthStart).and(_.lte(lastMonthEnd))
-      }).get()
+      })
 
       const curTotal = purchaseRes.data.reduce((s, p) => s + (p.amount || 0), 0)
       const prevTotal = lastPurchase.data.reduce((s, p) => s + (p.amount || 0), 0)
@@ -128,7 +127,6 @@ Page({
       var roomDays = { big: 0, small: 0 }
       var timeCount = { noon: 0, night: 0 }
       var roomDateSet = { big: {}, small: {} }
-      var timeNameMap = { noon: '中午', night: '晚上' }
       ;(reservationRes.data || []).forEach(function(r) {
         var dateStr = formatDate(r.date)
         var room = r.room || 'big'
@@ -192,9 +190,7 @@ Page({
       this.setData({
         loading: false,
         busiestDay: busiestRes.result.success ? (busiestRes.result.data[0] || { date: '-', count: 0 }) : { date: '-', count: 0 },
-        topIncomeSource: topSourceRes.result.success ? (topSourceRes.result.data[0] || { type: '-', amount: 0, typeName: '-' }) : { type: '-', amount: 0, typeName: '-' },
         avgDailyRevenue: formatAmount(avgDaily),
-        topCustomer: customerRes.result.success ? (customerRes.result.data[0] || { name: '-', visits: 0 }) : { name: '-', visits: 0 },
         insights
       })
     } catch (err) {

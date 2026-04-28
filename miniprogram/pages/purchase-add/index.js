@@ -1,5 +1,5 @@
 const app = getApp()
-const { formatDate, getCategoryName } = require('../../utils/helpers')
+const { formatDate } = require('../../utils/helpers')
 const { validateRequired, validateAmount } = require('../../utils/validators')
 const { log, LOG_TYPES } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')

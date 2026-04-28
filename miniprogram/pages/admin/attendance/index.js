@@ -84,14 +84,13 @@ Page({
   async loadData() {
     this.setData({ loading: true })
     try {
-      const cloudDb = wx.cloud.database()
       const range = getMonthRange(0)
 
       const [staffRes, clockinRes] = await Promise.all([
-        cloudDb.collection(COLLECTIONS.STAFF).where({ status: 'active' }).get(),
-        cloudDb.collection(COLLECTIONS.CLOCKIN).where({
-          date: cloudDb.command.gte(new Date(range.start + 'T00:00:00')).and(cloudDb.command.lte(new Date(range.end + 'T23:59:59')))
-        }).get()
+        db.queryAll(COLLECTIONS.STAFF, { status: 'active' }),
+        db.queryAll(COLLECTIONS.CLOCKIN, {
+          date: db.getDb().command.gte(new Date(range.start + 'T00:00:00')).and(db.getDb().command.lte(new Date(range.end + 'T23:59:59')))
+        })
       ])
 
       const clockinMap = {}

@@ -1,6 +1,6 @@
 const app = getApp()
 const { formatDate } = require('../../utils/helpers')
-const { log, LOG_TYPES } = require('../../utils/logger')
+const { log } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
@@ -38,7 +38,7 @@ Page({
       if (res.data && res.data.length > 0) {
         return res.data[0].value
       }
-    } catch (err) {}
+    } catch (err) { console.error('[IncomeAdd] 获取最低消费失败:', err) }
     return null
   },
 

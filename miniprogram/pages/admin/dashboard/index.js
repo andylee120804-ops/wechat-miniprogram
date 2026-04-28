@@ -1,9 +1,10 @@
 const app = getApp()
-const { getWeekRange, getMonthRange, getYearRange, getIncomeTypeText, getExpenseCategoryName, getWeekNumber } = require('../../../utils/helpers')
+const { getWeekRange, getMonthRange, getYearRange, getIncomeTypeText, getWeekNumber } = require('../../../utils/helpers')
 const { handleCloudError } = require('../../../utils/error-handler')
 const { getRingChartConfig, getIncomeTypeColors, getExpenseTypeColors } = require('../../../utils/chart-config')
 const { checkPermission } = require('../../../utils/permission')
 const { COLLECTIONS } = require('../../../utils/db')
+const db = require('../../../utils/db')
 
 Page({
   data: {
@@ -256,28 +257,26 @@ Page({
 
     var startDate = that.data.startDate
     var endDate = that.data.endDate
-    var dbInstance = wx.cloud.database()
-    var cmd = dbInstance.command
 
     // Query current period data
-    var incomePromise = dbInstance.collection(COLLECTIONS.INCOME).where({
-      date: cmd.gte(startDate).and(cmd.lte(endDate))
-    }).get()
+    var incomePromise = db.queryAll(COLLECTIONS.INCOME, {
+      date: db.getDb().command.gte(startDate).and(db.getDb().command.lte(endDate))
+    })
 
-    var purchasePromise = dbInstance.collection(COLLECTIONS.PURCHASE).where({
-      date: cmd.gte(startDate).and(cmd.lte(endDate))
-    }).get()
+    var purchasePromise = db.queryAll(COLLECTIONS.PURCHASE, {
+      date: db.getDb().command.gte(startDate).and(db.getDb().command.lte(endDate))
+    })
 
-    var expensePromise = dbInstance.collection(COLLECTIONS.EXPENSE).where({
-      date: cmd.gte(startDate).and(cmd.lte(endDate))
-    }).get()
+    var expensePromise = db.queryAll(COLLECTIONS.EXPENSE, {
+      date: db.getDb().command.gte(startDate).and(db.getDb().command.lte(endDate))
+    })
 
     // Fixed expenses: new format (monthlyAmount items) + old format (date-based records)
-    var fixedExpensePromise = dbInstance.collection(COLLECTIONS.FIXED_EXPENSE).get()
+    var fixedExpensePromise = db.queryAll(COLLECTIONS.FIXED_EXPENSE, {})
 
-    var salaryPromise = dbInstance.collection(COLLECTIONS.STAFF).where({
-      status: cmd.neq('inactive')
-    }).get()
+    var salaryPromise = db.queryAll(COLLECTIONS.STAFF, {
+      status: db.getDb().command.neq('inactive')
+    })
 
     Promise.all([
       incomePromise, purchasePromise, expensePromise, fixedExpensePromise, salaryPromise
@@ -460,13 +459,6 @@ Page({
 
     // Use distinct colors for each expense item (base 6 + extended for fixed cost names)
     var expenseColors = ['#F87171', '#C9A96E', '#60A5FA', '#4ADE80', '#FBBF24', '#6B7B8D', '#A78BFA', '#F472B6', '#34D399', '#FB923C', '#22D3EE', '#E879F9', '#FDE047']
-    if (themeId === 'cloud-pearl') {
-      expenseColors = ['#DC2626', '#5B7FFF', '#D97706', '#16A34A', '#7C3AED', '#909399', '#8B5CF6', '#EC4899', '#10B981', '#F97316', '#06B6D4', '#D946EF', '#EAB308']
-    } else if (themeId === 'neon-night') {
-      expenseColors = ['#F43F5E', '#8B5CF6', '#60A5FA', '#06D6A0', '#FBBF24', '#6B7B8D', '#A78BFA', '#F472B6', '#34D399', '#FB923C', '#22D3EE', '#E879F9', '#FDE047']
-    } else if (themeId === 'zen-mist') {
-      expenseColors = ['#A0522D', '#8B7355', '#6B7B8D', '#5A7D4A', '#B8860B', '#909399', '#8B7355', '#CD5C5C', '#7B9A6B', '#C4A35A', '#5F9EA0', '#B07D6B', '#9B8E7A']
-    }
 
     expenseItems.forEach(function(item, index) {
       if (item.value > 0) {

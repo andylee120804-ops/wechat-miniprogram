@@ -1,6 +1,7 @@
 const app = getApp()
 const { formatDate, formatAmount } = require('../../utils/helpers')
 const { COLLECTIONS } = require('../../utils/db')
+const db = require('../../utils/db')
 
 Page({
   data: {
@@ -28,15 +29,15 @@ Page({
 
   async loadData() {
     try {
-      const db = wx.cloud.database()
+      const dbInst = wx.cloud.database()
       const [resRes, incRes] = await Promise.all([
-        db.collection(COLLECTIONS.RESERVATION).where({
+        db.queryAll(COLLECTIONS.RESERVATION, {
           customerName: this.data.customerName,
-          status: db.command.neq('cancelled')
-        }).orderBy('date', 'desc').get(),
-        db.collection(COLLECTIONS.INCOME).where({
+          status: dbInst.command.neq('cancelled')
+        }, 'date', 'desc'),
+        db.queryAll(COLLECTIONS.INCOME, {
           source: this.data.customerName
-        }).get()
+        })
       ])
 
       const history = resRes.data

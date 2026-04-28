@@ -1,6 +1,7 @@
 const app = getApp()
 const { formatDate } = require('../../utils/helpers')
 const { COLLECTIONS } = require('../../utils/db')
+const db = require('../../utils/db')
 
 Page({
   data: {
@@ -91,7 +92,7 @@ Page({
           date: today
         }).get(),
         // Fixed expense items (new format: monthlyAmount items; old format: date-based)
-        db.collection(COLLECTIONS.FIXED_EXPENSE).get()
+        db.queryAll(COLLECTIONS.FIXED_EXPENSE, {})
       ])
 
       // Query announcement separately (non-blocking) - don't let it block the page
@@ -148,7 +149,6 @@ Page({
         todayIncome: todayIncomeTotal.toFixed(2),
         todayExpense: todayExpenseTotal.toFixed(2),
         monthlyFixedCost: monthlyFixedCostTotal,
-        monthlyFixedCostStr: monthlyFixedCostTotal.toFixed(2),
         announcements: announcementsData,
         currentAnnouncementIndex: 0,
         currentAnnouncement: announcementsData.length > 0 ? announcementsData[0] : null,

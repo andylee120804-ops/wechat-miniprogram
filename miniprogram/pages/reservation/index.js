@@ -1,6 +1,5 @@
-const { formatDate, getRoomName, getReservationStatusText } = require('../../utils/helpers')
+const { formatDate, getReservationStatusText } = require('../../utils/helpers')
 const { hasPermission } = require('../../utils/permission')
-const { log, LOG_TYPES } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
