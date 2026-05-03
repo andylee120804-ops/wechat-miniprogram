@@ -88,7 +88,7 @@
         <text class="address-pin">📍</text>
       </view>
       <view class="address-right">
-        <text class="address-label">会所地址</text>
+        <text class="address-label">食堂地址</text>
         <text class="address-text">{{venueAddress}}</text>
       </view>
       <view class="address-action">

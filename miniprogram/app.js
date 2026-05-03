@@ -7,7 +7,8 @@ App({
     permissions: [],
     isLogin: false,
     theme: 'ink-gold',
-    statusBarHeight: 44
+    statusBarHeight: 44,
+    venueName: ''
   },
 
   onLaunch() {
@@ -27,6 +28,21 @@ App({
     }
     this.loadTheme()
     this.checkLogin()
+    this.loadVenueName()
+  },
+
+  async loadVenueName() {
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'sendMessage',
+        data: { action: 'getSettings' }
+      })
+      if (res.result && res.result.success && res.result.data.venueName) {
+        this.globalData.venueName = res.result.data.venueName
+      }
+    } catch (err) {
+      // Silent — fallback to '听澜轩' in pages
+    }
   },
 
   loadTheme() {

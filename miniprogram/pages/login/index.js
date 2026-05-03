@@ -12,7 +12,7 @@ Page({
 
   onShow() {
     const theme = app.getThemePageData()
-    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, venueName: app.globalData.venueName })
   },
 
   onWechatIdInput(e) {

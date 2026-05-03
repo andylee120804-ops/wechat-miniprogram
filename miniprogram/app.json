@@ -38,7 +38,7 @@
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#0F0F1A",
-    "navigationBarTitleText": "听澜轩",
+    "navigationBarTitleText": "餐饮管理",
     "navigationBarTextStyle": "white"
   },
   "tabBar": {

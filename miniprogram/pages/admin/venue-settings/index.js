@@ -74,11 +74,11 @@ Page({
     if (this.data.saving) return
     const { venueName, venueAddress, venueLatitude, venueLongitude } = this.data
     if (!venueName.trim()) {
-      wx.showToast({ title: '请输入会所名称', icon: 'none' })
+      wx.showToast({ title: '请输入食堂名称', icon: 'none' })
       return
     }
     if (!venueAddress.trim()) {
-      wx.showToast({ title: '请输入会所地址', icon: 'none' })
+      wx.showToast({ title: '请输入食堂地址', icon: 'none' })
       return
     }
 

@@ -7,7 +7,7 @@
 
   <!-- Brand section -->
   <view class="login-brand safe-top" style="padding-top: {{statusBarHeight}}px;">
-    <text class="brand-name" style="color: {{theme.textPrimary || '#F5F0E8'}}; width: 416rpx; height: 120rpx; display: block; box-sizing: border-box">❤️ 听澜轩 ❤️</text>
+    <text class="brand-name" style="color: {{theme.textPrimary || '#F5F0E8'}}; width: 416rpx; height: 120rpx; display: block; box-sizing: border-box">❤️ {{venueName || '听澜轩'}} ❤️</text>
     <text class="brand-subtitle" style="color: {{theme.textMuted || '#5C5C72'}}; position: relative; left: 0rpx; top: -15rpx">等风，也等你</text>
   </view>
 

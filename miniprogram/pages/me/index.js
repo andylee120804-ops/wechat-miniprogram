@@ -59,7 +59,7 @@ Page({
 
     // Settings group
     if (userInfo && (userInfo.role === 'boss' || userInfo.role === 'admin')) {
-      settingsGroup.push({ key: 'venueSettings', icon: '🏠', text: '会所设置' })
+      settingsGroup.push({ key: 'venueSettings', icon: '🏠', text: '食堂设置' })
     }
     settingsGroup.push({ key: 'about', icon: 'ℹ️', text: '关于' })
 
@@ -89,8 +89,8 @@ Page({
 
     if (key === 'about') {
       wx.showModal({
-        title: '关于听澜轩',
-        content: '听澜轩智慧管理系统 v1.0.0',
+        title: '关于',
+        content: (app.globalData.venueName || '听澜轩') + '智慧管理系统 v1.0.0',
         showCancel: false
       })
       return

@@ -35,6 +35,7 @@ Page({
     this.setData({
       theme,
       statusBarHeight: app.globalData.statusBarHeight || 44,
+      venueName: app.globalData.venueName,
       todayDate: formatDate(new Date()),
       showSummary: app.hasPermission('income', 'view'),
       canAddReservation: app.hasPermission('reservation', 'add'),
@@ -56,8 +57,8 @@ Page({
     }, 10000) // 10 second timeout
 
     try {
-      const db = wx.cloud.database()
-      const _ = db.command
+      const dbInst = wx.cloud.database()
+      const _ = dbInst.command
       const now = new Date()
       const today = formatDate(now)
 
@@ -72,23 +73,23 @@ Page({
 
       // Query core data first (parallel)
       const [todayRes, tomorrowRes, todayIncomeRes, todayExpenseRes, todayPurchaseRes, fixedExpenseItemsRes] = await Promise.all([
-        db.collection(COLLECTIONS.RESERVATION).where({
+        dbInst.collection(COLLECTIONS.RESERVATION).where({
           date: _.gte(todayStart).and(_.lte(todayEnd)),
           status: _.neq('cancelled')
         }).orderBy('time', 'asc').get(),
-        db.collection(COLLECTIONS.RESERVATION).where({
+        dbInst.collection(COLLECTIONS.RESERVATION).where({
           date: _.gte(tomorrowStart).and(_.lte(tomorrowEnd)),
           status: _.neq('cancelled')
         }).orderBy('time', 'asc').get(),
         // Income/expense dates stored as "YYYY-MM-DD" strings — use exact string match
-        db.collection(COLLECTIONS.INCOME).where({
+        dbInst.collection(COLLECTIONS.INCOME).where({
           date: today
         }).get(),
-        db.collection(COLLECTIONS.EXPENSE).where({
+        dbInst.collection(COLLECTIONS.EXPENSE).where({
           date: today
         }).get(),
         // Today's purchase costs
-        db.collection(COLLECTIONS.PURCHASE).where({
+        dbInst.collection(COLLECTIONS.PURCHASE).where({
           date: today
         }).get(),
         // Fixed expense items (new format: monthlyAmount items; old format: date-based)
@@ -101,10 +102,15 @@ Page({
       let hasUrgentUnread = false
       try {
         const userInfo = app.globalData.userInfo
-        const announcementRes = await db.collection(COLLECTIONS.ANNOUNCEMENT).where({
+        const announcementRes = await dbInst.collection(COLLECTIONS.ANNOUNCEMENT).where({
           active: true
         }).orderBy('createdAt', 'desc').limit(50).get()
-        announcementsData = announcementRes.data || []
+        announcementsData = (announcementRes.data || []).filter(a => {
+          // Filter by display time range: only show if within startDate~endDate
+          if (a.startDate && a.startDate > today) return false
+          if (a.endDate && a.endDate < today) return false
+          return true
+        })
         // Count unread announcements and check for urgent unread
         if (userInfo && userInfo._id) {
           unreadAnnouncementCount = announcementsData.filter(a => !(a.readBy || []).includes(userInfo._id)).length

@@ -106,8 +106,8 @@
           </view>
           <view style="border-top: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.08)'}}; margin-top: 12rpx; padding-top: 12rpx;">
             <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 6rpx;">📍 地址（可改）</text>
-            <input value="{{shareAddress}}" bindinput="onShareAddressInput" placeholder="会所地址"
-              style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 10rpx; padding: 16rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; width: 100%; box-sizing: border-box;" />
+            <textarea value="{{shareAddress}}" bindinput="onShareAddressInput" placeholder="食堂地址"
+              style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 10rpx; padding: 12rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; width: 100%; box-sizing: border-box; min-height: 72rpx; line-height: 1.4;" />
           </view>
         </view>
 
