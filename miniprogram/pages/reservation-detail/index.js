@@ -14,7 +14,10 @@ Page({
     loading: true,
     showCancelModal: false,
     showShareModal: false,
-    shareTitle: ''
+    shareTitle: '',
+    shareAddress: '',
+    shareLatitude: '',
+    shareLongitude: ''
   },
 
   onLoad(options) {
@@ -33,7 +36,10 @@ Page({
   async loadData() {
     try {
       this.setData({ loading: true })
-      const res = await db.getDoc(COLLECTIONS.RESERVATION, this.data.id)
+      const [res, settingsRes] = await Promise.all([
+        db.getDoc(COLLECTIONS.RESERVATION, this.data.id),
+        this.loadVenueSettings()
+      ])
       if (!res) {
         wx.showToast({ title: '预约不存在', icon: 'none' })
         setTimeout(function() { wx.navigateBack() }, 1500)
@@ -56,6 +62,24 @@ Page({
     } catch (err) {
       handleCloudError(err, '加载预约详情')
       this.setData({ loading: false })
+    }
+  },
+
+  async loadVenueSettings() {
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'sendMessage',
+        data: { action: 'getSettings' }
+      })
+      if (res.result && res.result.success) {
+        this.setData({
+          shareAddress: res.result.data.venueAddress || '',
+          shareLatitude: res.result.data.venueLatitude || '',
+          shareLongitude: res.result.data.venueLongitude || ''
+        })
+      }
+    } catch (err) {
+      // Silent fail
     }
   },
 
@@ -105,7 +129,8 @@ Page({
       wx.showToast({ title: '无权限操作', icon: 'none' })
       return
     }
-    const defaultTitle = (this.data.reservation.customerName || '预约') + ' · 预定信息'
+    const r = this.data.reservation
+    const defaultTitle = (r.customerName || '预约') + ' · 预定信息'
     this.setData({ showShareModal: true, shareTitle: defaultTitle })
   },
 
@@ -117,11 +142,22 @@ Page({
     this.setData({ shareTitle: e.detail.value })
   },
 
+  onShareAddressInput(e) {
+    this.setData({ shareAddress: e.detail.value })
+  },
+
   onShareAppMessage() {
     var title = this.data.shareTitle || (this.data.reservation ? this.data.reservation.customerName + ' · 预定信息' : '预定信息')
+    // Pass address as query params so share page doesn't need to fetch settings
+    var addr = this.data.shareAddress || ''
+    var lat = this.data.shareLatitude || ''
+    var lng = this.data.shareLongitude || ''
+    var path = '/pages/reservation-share/index?id=' + this.data.id
+    if (addr) path += '&addr=' + encodeURIComponent(addr)
+    if (lat && lng) path += '&lat=' + lat + '&lng=' + lng
     return {
       title: title,
-      path: '/pages/reservation-share/index?id=' + this.data.id
+      path: path
     }
   }
 })

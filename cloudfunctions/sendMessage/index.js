@@ -109,35 +109,37 @@ async function getSettings(event) {
     success: true,
     data: {
       venueName: data.venueName || '听澜轩',
-      venueAddress: data.venueAddress || ''
+      venueAddress: data.venueAddress || '',
+      venueLatitude: data.venueLatitude || '',
+      venueLongitude: data.venueLongitude || ''
     }
   }
 }
 
 async function updateSettings(event) {
-  const { wxContext } = cloud.getWXContext()
-  const { venueName, venueAddress } = event
+  const { OPENID } = cloud.getWXContext()
+  const { venueName, venueAddress, venueLatitude, venueLongitude } = event
 
   if (!venueName || !venueAddress) {
     return { success: false, message: '会所名称和地址不能为空' }
   }
 
   // 校验请求者角色
-  const staffRes = await db.collection('staff').where({ _openid: wxContext.OPENID }).get()
+  const staffRes = await db.collection('staff').where({ _openid: OPENID }).get()
   const staff = staffRes.data && staffRes.data[0]
   if (!staff || (staff.role !== 'boss' && staff.role !== 'admin')) {
     return { success: false, message: '无权限执行此操作' }
   }
 
+  const updateData = { venueName, venueAddress, venueLatitude: venueLatitude || '', venueLongitude: venueLongitude || '', updatedAt: db.serverDate() }
+
   const existing = await db.collection('settings').where({ key: 'venue_info' }).get()
   if (existing.data && existing.data.length > 0) {
-    await db.collection('settings').doc(existing.data[0]._id).update({
-      data: { venueName, venueAddress, updatedAt: db.serverDate() }
-    })
+    await db.collection('settings').doc(existing.data[0]._id).update({ data: updateData })
   } else {
-    await db.collection('settings').add({
-      data: { key: 'venue_info', venueName, venueAddress, createdAt: db.serverDate(), updatedAt: db.serverDate() }
-    })
+    updateData.key = 'venue_info'
+    updateData.createdAt = db.serverDate()
+    await db.collection('settings').add({ data: updateData })
   }
 
   return { success: true }

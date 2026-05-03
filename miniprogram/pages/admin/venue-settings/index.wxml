@@ -16,16 +16,38 @@
     </view>
 
     <view wx:if="{{!loading}}" class="form-wrapper" style="padding: 32rpx;">
+      <!-- 会所名称 -->
       <view class="form-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx; padding: 32rpx;">
         <view class="form-item" style="margin-bottom: 32rpx;">
           <text class="form-label" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx; display: block; margin-bottom: 12rpx;">会所名称</text>
-          <input class="form-input" value="{{venueName}}" bindinput="onNameInput" placeholder="请输入会所名称" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
+          <input value="{{venueName}}" bindinput="onNameInput" placeholder="例如：听澜轩" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};"
             style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx; width: 100%; box-sizing: border-box;" />
         </view>
-        <view class="form-item">
+        <view class="form-item" style="margin-bottom: 32rpx;">
           <text class="form-label" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx; display: block; margin-bottom: 12rpx;">会所地址</text>
-          <textarea class="form-textarea" value="{{venueAddress}}" bindinput="onAddressInput" placeholder="请输入会所地址" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
+          <textarea value="{{venueAddress}}" bindinput="onAddressInput" placeholder="请输入会所地址" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};"
             style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx; width: 100%; box-sizing: border-box; min-height: 160rpx;" />
+        </view>
+        <!-- 坐标（选填）+ 地图选择 -->
+        <view class="form-item">
+          <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rpx;">
+            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">导航坐标（选填）</text>
+            <view bindtap="onPickLocation" style="background: {{theme.accentColor || '#C9A96E'}}; border-radius: 12rpx; padding: 12rpx 24rpx; display: flex; align-items: center; gap: 8rpx;">
+              <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 26rpx; font-weight: 600;">📍 选择位置</text>
+            </view>
+          </view>
+          <view style="display: flex; gap: 16rpx;">
+            <view style="flex: 1;">
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; display: block; margin-bottom: 8rpx;">纬度</text>
+              <input value="{{venueLatitude}}" bindinput="onLatitudeInput" placeholder="如 31.2304" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};"
+                style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 20rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx; width: 100%; box-sizing: border-box;" />
+            </view>
+            <view style="flex: 1;">
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; display: block; margin-bottom: 8rpx;">经度</text>
+              <input value="{{venueLongitude}}" bindinput="onLongitudeInput" placeholder="如 121.4737" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};"
+                style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 20rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx; width: 100%; box-sizing: border-box;" />
+            </view>
+          </view>
         </view>
       </view>
 

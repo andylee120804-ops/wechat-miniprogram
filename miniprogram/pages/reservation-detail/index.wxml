@@ -1,4 +1,4 @@
-<view class="detail-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx;">
+<view class="detail-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 160rpx;">
   <!-- Custom Navigation Bar -->
   <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor || '#1A1A2E'}}; padding-top: {{statusBarHeight}}px;">
     <view class="nav-bar-content">
@@ -63,14 +63,8 @@
       </theme-card>
     </view>
 
-    <!-- Action Bar - only for non-cancelled -->
-    <view class="bottom-bar" wx:if="{{reservation.status !== 'cancelled'}}">
-      <view class="bottom-bar-inner three-btns">
-        <view class="bar-btn bar-btn-outline" bindtap="onShareToGuest">分享给客人</view>
-        <view class="bar-btn bar-btn-danger" bindtap="onCancel">取消预约</view>
-        <view class="bar-btn bar-btn-primary" bindtap="onEdit">编辑</view>
-      </view>
-    </view>
+    <!-- Action Bar - only for non-cancelled
+    (moved outside the block below to ensure fixed positioning) -->
 
     <!-- Cancel Modal -->
     <theme-modal theme="{{theme}}" visible="{{showCancelModal}}" title="取消预约" confirmText="确认取消" cancelText="返回" position="center" bind:confirm="onConfirmCancel" bind:close="onCloseCancel">
@@ -81,19 +75,60 @@
 
     <!-- Share Modal -->
     <theme-modal theme="{{theme}}" visible="{{showShareModal}}" title="分享给客人" cancelText="取消" bind:close="onCloseShareModal">
-      <view style="padding: 16rpx 0;">
-        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 16rpx;">分享标题</text>
-        <input value="{{shareTitle}}" bindinput="onShareTitleInput" placeholder="请输入分享标题" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
-          style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 20rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx; width: 100%; box-sizing: border-box;" />
-        <view style="margin-top: 24rpx;">
+      <scroll-view scroll-y style="max-height: 70vh; padding: 16rpx 0;">
+        <!-- Share title -->
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 12rpx;">分享标题</text>
+        <input value="{{shareTitle}}" bindinput="onShareTitleInput" placeholder="输入分享标题" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
+          style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 30rpx; width: 100%; box-sizing: border-box;" />
+
+        <!-- Preview card -->
+        <view style="margin-top: 28rpx; background: {{theme.glassBg || 'rgba(255,255,255,0.04)'}}; border-radius: 16rpx; padding: 24rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 16rpx;">📋 客人将看到的内容</text>
+          <view style="display: flex; justify-content: space-between; padding: 10rpx 0;">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">日期</text>
+            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; font-weight: 500;">{{reservation.dateDisplay || ''}}</text>
+          </view>
+          <view style="display: flex; justify-content: space-between; padding: 10rpx 0;">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">时段</text>
+            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; font-weight: 500;">{{reservation.time || ''}}</text>
+          </view>
+          <view style="display: flex; justify-content: space-between; padding: 10rpx 0;">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">包厢</text>
+            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; font-weight: 500;">{{reservation.roomNameDisplay || ''}}</text>
+          </view>
+          <view style="display: flex; justify-content: space-between; padding: 10rpx 0;">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">人数</text>
+            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; font-weight: 500;">{{reservation.guestCount || ''}}人</text>
+          </view>
+          <view wx:if="{{reservation.remark}}" style="display: flex; justify-content: space-between; padding: 10rpx 0;">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">备注</text>
+            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; max-width: 55%; text-align: right;">{{reservation.remark}}</text>
+          </view>
+          <view style="border-top: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.08)'}}; margin-top: 12rpx; padding-top: 12rpx;">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; display: block; margin-bottom: 8rpx;">📍 会所地址（可修改）</text>
+            <textarea value="{{shareAddress}}" bindinput="onShareAddressInput" placeholder="请输入会所地址"
+              style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 10rpx; padding: 16rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; width: 100%; box-sizing: border-box; min-height: 100rpx; line-height: 1.5;" />
+          </view>
+        </view>
+
+        <view style="margin-top: 28rpx;">
           <button open-type="share" bindtap="onCloseShareModal"
-            style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}}; width: 100%; border-radius: 12rpx; padding: 24rpx; font-size: 28rpx; font-weight: 600; border: none; line-height: 1.2;">
+            style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}}; width: 100%; border-radius: 14rpx; padding: 26rpx; font-size: 30rpx; font-weight: 600; border: none; line-height: 1.2;">
             分享到微信
           </button>
         </view>
-      </view>
+      </scroll-view>
     </theme-modal>
   </block>
+
+  <!-- Action Bar - fixed at bottom, independent of content -->
+  <view class="bottom-bar" wx:if="{{!loading && reservation && reservation.status !== 'cancelled'}}">
+    <view class="bottom-bar-inner three-btns">
+      <view class="bar-btn bar-btn-outline" bindtap="onShareToGuest">分享给客人</view>
+      <view class="bar-btn bar-btn-danger" bindtap="onCancel">取消预约</view>
+      <view class="bar-btn bar-btn-primary" bindtap="onEdit">编辑</view>
+    </view>
+  </view>
 
   <view wx:if="{{loading}}" class="loading-state" style="padding-top: {{statusBarHeight + 44}}px;">
     <text style="color: {{theme.textMuted || '#5C5C72'}};">加载中...</text>

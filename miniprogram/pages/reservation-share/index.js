@@ -8,6 +8,8 @@ Page({
     error: false,
     venueName: '听澜轩',
     venueAddress: '',
+    venueLatitude: '',
+    venueLongitude: '',
     customerName: '',
     phone: '',
     date: '',
@@ -18,20 +20,32 @@ Page({
   },
 
   onLoad(options) {
-    if (options.id) {
-      this.loadData(options.id)
-    } else {
+    if (!options.id) {
       this.setData({ loading: false, error: true })
+      return
     }
+    // If address passed from share modal, use it directly
+    const addr = options.addr || ''
+    const lat = options.lat || ''
+    const lng = options.lng || ''
+    if (addr) {
+      this.setData({
+        venueAddress: decodeURIComponent(addr),
+        venueLatitude: lat,
+        venueLongitude: lng
+      })
+    }
+    this.loadData(options.id, !!addr)
   },
 
-  async loadData(id) {
+  async loadData(id, hasAddress) {
     try {
-      // Parallel load reservation data and venue settings
-      const [reservationRes] = await Promise.all([
-        db.getDoc(COLLECTIONS.RESERVATION, id),
-        this.loadVenueSettings()
-      ])
+      const tasks = [db.getDoc(COLLECTIONS.RESERVATION, id)]
+      // Only load venue settings if address not already provided from share modal
+      if (!hasAddress) {
+        tasks.push(this.loadVenueSettings())
+      }
+      const [reservationRes] = await Promise.all(tasks)
 
       if (!reservationRes) {
         this.setData({ loading: false, error: true })
@@ -75,11 +89,44 @@ Page({
       if (res.result && res.result.success) {
         this.setData({
           venueName: res.result.data.venueName || '听澜轩',
-          venueAddress: res.result.data.venueAddress || ''
+          venueAddress: res.result.data.venueAddress || '',
+          venueLatitude: res.result.data.venueLatitude || '',
+          venueLongitude: res.result.data.venueLongitude || ''
         })
       }
     } catch (err) {
       // Silent fail, use defaults
     }
+  },
+
+  onAddressTap() {
+    const { venueAddress, venueLatitude, venueLongitude } = this.data
+    if (!venueAddress) return
+
+    // If coordinates available, open map navigation
+    if (venueLatitude && venueLongitude) {
+      wx.openLocation({
+        latitude: parseFloat(venueLatitude),
+        longitude: parseFloat(venueLongitude),
+        name: this.data.venueName,
+        address: venueAddress,
+        fail: () => {
+          // Fallback: copy to clipboard
+          this.copyAddress(venueAddress)
+        }
+      })
+    } else {
+      // No coordinates - copy to clipboard
+      this.copyAddress(venueAddress)
+    }
+  },
+
+  copyAddress(address) {
+    wx.setClipboardData({
+      data: address,
+      success() {
+        wx.showToast({ title: '地址已复制，可粘贴到地图导航', icon: 'none', duration: 2500 })
+      }
+    })
   }
 })

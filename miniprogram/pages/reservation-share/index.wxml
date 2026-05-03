@@ -1,64 +1,101 @@
-<view class="page" style="background: #F5F0E8; min-height: 100vh;">
-  <!-- Loading state -->
-  <view wx:if="{{loading}}" style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
-    <text style="color: #999; font-size: 28rpx;">加载中...</text>
+<view class="page">
+  <!-- Loading -->
+  <view wx:if="{{loading}}" class="state-wrap">
+    <view class="loading-dots">
+      <view class="dot"></view>
+      <view class="dot"></view>
+      <view class="dot"></view>
+    </view>
+    <text class="state-text">加载中...</text>
   </view>
 
-  <!-- Error state -->
-  <view wx:if="{{!loading && error}}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 60rpx;">
-    <text style="font-size: 64rpx; margin-bottom: 24rpx;">😕</text>
-    <text style="color: #999; font-size: 28rpx;">预约信息不存在或已失效</text>
+  <!-- Error -->
+  <view wx:if="{{!loading && error}}" class="state-wrap">
+    <view class="error-icon">☕</view>
+    <text class="state-text">预约信息不存在或已失效</text>
   </view>
 
-  <!-- Content area -->
-  <view wx:if="{{!loading && !error}}" style="padding: 60rpx 40rpx; max-width: 640rpx; margin: 0 auto;">
-    <!-- Venue header -->
-    <view style="text-align: center; margin-bottom: 48rpx;">
-      <text style="font-size: 40rpx; font-weight: 700; color: #2D2D3A; letter-spacing: 4rpx;">{{venueName}}</text>
-      <view style="width: 60rpx; height: 4rpx; background: #C9A96E; margin: 16rpx auto 0; border-radius: 2rpx;"></view>
+  <!-- Content -->
+  <view wx:if="{{!loading && !error}}" class="content">
+    <!-- Top decorative band -->
+    <view class="top-band"></view>
+
+    <!-- Card -->
+    <view class="card">
+      <!-- Venue header -->
+      <view class="venue-header">
+        <view class="venue-icon">🏮</view>
+        <text class="venue-name">{{venueName}}</text>
+        <view class="venue-divider"></view>
+      </view>
+
+      <!-- Guest info -->
+      <view class="guest-section">
+        <text class="guest-name">{{customerName}}</text>
+        <text wx:if="{{phone}}" class="guest-phone">{{phone}}</text>
+      </view>
+
+      <view class="card-divider"></view>
+
+      <!-- Detail rows -->
+      <view class="detail-list">
+        <view class="detail-item">
+          <view class="detail-label">
+            <text class="label-icon">📅</text>
+            <text class="label-text">日期</text>
+          </view>
+          <text class="detail-value">{{date}}</text>
+        </view>
+        <view class="detail-item">
+          <view class="detail-label">
+            <text class="label-icon">🕐</text>
+            <text class="label-text">时段</text>
+          </view>
+          <text class="detail-value">{{time}}</text>
+        </view>
+        <view class="detail-item">
+          <view class="detail-label">
+            <text class="label-icon">🚪</text>
+            <text class="label-text">包厢</text>
+          </view>
+          <text class="detail-value">{{roomName}}</text>
+        </view>
+        <view class="detail-item">
+          <view class="detail-label">
+            <text class="label-icon">👥</text>
+            <text class="label-text">人数</text>
+          </view>
+          <text class="detail-value">{{guestCount}}人</text>
+        </view>
+        <view wx:if="{{remark}}" class="detail-item">
+          <view class="detail-label">
+            <text class="label-icon">📝</text>
+            <text class="label-text">备注</text>
+          </view>
+          <text class="detail-value detail-value-remark">{{remark}}</text>
+        </view>
+      </view>
     </view>
 
-    <!-- Detail card -->
-    <view style="background: #FFFFFF; border-radius: 20rpx; padding: 40rpx; box-shadow: 0 4rpx 24rpx rgba(0,0,0,0.08);">
-      <!-- Customer info -->
-      <view style="margin-bottom: 32rpx;">
-        <text style="font-size: 36rpx; font-weight: 600; color: #2D2D3A; display: block;">{{customerName}}</text>
-        <text wx:if="{{phone}}" style="font-size: 28rpx; color: #999; margin-top: 8rpx; display: block;">{{phone}}</text>
+    <!-- Address card (tappable - opens navigation) -->
+    <view wx:if="{{venueAddress}}" class="address-card" bindtap="onAddressTap">
+      <view class="address-left">
+        <text class="address-pin">📍</text>
       </view>
-
-      <view style="height: 2rpx; background: #F0EDE8; margin-bottom: 32rpx;"></view>
-
-      <!-- Reservation details -->
-      <view style="display: flex; justify-content: space-between; padding: 16rpx 0;">
-        <text style="font-size: 28rpx; color: #999;">日期</text>
-        <text style="font-size: 28rpx; color: #2D2D3A; font-weight: 500;">{{date}}</text>
+      <view class="address-right">
+        <text class="address-label">会所地址</text>
+        <text class="address-text">{{venueAddress}}</text>
       </view>
-      <view style="display: flex; justify-content: space-between; padding: 16rpx 0;">
-        <text style="font-size: 28rpx; color: #999;">时段</text>
-        <text style="font-size: 28rpx; color: #2D2D3A; font-weight: 500;">{{time}}</text>
+      <view class="address-action">
+        <text wx:if="{{venueLatitude && venueLongitude}}" class="address-copy">导航</text>
+        <text wx:else class="address-copy">复制</text>
       </view>
-      <view style="display: flex; justify-content: space-between; padding: 16rpx 0;">
-        <text style="font-size: 28rpx; color: #999;">包厢</text>
-        <text style="font-size: 28rpx; color: #2D2D3A; font-weight: 500;">{{roomName}}</text>
-      </view>
-      <view style="display: flex; justify-content: space-between; padding: 16rpx 0;">
-        <text style="font-size: 28rpx; color: #999;">人数</text>
-        <text style="font-size: 28rpx; color: #2D2D3A; font-weight: 500;">{{guestCount}}人</text>
-      </view>
-      <view wx:if="{{remark}}" style="display: flex; justify-content: space-between; padding: 16rpx 0;">
-        <text style="font-size: 28rpx; color: #999;">备注</text>
-        <text style="font-size: 28rpx; color: #2D2D3A; font-weight: 500; max-width: 60%; text-align: right; word-break: break-all;">{{remark}}</text>
-      </view>
-    </view>
-
-    <!-- Address section -->
-    <view wx:if="{{venueAddress}}" style="text-align: center; margin-top: 40rpx; padding: 32rpx; background: #FFFFFF; border-radius: 20rpx; box-shadow: 0 4rpx 24rpx rgba(0,0,0,0.08);">
-      <text style="font-size: 28rpx; color: #2D2D3A;">{{venueAddress}}</text>
     </view>
 
     <!-- Footer -->
-    <view style="text-align: center; margin-top: 60rpx;">
-      <text style="font-size: 24rpx; color: #CCC;">本信息由{{venueName}}提供</text>
+    <view class="footer">
+      <view class="footer-divider"></view>
+      <text class="footer-text">本信息由 {{venueName}} 提供</text>
     </view>
   </view>
 </view>

@@ -7,6 +7,8 @@ Page({
     statusBarHeight: 0,
     venueName: '',
     venueAddress: '',
+    venueLatitude: '',
+    venueLongitude: '',
     loading: true,
     saving: false
   },
@@ -30,8 +32,10 @@ Page({
       })
       if (res.result && res.result.success) {
         this.setData({
-          venueName: res.result.data.venueName,
-          venueAddress: res.result.data.venueAddress
+          venueName: res.result.data.venueName || '',
+          venueAddress: res.result.data.venueAddress || '',
+          venueLatitude: res.result.data.venueLatitude || '',
+          venueLongitude: res.result.data.venueLongitude || ''
         })
       }
       wx.hideLoading()
@@ -51,9 +55,32 @@ Page({
     this.setData({ venueAddress: e.detail.value })
   },
 
+  onLatitudeInput(e) {
+    this.setData({ venueLatitude: e.detail.value })
+  },
+
+  onLongitudeInput(e) {
+    this.setData({ venueLongitude: e.detail.value })
+  },
+
+  onPickLocation() {
+    wx.chooseLocation({
+      success: (res) => {
+        this.setData({
+          venueLatitude: String(res.latitude),
+          venueLongitude: String(res.longitude),
+          venueAddress: res.address || this.data.venueAddress
+        })
+      },
+      fail: () => {
+        wx.showToast({ title: '取消选择', icon: 'none' })
+      }
+    })
+  },
+
   async onSave() {
     if (this.data.saving) return
-    const { venueName, venueAddress } = this.data
+    const { venueName, venueAddress, venueLatitude, venueLongitude } = this.data
     if (!venueName.trim()) {
       wx.showToast({ title: '请输入会所名称', icon: 'none' })
       return
@@ -69,7 +96,13 @@ Page({
     try {
       const res = await wx.cloud.callFunction({
         name: 'sendMessage',
-        data: { action: 'updateSettings', venueName: venueName.trim(), venueAddress: venueAddress.trim() }
+        data: {
+          action: 'updateSettings',
+          venueName: venueName.trim(),
+          venueAddress: venueAddress.trim(),
+          venueLatitude: venueLatitude.trim(),
+          venueLongitude: venueLongitude.trim()
+        }
       })
       wx.hideLoading()
       if (res.result && res.result.success) {
