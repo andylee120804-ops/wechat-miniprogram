@@ -75,39 +75,39 @@
 
     <!-- Share Modal -->
     <theme-modal theme="{{theme}}" visible="{{showShareModal}}" title="分享给客人" cancelText="取消" bind:close="onCloseShareModal">
-      <scroll-view scroll-y style="max-height: 70vh; padding: 16rpx 0;">
+      <scroll-view scroll-y style="max-height: 80vh; padding: 16rpx 0;">
         <!-- Share title -->
-        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 12rpx;">分享标题</text>
-        <input value="{{shareTitle}}" bindinput="onShareTitleInput" placeholder="输入分享标题" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
-          style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 30rpx; width: 100%; box-sizing: border-box;" />
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 30rpx; display: block; margin-bottom: 16rpx;">分享标题</text>
+        <textarea value="{{shareTitle}}" bindinput="onShareTitleInput" placeholder="输入分享标题" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
+          style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 34rpx; width: 100%; box-sizing: border-box; min-height: 120rpx;" />
 
         <!-- Preview card -->
-        <view style="margin-top: 28rpx; background: {{theme.glassBg || 'rgba(255,255,255,0.04)'}}; border-radius: 16rpx; padding: 24rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+        <view style="margin-top: 28rpx; background: {{theme.glassBg || 'rgba(255,255,255,0.04)'}}; border-radius: 16rpx; padding: 28rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
           <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 16rpx;">📋 客人将看到的内容</text>
-          <view style="display: flex; justify-content: space-between; padding: 10rpx 0;">
-            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">日期</text>
-            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; font-weight: 500;">{{reservation.dateDisplay || ''}}</text>
+          <view style="display: flex; justify-content: space-between; padding: 12rpx 0;">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">日期</text>
+            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx; font-weight: 500;">{{reservation.dateDisplay || ''}}</text>
           </view>
-          <view style="display: flex; justify-content: space-between; padding: 10rpx 0;">
-            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">时段</text>
-            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; font-weight: 500;">{{reservation.time || ''}}</text>
+          <view style="display: flex; justify-content: space-between; padding: 12rpx 0;">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">时段</text>
+            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx; font-weight: 500;">{{reservation.time || ''}}</text>
           </view>
-          <view style="display: flex; justify-content: space-between; padding: 10rpx 0;">
-            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">包厢</text>
-            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; font-weight: 500;">{{reservation.roomNameDisplay || ''}}</text>
+          <view style="display: flex; justify-content: space-between; padding: 12rpx 0;">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">包厢</text>
+            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx; font-weight: 500;">{{reservation.roomNameDisplay || ''}}</text>
           </view>
-          <view style="display: flex; justify-content: space-between; padding: 10rpx 0;">
-            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">人数</text>
-            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; font-weight: 500;">{{reservation.guestCount || ''}}人</text>
+          <view style="display: flex; justify-content: space-between; padding: 12rpx 0;">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">人数</text>
+            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx; font-weight: 500;">{{reservation.guestCount || ''}}人</text>
           </view>
-          <view wx:if="{{reservation.remark}}" style="display: flex; justify-content: space-between; padding: 10rpx 0;">
-            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">备注</text>
-            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; max-width: 55%; text-align: right;">{{reservation.remark}}</text>
+          <view wx:if="{{reservation.remark}}" style="display: flex; justify-content: space-between; padding: 12rpx 0;">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">备注</text>
+            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx; max-width: 55%; text-align: right;">{{reservation.remark}}</text>
           </view>
           <view style="border-top: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.08)'}}; margin-top: 12rpx; padding-top: 12rpx;">
-            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; display: block; margin-bottom: 8rpx;">📍 会所地址（可修改）</text>
-            <textarea value="{{shareAddress}}" bindinput="onShareAddressInput" placeholder="请输入会所地址"
-              style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 10rpx; padding: 16rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; width: 100%; box-sizing: border-box; min-height: 100rpx; line-height: 1.5;" />
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 6rpx;">📍 地址（可改）</text>
+            <textarea value="{{shareAddress}}" bindinput="onShareAddressInput" placeholder="会所地址"
+              style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 10rpx; padding: 12rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 24rpx; width: 100%; box-sizing: border-box; min-height: 60rpx; line-height: 1.4;" />
           </view>
         </view>
 
