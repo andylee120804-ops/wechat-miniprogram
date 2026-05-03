@@ -24,7 +24,7 @@
     <view class="card">
       <!-- Venue header -->
       <view class="venue-header">
-        <view class="venue-icon">🏮</view>
+        <view class="venue-icon">❤️</view>
         <text class="venue-name">{{venueName}}</text>
         <view class="venue-divider"></view>
       </view>
