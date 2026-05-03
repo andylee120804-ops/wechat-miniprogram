@@ -68,6 +68,7 @@ Page({
 
       this.setData({
         loading: false,
+        shareTitle: this.data.shareTitle || (r.customerName || '预约') + ' · 预定信息',
         customerName: r.customerName || '',
         phone: r.phone || '',
         date: formatDate(r.date) || '',
