@@ -112,6 +112,8 @@ Page({
       wx.hideLoading()
       if (res.result && res.result.success) {
         wx.showToast({ title: '保存成功', icon: 'success' })
+        // 同步更新到全局
+        app.globalData.venueName = venueName.trim()
       } else {
         wx.showToast({ title: res.result.message || '保存失败', icon: 'none' })
       }
