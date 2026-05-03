@@ -6,6 +6,7 @@ Page({
   data: {
     loading: true,
     error: false,
+    shareTitle: '',
     venueName: '听澜轩',
     venueAddress: '',
     venueLatitude: '',
@@ -24,17 +25,17 @@ Page({
       this.setData({ loading: false, error: true })
       return
     }
-    // If address passed from share modal, use it directly
+    // Data passed from share modal (if shared via app)
+    const title = options.title || ''
     const addr = options.addr || ''
     const lat = options.lat || ''
     const lng = options.lng || ''
-    if (addr) {
-      this.setData({
-        venueAddress: decodeURIComponent(addr),
-        venueLatitude: lat,
-        venueLongitude: lng
-      })
-    }
+    var initData = {}
+    if (title) initData.shareTitle = decodeURIComponent(title)
+    if (addr) initData.venueAddress = decodeURIComponent(addr)
+    if (lat) initData.venueLatitude = lat
+    if (lng) initData.venueLongitude = lng
+    if (Object.keys(initData).length > 0) this.setData(initData)
     this.loadData(options.id, !!addr)
   },
 

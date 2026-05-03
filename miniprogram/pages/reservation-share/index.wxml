@@ -29,6 +29,11 @@
         <view class="venue-divider"></view>
       </view>
 
+      <!-- Share title (when shared via app) -->
+      <view wx:if="{{shareTitle}}" class="title-banner">
+        <text class="title-text">{{shareTitle}}</text>
+      </view>
+
       <!-- Guest info -->
       <view class="guest-section">
         <text class="guest-name">{{customerName}}</text>

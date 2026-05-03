@@ -177,6 +177,7 @@ Page({
     var lat = this.data.shareLatitude || ''
     var lng = this.data.shareLongitude || ''
     var path = '/pages/reservation-share/index?id=' + this.data.id
+    path += '&title=' + encodeURIComponent(title)
     if (addr) path += '&addr=' + encodeURIComponent(addr)
     if (lat && lng) path += '&lat=' + lat + '&lng=' + lng
     return {
