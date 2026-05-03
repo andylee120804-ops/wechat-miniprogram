@@ -65,7 +65,7 @@
   <view class="bottom-bar safe-bottom">
     <view class="bottom-bar-inner {{isEdit ? 'two-btns' : 'single-btn'}}">
       <view wx:if="{{isEdit}}" class="bar-btn bar-btn-danger" bindtap="onDelete">删除员工</view>
-      <view class="bar-btn bar-btn-primary" bindtap="onSubmit">{{isEdit ? '保存修改' : '添加员工'}}</view>
+      <view class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onSubmit">{{isEdit ? '保存修改' : '添加员工'}}</view>
     </view>
   </view>
 

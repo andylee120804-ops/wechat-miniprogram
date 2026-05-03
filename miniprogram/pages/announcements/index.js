@@ -1,4 +1,5 @@
 const app = getApp()
+const { formatDate } = require('../../utils/helpers')
 const { log } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { hasPermission } = require('../../utils/permission')
@@ -16,6 +17,8 @@ Page({
     createContent: '',
     createPriority: 'normal',
     createNeedsConfirm: false,
+    createStartDate: '',
+    createEndDate: '',
     expandedId: ''
   },
 
@@ -56,7 +59,8 @@ Page({
   },
 
   onAddAnnouncement() {
-    this.setData({ showCreateModal: true, createTitle: '', createContent: '', createPriority: 'normal', createNeedsConfirm: false })
+    const today = formatDate(new Date())
+    this.setData({ showCreateModal: true, createTitle: '', createContent: '', createPriority: 'normal', createNeedsConfirm: false, createStartDate: today, createEndDate: today })
   },
 
   onTitleInput(e) {
@@ -75,10 +79,37 @@ Page({
     this.setData({ createNeedsConfirm: e.detail.value })
   },
 
+  onStartDateChange(e) {
+    const val = e.detail.value
+    const today = formatDate(new Date())
+    if (val < today) {
+      wx.showToast({ title: '起始日期不能早于今天', icon: 'none' })
+      return
+    }
+    this.setData({ createStartDate: val })
+    // Auto-update end date if it's before the new start date
+    if (this.data.createEndDate && this.data.createEndDate < val) {
+      this.setData({ createEndDate: val })
+    }
+  },
+
+  onEndDateChange(e) {
+    const val = e.detail.value
+    if (val < this.data.createStartDate) {
+      wx.showToast({ title: '结束日期不能早于起始日期', icon: 'none' })
+      return
+    }
+    this.setData({ createEndDate: val })
+  },
+
   async onSaveAnnouncement() {
-    const { createTitle, createContent, createPriority, createNeedsConfirm } = this.data
+    const { createTitle, createContent, createPriority, createNeedsConfirm, createStartDate, createEndDate } = this.data
     if (!createTitle.trim() || !createContent.trim()) {
       wx.showToast({ title: '请填写标题和内容', icon: 'none' })
+      return
+    }
+    if (!createStartDate || !createEndDate) {
+      wx.showToast({ title: '请设置显示起止日期', icon: 'none' })
       return
     }
     const userInfo = app.globalData.userInfo
@@ -91,6 +122,8 @@ Page({
           content: createContent.trim(),
           priority: createPriority,
           needsConfirm: createNeedsConfirm,
+          startDate: createStartDate,
+          endDate: createEndDate,
           createdBy: userInfo._id,
           createdByName: userInfo.name
         }

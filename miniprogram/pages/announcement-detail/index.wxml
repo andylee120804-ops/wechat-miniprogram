@@ -43,10 +43,39 @@
     <view style="padding: 0 32rpx;">
       <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 30rpx; line-height: 1.9; display: block; white-space: pre-wrap;">{{announcement.content}}</text>
     </view>
+
+    <!-- Read/Unread Staff List -->
+    <view wx:if="{{announcement.needsConfirm}}" style="padding: 32rpx; margin-top: 16rpx;">
+      <view style="background: {{theme.elevated || '#252540'}}; border-radius: 16rpx; padding: 24rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; display: block; margin-bottom: 16rpx;">确认状态</text>
+        <view style="display: flex; gap: 24rpx;">
+          <!-- Confirmed list -->
+          <view style="flex: 1;">
+            <text style="color: #4ADE80; font-size: 24rpx; font-weight: 600; display: block; margin-bottom: 10rpx;">✓ 已确认 ({{readStaff.length}})</text>
+            <view wx:for="{{readStaff}}" wx:key="id" style="padding: 6rpx 0; border-bottom: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.04)'}};">
+              <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx;">{{item.name}}</text>
+            </view>
+            <view wx:if="{{readStaff.length === 0}}">
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">暂无</text>
+            </view>
+          </view>
+          <!-- Unconfirmed list -->
+          <view style="flex: 1;">
+            <text style="color: #F87171; font-size: 24rpx; font-weight: 600; display: block; margin-bottom: 10rpx;">○ 未确认 ({{unreadStaff.length}})</text>
+            <view wx:for="{{unreadStaff}}" wx:key="id" style="padding: 6rpx 0; border-bottom: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.04)'}};">
+              <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx;">{{item.name}}</text>
+            </view>
+            <view wx:if="{{unreadStaff.length === 0}}">
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">全部已确认</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
   </block>
 
   <!-- Day Navigation Strip -->
-  <view style="margin: 40rpx 32rpx 0; padding: 24rpx; background: {{theme.elevated || '#252540'}}; border-radius: 16rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; position: relative; left: 0rpx; top: 558rpx">
+  <view style="margin: 40rpx 32rpx 0; padding: 24rpx; background: {{theme.elevated || '#252540'}}; border-radius: 16rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
     <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 16rpx;">当日其他公告 ({{dayAnnouncements.length}}条)</text>
     <view wx:for="{{dayAnnouncements}}" wx:key="_id" style="margin-bottom: 10rpx;">
       <view bindtap="onDayAnnouncementTap" data-id="{{item._id}}" style="background: {{item._id === announcement._id ? 'rgba(201,169,110,0.15)' : (theme.surface || '#1A1A2E')}}; border-radius: 10rpx; padding: 14rpx 18rpx; display: flex; align-items: center; gap: 10rpx; border: 1rpx solid {{item._id === announcement._id ? 'rgba(201,169,110,0.4)' : (theme.borderColor || 'rgba(255,255,255,0.10)')}};">

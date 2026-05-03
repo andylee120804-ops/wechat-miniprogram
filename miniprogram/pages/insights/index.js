@@ -27,8 +27,8 @@ Page({
   async loadData() {
     this.setData({ loading: true })
     try {
-      const db = wx.cloud.database()
-      const _ = db.command
+      const dbInst = wx.cloud.database()
+      const _ = dbInst.command
       const now = new Date()
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 

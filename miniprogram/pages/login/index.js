@@ -13,6 +13,17 @@ Page({
   onShow() {
     const theme = app.getThemePageData()
     this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, venueName: app.globalData.venueName })
+    if (!app.globalData.venueName) this.loadVenueName()
+  },
+
+  async loadVenueName() {
+    try {
+      const res = await wx.cloud.callFunction({ name: 'sendMessage', data: { action: 'getSettings' } })
+      if (res.result && res.result.success && res.result.data.venueName) {
+        app.globalData.venueName = res.result.data.venueName
+        this.setData({ venueName: res.result.data.venueName })
+      }
+    } catch (_) {}
   },
 
   onWechatIdInput(e) {

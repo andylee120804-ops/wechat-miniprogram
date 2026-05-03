@@ -59,7 +59,7 @@
     <view class="bottom-bar">
       <view class="bottom-bar-inner two-btns">
         <view wx:if="{{canDelete}}" class="bar-btn bar-btn-danger" bindtap="onDelete">删除</view>
-        <view wx:if="{{canEdit}}" class="bar-btn bar-btn-primary" bindtap="onEdit">编辑</view>
+        <view wx:if="{{canEdit}}" class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onEdit">编辑</view>
       </view>
     </view>
 

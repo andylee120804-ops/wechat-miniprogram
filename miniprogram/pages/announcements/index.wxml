@@ -67,6 +67,22 @@
           <view class="priority-pill {{createPriority === 'urgent' ? 'active' : ''}}" data-priority="urgent" bindtap="onPriorityChange" style="{{createPriority === 'urgent' ? 'background:' + (theme.statusDanger || '#F87171') + ';color:#fff;' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}} padding: 10rpx 24rpx; border-radius: 999rpx; font-size: 26rpx;">紧急</view>
         </view>
       </view>
+      <view style="margin-bottom: 24rpx;">
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; display: block; margin-bottom: 12rpx;">显示时间</text>
+        <view style="display: flex; gap: 16rpx; align-items: center;">
+          <picker mode="date" value="{{createStartDate}}" bindchange="onStartDateChange">
+            <view class="date-picker-trigger" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.1)'}}; border-radius: 12rpx; padding: 16rpx 20rpx; flex: 1; color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 26rpx;">
+              {{createStartDate}}
+            </view>
+          </picker>
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">至</text>
+          <picker mode="date" value="{{createEndDate}}" bindchange="onEndDateChange">
+            <view class="date-picker-trigger" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.1)'}}; border-radius: 12rpx; padding: 16rpx 20rpx; flex: 1; color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 26rpx;">
+              {{createEndDate}}
+            </view>
+          </picker>
+        </view>
+      </view>
       <view class="toggle-row">
         <view style="flex: 1;">
           <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 500;">需要员工确认</text>

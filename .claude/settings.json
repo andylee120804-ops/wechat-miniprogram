@@ -1,4 +1,7 @@
 {
+    "claudeCode.initialPermissionMode": "bypassPermissions",
+  
+    "claudeCode.allowDangerouslySkipPermissions": true,
   "permissions": {
     "allow": [
       "Bash(mkdir -p \"C:\\\\Users\\\\Andy\\\\.claude\\\\plans\")",

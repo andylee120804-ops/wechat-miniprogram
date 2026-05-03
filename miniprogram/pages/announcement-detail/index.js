@@ -62,12 +62,30 @@ Page({
       // Filter same day in local time
       const dayList = allAnnouncements.filter(a => formatDate(a.createdAt) === dateStr)
 
+      // Build read/unread staff lists for needsConfirm announcements
+      let readStaff = []
+      let unreadStaff = []
+      if (announcement.needsConfirm) {
+        const staffRes = await db.queryAll(COLLECTIONS.STAFF, { status: 'active' })
+        const staffList = staffRes.data || []
+        const readByIds = announcement.readBy || []
+        staffList.forEach(s => {
+          if (readByIds.includes(s._id)) {
+            readStaff.push({ name: s.name || '未知', id: s._id })
+          } else {
+            unreadStaff.push({ name: s.name || '未知', id: s._id })
+          }
+        })
+      }
+
       this.setData({
         loading: false,
         announcement,
         formattedTime: formatDateTime(announcement.createdAt),
         needsConfirm,
-        dayAnnouncements: dayList
+        dayAnnouncements: dayList,
+        readStaff,
+        unreadStaff
       })
     } catch (err) {
       handleCloudError(err, '加载公告')
