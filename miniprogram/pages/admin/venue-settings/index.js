@@ -55,14 +55,6 @@ Page({
     this.setData({ venueAddress: e.detail.value })
   },
 
-  onLatitudeInput(e) {
-    this.setData({ venueLatitude: e.detail.value })
-  },
-
-  onLongitudeInput(e) {
-    this.setData({ venueLongitude: e.detail.value })
-  },
-
   onPickLocation() {
     wx.chooseLocation({
       success: (res) => {
