@@ -16,6 +16,10 @@ exports.main = async (event, context) => {
         return await markRead(event)
       case 'deleteAnnouncement':
         return await deleteAnnouncement(event)
+      case 'getSettings':
+        return await getSettings(event)
+      case 'updateSettings':
+        return await updateSettings(event)
       default:
         return { success: false, message: '未知操作' }
     }
@@ -26,7 +30,7 @@ exports.main = async (event, context) => {
 }
 
 async function createAnnouncement(event) {
-  const { title, content, priority, needsConfirm, createdBy, createdByName } = event
+  const { title, content, priority, needsConfirm, createdBy, createdByName, startDate, endDate } = event
 
   if (!title || !content) {
     return { success: false, message: '标题和内容不能为空' }
@@ -38,6 +42,8 @@ async function createAnnouncement(event) {
       content,
       priority: priority || 'normal',
       needsConfirm: !!needsConfirm,
+      startDate: startDate || '',
+      endDate: endDate || '',
       createdBy: createdBy || '',
       createdByName: createdByName || '',
       active: true,
@@ -92,6 +98,47 @@ async function deleteAnnouncement(event) {
   await db.collection('announcement').doc(announcementId).update({
     data: { active: false }
   })
+
+  return { success: true }
+}
+
+async function getSettings(event) {
+  const result = await db.collection('settings').where({ key: 'venue_info' }).get()
+  const data = result.data && result.data.length > 0 ? result.data[0] : {}
+  return {
+    success: true,
+    data: {
+      venueName: data.venueName || '听澜轩',
+      venueAddress: data.venueAddress || ''
+    }
+  }
+}
+
+async function updateSettings(event) {
+  const { wxContext } = cloud.getWXContext()
+  const { venueName, venueAddress } = event
+
+  if (!venueName || !venueAddress) {
+    return { success: false, message: '会所名称和地址不能为空' }
+  }
+
+  // 校验请求者角色
+  const staffRes = await db.collection('staff').where({ _openid: wxContext.OPENID }).get()
+  const staff = staffRes.data && staffRes.data[0]
+  if (!staff || (staff.role !== 'boss' && staff.role !== 'admin')) {
+    return { success: false, message: '无权限执行此操作' }
+  }
+
+  const existing = await db.collection('settings').where({ key: 'venue_info' }).get()
+  if (existing.data && existing.data.length > 0) {
+    await db.collection('settings').doc(existing.data[0]._id).update({
+      data: { venueName, venueAddress, updatedAt: db.serverDate() }
+    })
+  } else {
+    await db.collection('settings').add({
+      data: { key: 'venue_info', venueName, venueAddress, createdAt: db.serverDate(), updatedAt: db.serverDate() }
+    })
+  }
 
   return { success: true }
 }

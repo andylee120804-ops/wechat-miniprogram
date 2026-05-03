@@ -1,0 +1,13 @@
+@import '../../../styles/mixins.wxss';
+
+.page { width: 100%; }
+.nav-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+.nav-bar-content { display: flex; align-items: center; justify-content: space-between; height: 88rpx; padding: 0 24rpx; }
+.nav-back { width: 64rpx; height: 64rpx; display: flex; align-items: center; justify-content: center; }
+.nav-back-icon { font-size: 44rpx; }
+.nav-title { font-size: 34rpx; font-weight: 600; }
+.nav-action { min-width: 64rpx; }
+.page-content { padding-bottom: 40px; }
+.form-input { height: 72rpx; }
+.form-textarea { height: auto; }
+.save-btn:active { transform: scale(0.97); opacity: 0.9; }

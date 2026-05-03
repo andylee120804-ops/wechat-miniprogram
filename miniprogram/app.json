@@ -31,7 +31,9 @@
     "pages/admin/logs/index",
     "pages/admin/attendance/index",
     "pages/admin/attendance-detail/index",
-    "pages/min-amount/index"
+    "pages/admin/venue-settings/index",
+    "pages/min-amount/index",
+    "pages/reservation-share/index"
   ],
   "window": {
     "backgroundTextStyle": "light",

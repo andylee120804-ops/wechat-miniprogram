@@ -77,10 +77,27 @@
   border: 1rpx solid rgba(201, 169, 110, 0.3);
 }
 
+/* Wide primary button - 2x width of danger button to prevent accidental taps */
+.bar-btn-primary-wide {
+  flex: 2;
+}
+
 .bar-btn-danger {
   background: rgba(248, 113, 113, 0.12);
   color: #F87171;
   border: 1rpx solid rgba(248, 113, 113, 0.25);
+}
+
+/* Three buttons - space between */
+.bottom-bar-inner.three-btns {
+  justify-content: space-between;
+}
+
+/* Outline button - subtle border only, for secondary actions */
+.bar-btn-outline {
+  background: transparent;
+  color: #C9A96E;
+  border: 1rpx solid rgba(201, 169, 110, 0.3);
 }
 
 /* Safe area bottom padding */

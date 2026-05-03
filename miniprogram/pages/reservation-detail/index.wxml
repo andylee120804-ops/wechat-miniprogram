@@ -65,7 +65,8 @@
 
     <!-- Action Bar - only for non-cancelled -->
     <view class="bottom-bar" wx:if="{{reservation.status !== 'cancelled'}}">
-      <view class="bottom-bar-inner two-btns">
+      <view class="bottom-bar-inner three-btns">
+        <view class="bar-btn bar-btn-outline" bindtap="onShareToGuest">分享给客人</view>
         <view class="bar-btn bar-btn-danger" bindtap="onCancel">取消预约</view>
         <view class="bar-btn bar-btn-primary" bindtap="onEdit">编辑</view>
       </view>
@@ -75,6 +76,21 @@
     <theme-modal theme="{{theme}}" visible="{{showCancelModal}}" title="取消预约" confirmText="确认取消" cancelText="返回" position="center" bind:confirm="onConfirmCancel" bind:close="onCloseCancel">
       <view style="padding: 16rpx 0;">
         <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">确定要取消此预约吗？取消后无法恢复。</text>
+      </view>
+    </theme-modal>
+
+    <!-- Share Modal -->
+    <theme-modal theme="{{theme}}" visible="{{showShareModal}}" title="分享给客人" cancelText="取消" bind:close="onCloseShareModal">
+      <view style="padding: 16rpx 0;">
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 16rpx;">分享标题</text>
+        <input value="{{shareTitle}}" bindinput="onShareTitleInput" placeholder="请输入分享标题" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
+          style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 20rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx; width: 100%; box-sizing: border-box;" />
+        <view style="margin-top: 24rpx;">
+          <button open-type="share" bindtap="onCloseShareModal"
+            style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}}; width: 100%; border-radius: 12rpx; padding: 24rpx; font-size: 28rpx; font-weight: 600; border: none; line-height: 1.2;">
+            分享到微信
+          </button>
+        </view>
       </view>
     </theme-modal>
   </block>

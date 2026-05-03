@@ -58,6 +58,9 @@ Page({
     }
 
     // Settings group
+    if (userInfo && (userInfo.role === 'boss' || userInfo.role === 'admin')) {
+      settingsGroup.push({ key: 'venueSettings', icon: '🏠', text: '会所设置' })
+    }
     settingsGroup.push({ key: 'about', icon: 'ℹ️', text: '关于' })
 
     this.setData({
@@ -80,6 +83,7 @@ Page({
       minAmount: '/pages/min-amount/index',
       fixedExpense: '/pages/admin/expense/index',
       logs: '/pages/admin/logs/index',
+      venueSettings: '/pages/admin/venue-settings/index',
       about: ''
     }
 

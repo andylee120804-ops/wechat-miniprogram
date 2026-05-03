@@ -12,7 +12,9 @@ Page({
     id: '',
     reservation: null,
     loading: true,
-    showCancelModal: false
+    showCancelModal: false,
+    showShareModal: false,
+    shareTitle: ''
   },
 
   onLoad(options) {
@@ -95,6 +97,31 @@ Page({
     } catch (err) {
       wx.hideLoading()
       handleCloudError(err, '取消预约')
+    }
+  },
+
+  onShareToGuest() {
+    if (!hasPermission('reservation', 'edit')) {
+      wx.showToast({ title: '无权限操作', icon: 'none' })
+      return
+    }
+    const defaultTitle = (this.data.reservation.customerName || '预约') + ' · 预定信息'
+    this.setData({ showShareModal: true, shareTitle: defaultTitle })
+  },
+
+  onCloseShareModal() {
+    this.setData({ showShareModal: false })
+  },
+
+  onShareTitleInput(e) {
+    this.setData({ shareTitle: e.detail.value })
+  },
+
+  onShareAppMessage() {
+    var title = this.data.shareTitle || (this.data.reservation ? this.data.reservation.customerName + ' · 预定信息' : '预定信息')
+    return {
+      title: title,
+      path: '/pages/reservation-share/index?id=' + this.data.id
     }
   }
 })
