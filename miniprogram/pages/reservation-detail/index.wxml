@@ -112,7 +112,7 @@
         </view>
 
         <view style="margin-top: 28rpx;">
-          <button open-type="share" bindtap="onCloseShareModal"
+          <button open-type="share" bindtap="onShareAndSave"
             style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}}; width: 100%; border-radius: 14rpx; padding: 26rpx; font-size: 30rpx; font-weight: 600; border: none; line-height: 1.2;">
             分享到微信
           </button>

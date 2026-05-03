@@ -146,9 +146,33 @@ Page({
     this.setData({ shareAddress: e.detail.value })
   },
 
+  // Called via bindtap before open-type="share" triggers onShareAppMessage
+  onShareAndSave() {
+    this.setData({ showShareModal: false })
+    // Fire-and-forget: save the updated address to cloud in background
+    const addr = this.data.shareAddress || ''
+    const lat = this.data.shareLatitude || ''
+    const lng = this.data.shareLongitude || ''
+    wx.cloud.callFunction({
+      name: 'sendMessage',
+      data: { action: 'getSettings' }
+    }).then(settingsRes => {
+      if (!settingsRes.result || !settingsRes.result.success) return
+      wx.cloud.callFunction({
+        name: 'sendMessage',
+        data: {
+          action: 'updateSettings',
+          venueName: settingsRes.result.data.venueName || '听澜轩',
+          venueAddress: addr,
+          venueLatitude: lat,
+          venueLongitude: lng
+        }
+      }).catch(() => {})
+    }).catch(() => {})
+  },
+
   onShareAppMessage() {
     var title = this.data.shareTitle || (this.data.reservation ? this.data.reservation.customerName + ' · 预定信息' : '预定信息')
-    // Pass address as query params so share page doesn't need to fetch settings
     var addr = this.data.shareAddress || ''
     var lat = this.data.shareLatitude || ''
     var lng = this.data.shareLongitude || ''
