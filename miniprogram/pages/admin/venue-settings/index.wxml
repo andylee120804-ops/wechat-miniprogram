@@ -15,25 +15,23 @@
       <text style="color: {{theme.textMuted || '#5C5C72'}};">加载中...</text>
     </view>
 
-    <view wx:if="{{!loading}}" style="padding: 32rpx;">
-      <view style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx; padding: 32rpx;">
+    <view wx:if="{{!loading}}" class="px-lg mt-lg">
+      <view class="p-lg" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx;">
         <!-- 食堂名称 -->
-        <view style="margin-bottom: 32rpx;">
+        <view class="form-item" style="margin-bottom: 32rpx;">
           <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx; display: block; margin-bottom: 12rpx;">食堂名称</text>
-          <view style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 0 24rpx; display: flex; align-items: center; min-height: 80rpx;">
-            <input value="{{venueName}}" bindinput="onNameInput" placeholder="请输入食堂名称" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
-              style="font-size: 28rpx; color: {{theme.textPrimary || '#F5F0E8'}}; background: transparent; padding: 0; height: 95rpx; min-height: 80rpx; line-height: 80rpx; display: block; box-sizing: border-box" />
-          </view>
+          <input value="{{venueName}}" bindinput="onNameInput" placeholder="请输入食堂名称" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
+            style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx; width: 100%; box-sizing: border-box; line-height: 1.5;" />
         </view>
 
         <!-- 食堂地址 -->
-        <view style="margin-bottom: 32rpx;">
+        <view class="form-item">
           <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx; display: block; margin-bottom: 12rpx;">食堂地址</text>
-          <view style="display: flex; gap: 16rpx; align-items: flex-end; width: 625rpx; box-sizing: border-box">
+          <view style="display: flex; gap: 16rpx;">
             <textarea value="{{venueAddress}}" bindinput="onAddressInput" placeholder="请输入食堂地址" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
-              style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx; width: 644rpx; box-sizing: border-box; min-height: 140rpx; display: block; left: 0rpx; top: 0rpx; height: 304rpx" />
-            <view bindtap="onPickLocation"
-              style="background: {{theme.accentColor || '#C9A96E'}}; border-radius: 12rpx; padding: 20rpx 20rpx; white-space: nowrap; flex-shrink: 0; display: flex; align-items: center; justify-content: center; min-height: 88rpx; width: 128rpx; height: 60rpx; box-sizing: border-box; position: relative; left: 0rpx; top: -109rpx">
+              style="flex: 1; background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx; width: 100%; box-sizing: border-box; min-height: 160rpx;" />
+            <view class="flex-center" bindtap="onPickLocation"
+              style="background: {{theme.accentColor || '#C9A96E'}}; border-radius: 12rpx; padding: 20rpx; flex-shrink: 0; align-self: flex-end;">
               <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 26rpx; font-weight: 600;">📍 选位置</text>
             </view>
           </view>
@@ -41,7 +39,7 @@
         </view>
       </view>
 
-      <view style="margin-top: 48rpx;">
+      <view class="mt-lg">
         <button class="save-btn" bindtap="onSave" loading="{{saving}}" disabled="{{saving}}"
           style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}}; width: 100%; border-radius: 16rpx; padding: 28rpx; font-size: 30rpx; font-weight: 600; border: none;">
           {{saving ? '保存中...' : '保存设置'}}

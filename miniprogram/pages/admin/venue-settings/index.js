@@ -56,16 +56,29 @@ Page({
   },
 
   onPickLocation() {
-    wx.chooseLocation({
-      success: (res) => {
-        this.setData({
-          venueLatitude: String(res.latitude),
-          venueLongitude: String(res.longitude),
-          venueAddress: res.address || this.data.venueAddress
+    var that = this
+    wx.authorize({
+      scope: 'scope.userLocation',
+      success() {
+        wx.chooseLocation({
+          success(res) {
+            that.setData({
+              venueLatitude: String(res.latitude),
+              venueLongitude: String(res.longitude),
+              venueAddress: res.address || that.data.venueAddress
+            })
+          },
+          fail() {
+            wx.showToast({ title: '取消选择', icon: 'none' })
+          }
         })
       },
-      fail: () => {
-        wx.showToast({ title: '取消选择', icon: 'none' })
+      fail() {
+        wx.showModal({
+          title: '需要位置权限',
+          content: '请先在开发者工具顶部模拟器工具栏点击「📍定位」按钮，设置一个模拟位置后再试',
+          showCancel: false
+        })
       }
     })
   },
