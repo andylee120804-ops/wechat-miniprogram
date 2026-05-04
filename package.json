@@ -1,0 +1,19 @@
+{
+  "name": "tinglanxuan-v2-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "听澜轩小程序 E2E 测试",
+  "scripts": {
+    "test:e2e": "jest --config jest.config.js",
+    "test:e2e:login": "jest --config jest.config.js --testPathPattern=login",
+    "test:e2e:home": "jest --config jest.config.js --testPathPattern=home",
+    "test:e2e:reservation": "jest --config jest.config.js --testPathPattern=reservation",
+    "test:e2e:purchase": "jest --config jest.config.js --testPathPattern=purchase",
+    "test:e2e:income": "jest --config jest.config.js --testPathPattern=income"
+  },
+  "devDependencies": {
+    "miniprogram-automator": "^0.12.1",
+    "jest": "^29.7.0",
+    "@jest/globals": "^29.7.0"
+  }
+}
