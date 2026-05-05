@@ -2,7 +2,6 @@
 
 .home-page {
   min-height: 100vh;
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Navigation Bar */
@@ -445,7 +444,4 @@
   color: #4ADE80;
 }
 
-/* Bottom spacing */
-.bottom-spacer {
-  height: 120rpx;
-}
+

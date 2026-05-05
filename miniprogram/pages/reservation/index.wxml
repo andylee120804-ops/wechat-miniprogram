@@ -214,6 +214,6 @@
     <text class="fab-icon">+</text>
   </view>
 
-  <!-- Bottom safe area -->
-  <view class="safe-bottom"></view>
+  <!-- Bottom Spacer for tab bar -->
+  <view class="tab-bar-safe-bottom"></view>
 </view>

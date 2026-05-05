@@ -23,13 +23,16 @@
         </view>
         <view style="display: flex; align-items: center; gap: 12rpx;">
           <theme-badge theme="{{theme}}" status="{{item.priority}}" type="role" text="{{item.priority === 'urgent' ? '紧急' : item.priority === 'important' ? '重要' : '普通'}}" size="sm" />
-          <text wx:if="{{canDeleteAnnouncement}}" style="color: {{theme.statusDanger || '#F87171'}}; font-size: 24rpx;" data-id="{{item._id}}" catchtap="onDeleteAnnouncement">删除</text>
+          <view wx:if="{{canEditAnnouncement}}" style="background: rgba(201,169,110,0.12); border-radius: 999rpx; padding: 8rpx 24rpx;" data-id="{{item._id}}" catchtap="onEditAnnouncement">
+            <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 26rpx; font-weight: 500;">编辑</text>
+          </view>
         </view>
       </view>
 
       <view class="ann-meta" style="margin-top: 12rpx;">
-        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.createdByName}} · {{formatDateTime(item.createdAt)}}</text>
-        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; margin-left: 16rpx;">{{item.readBy.length}}人已读</text>
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.createdByName}}</text>
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; margin-left: 8rpx;">{{item.readBy.length}}人已读</text>
+        <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 22rpx; margin-left: 12rpx;">📅 {{item.displayDateRange}}</text>
       </view>
 
       <view wx:if="{{expandedId === item._id}}" style="margin-top: 20rpx; padding-top: 20rpx; border-top: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.04)'}};">

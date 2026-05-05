@@ -44,7 +44,7 @@
 }
 
 .page {
-  padding-bottom: 120rpx;
+  min-height: 100vh;
 }
 
 /* Calendar Section - takes ~55% viewport */
@@ -170,7 +170,7 @@
 .fab {
   position: fixed;
   right: 40rpx;
-  bottom: 120rpx;
+  bottom: calc(136rpx + env(safe-area-inset-bottom));
   width: 112rpx;
   height: 112rpx;
   border-radius: 50%;
@@ -189,9 +189,4 @@
   font-size: 52rpx;
   font-weight: 300;
   line-height: 1;
-}
-
-/* Bottom safe area */
-.safe-bottom {
-  height: env(safe-area-inset-bottom);
 }

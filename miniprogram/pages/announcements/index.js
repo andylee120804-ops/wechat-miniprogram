@@ -3,6 +3,8 @@ const { formatDate } = require('../../utils/helpers')
 const { log } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { hasPermission } = require('../../utils/permission')
+const { COLLECTIONS } = require('../../utils/db')
+const db = require('../../utils/db')
 
 Page({
   data: {
@@ -11,6 +13,7 @@ Page({
     loading: true,
     announcements: [],
     canAddAnnouncement: false,
+    canEditAnnouncement: false,
     canDeleteAnnouncement: false,
     showCreateModal: false,
     createTitle: '',
@@ -25,8 +28,9 @@ Page({
   onShow() {
     const theme = app.getThemePageData()
     const canAddAnnouncement = hasPermission('announcement', 'add')
+    const canEditAnnouncement = hasPermission('announcement', 'edit')
     const canDeleteAnnouncement = hasPermission('announcement', 'delete')
-    this.setData({ theme, canAddAnnouncement, canDeleteAnnouncement, statusBarHeight: app.globalData.statusBarHeight || 44 })
+    this.setData({ theme, canAddAnnouncement, canEditAnnouncement, canDeleteAnnouncement, statusBarHeight: app.globalData.statusBarHeight || 44 })
     this.loadData()
   },
 
@@ -37,12 +41,22 @@ Page({
   async loadData() {
     this.setData({ loading: true })
     try {
-      const res = await wx.cloud.callFunction({ name: 'sendMessage', data: { action: 'getAnnouncements', limit: 50 } })
-      if (res.result.success) {
-        this.setData({ loading: false, announcements: res.result.data })
-      } else {
-        this.setData({ loading: false })
-      }
+      const today = formatDate(new Date())
+      const res = await db.queryAll(COLLECTIONS.ANNOUNCEMENT, { active: true }, 'createdAt', 'desc')
+      const announcements = (res.data || []).filter(ann => {
+        if (!ann.startDate && !ann.endDate) {
+          return formatDate(ann.createdAt) === today
+        }
+        if (ann.startDate && ann.startDate > today) return false
+        if (ann.endDate && ann.endDate < today) return false
+        return true
+      }).map(ann => {
+        const startDate = ann.startDate || formatDate(ann.createdAt)
+        const endDate = ann.endDate && ann.endDate !== startDate ? ann.endDate : ''
+        ann.displayDateRange = endDate ? startDate + '-' + endDate : startDate
+        return ann
+      })
+      this.setData({ loading: false, announcements })
     } catch (err) {
       handleCloudError(err, '加载公告')
       this.setData({ loading: false })
@@ -55,6 +69,13 @@ Page({
       wx.navigateTo({ url: `/pages/announcement-detail/index?id=${id}` })
     } else {
       wx.showToast({ title: '公告ID无效', icon: 'none' })
+    }
+  },
+
+  onEditAnnouncement(e) {
+    const id = e.currentTarget.dataset.id
+    if (id) {
+      wx.navigateTo({ url: `/pages/announcement-detail/index?id=${id}` })
     }
   },
 

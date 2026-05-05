@@ -18,10 +18,11 @@
     <view class="home-content" style="padding-top: {{statusBarHeight + 44}}px;">
 
       <!-- Announcement Marquee -->
-      <view wx:if="{{announcements.length > 0}}" class="announcement-marquee" bindtap="onAnnouncementTap" bindtouchstart="onMarqueeTouchStart" bindtouchend="onMarqueeTouchEnd">
+      <view class="announcement-marquee" bindtap="onAnnouncementTap" bindtouchstart="onMarqueeTouchStart" bindtouchend="onMarqueeTouchEnd">
         <view class="marquee-icon">{{announcementEmoji}}</view>
         <view class="marquee-content">
-          <view wx:if="{{!marqueeReset}}" class="marquee-text-wrap" style="animation: marquee-scroll 15s ease-out both;">{{currentAnnouncement.title}}</view>
+          <view wx:if="{{announcements.length > 0 && !marqueeReset}}" class="marquee-text-wrap" style="animation: marquee-scroll 15s ease-out both;">{{currentAnnouncement.title}}</view>
+          <view wx:elif="{{announcements.length === 0}}" class="marquee-text-wrap" style="color: {{theme.textMuted || '#5C5C72'}};">暂无公告</view>
         </view>
         <view class="marquee-arrow">›</view>
       </view>
@@ -162,7 +163,7 @@
     </view>
 
     <!-- Bottom spacing -->
-    <view class="bottom-spacer" style="height: 160rpx; display: block; box-sizing: border-box"></view>
+    <view class="tab-bar-safe-bottom"></view>
 
   </block>
 </view>

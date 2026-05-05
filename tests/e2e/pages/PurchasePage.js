@@ -9,6 +9,10 @@ class PurchasePage extends BasePage {
     return this.getData('monthStr')
   }
 
+  async getCategories() {
+    return this.getData('categories')
+  }
+
   async getActiveCategory() {
     return this.getData('activeCategory')
   }

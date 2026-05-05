@@ -6,8 +6,9 @@
   display: flex;
   align-items: center;
   justify-content: space-around;
-  height: 100rpx;
+  height: 120rpx;
   padding-top: 8rpx;
+  padding-bottom: env(safe-area-inset-bottom);
   z-index: 500;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -28,8 +29,8 @@
 }
 
 .tab-icon-wrap {
-  width: 56rpx;
-  height: 56rpx;
+  width: 72rpx;
+  height: 72rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -43,17 +44,17 @@
 }
 
 .tab-icon {
-  font-size: 36rpx;
+  font-size: 44rpx;
   line-height: 1;
 }
 
 .tab-icon-img {
-  width: 44rpx;
-  height: 44rpx;
+  width: 56rpx;
+  height: 56rpx;
 }
 
 .tab-text {
-  font-size: 20rpx;
+  font-size: 24rpx;
   font-weight: 500;
   transition: color 0.2s ease;
 }

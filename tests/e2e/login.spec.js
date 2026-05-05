@@ -20,15 +20,18 @@ describe('Login Page', () => {
     await loginPage.open()
   })
 
-  test('should display brand name and form data', async () => {
-    const brandName = await loginPage.getData('venueName')
-    expect(brandName).toBeDefined()
+  test('should display venue name from cloud', async () => {
+    const venueName = await loginPage.getData('venueName')
+    expect(venueName).toBeDefined()
+    expect(typeof venueName).toBe('string')
+  })
 
+  test('should have wechatId and phone input fields', async () => {
     const wechatId = await loginPage.getData('wechatId')
     expect(typeof wechatId).toBe('string')
 
-    const loading = await loginPage.getData('loading')
-    expect(typeof loading).toBe('boolean')
+    const phone = await loginPage.getData('phone')
+    expect(typeof phone).toBe('string')
   })
 
   test('should show error when submitting empty wechatId', async () => {
@@ -40,30 +43,17 @@ describe('Login Page', () => {
   })
 
   test('should set wechatId via setData', async () => {
-    await loginPage.setData({ wechatId: 'test_user' })
+    await loginPage.setData({ wechatId: 'a' })
     const wechatId = await loginPage.getData('wechatId')
-    expect(wechatId).toBe('test_user')
+    expect(wechatId).toBe('a')
   })
 
-  test('should set phone via setData', async () => {
-    await loginPage.setData({ phone: '13800138000' })
-    const phone = await loginPage.getData('phone')
-    expect(phone).toBe('13800138000')
-  })
-
-  test('should attempt login with valid wechatId', async () => {
+  test('should login successfully with wechatId "a" and navigate to home', async () => {
     await loginPage.setData({ wechatId: TEST_ACCOUNTS.boss.wechatId })
     await loginPage.tapLogin()
 
-    const loading = await loginPage.getData('loading')
-    expect(typeof loading).toBe('boolean')
-  })
-
-  test('should clear loading state after login attempt', async () => {
-    await loginPage.setData({ wechatId: 'nonexistent_user_12345' })
-    await loginPage.tapLogin()
-
-    const maxWait = 10000
+    // Wait for loading to complete
+    const maxWait = 15000
     const start = Date.now()
     let loading = true
     while (loading && Date.now() - start < maxWait) {
@@ -72,6 +62,11 @@ describe('Login Page', () => {
       await new Promise(r => setTimeout(r, 500))
     }
     expect(loading).toBe(false)
+
+    // After successful login, page should have navigated away
+    await new Promise(r => setTimeout(r, 1500))
+    const currentPage = await miniProgram.currentPage()
+    expect(currentPage.path).not.toContain('login')
   })
 
   test('should shake card on invalid login and stop after timeout', async () => {

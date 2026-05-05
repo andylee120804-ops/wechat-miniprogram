@@ -19,16 +19,14 @@
       <view class="p-lg" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx;">
         <!-- 食堂名称 -->
         <view class="form-item" style="margin-bottom: 32rpx;">
-          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx; display: block; margin-bottom: 12rpx;">食堂名称</text>
-          <view style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 0 24rpx; display: flex; align-items: center; min-height: 80rpx;">
-            <input value="{{venueName}}" bindinput="onNameInput" placeholder="请输入食堂名称" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
-              style="flex: 1; font-size: 28rpx; color: {{theme.textPrimary || '#F5F0E8'}}; background: transparent; padding: 0; height: auto; line-height: normal;" />
-          </view>
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 32rpx; display: block; margin-bottom: 12rpx">食堂名称</text>
+          <input value="{{venueName}}" bindinput="onNameInput" placeholder="请输入食堂名称" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
+            style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx; width: 100%; box-sizing: border-box; line-height: 1.5; height: 134rpx; display: block" />
         </view>
 
         <!-- 食堂地址 -->
         <view class="form-item">
-          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx; display: block; margin-bottom: 12rpx;">食堂地址</text>
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 32rpx; display: block; margin-bottom: 12rpx;">食堂地址</text>
           <view style="display: flex; gap: 16rpx;">
             <textarea value="{{venueAddress}}" bindinput="onAddressInput" placeholder="请输入食堂地址" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
               style="flex: 1; background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx; width: 100%; box-sizing: border-box; min-height: 160rpx;" />

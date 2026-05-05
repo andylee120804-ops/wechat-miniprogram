@@ -102,11 +102,12 @@ Page({
       let hasUrgentUnread = false
       try {
         const userInfo = app.globalData.userInfo
-        const announcementRes = await dbInst.collection(COLLECTIONS.ANNOUNCEMENT).where({
-          active: true
-        }).orderBy('createdAt', 'desc').limit(50).get()
+        const announcementRes = await db.queryAll(COLLECTIONS.ANNOUNCEMENT, { active: true }, 'createdAt', 'desc')
         announcementsData = (announcementRes.data || []).filter(a => {
-          // Filter by display time range: only show if within startDate~endDate
+          // No startDate/endDate: only visible on creation day
+          if (!a.startDate && !a.endDate) {
+            return formatDate(a.createdAt) === today
+          }
           if (a.startDate && a.startDate > today) return false
           if (a.endDate && a.endDate < today) return false
           return true

@@ -1,9 +1,6 @@
+// Real wechatId that exists in the staff collection
 const TEST_ACCOUNTS = {
-  boss: { wechatId: 'boss_test', phone: '13800000001' },
-  admin: { wechatId: 'admin_test', phone: '13800000002' },
-  purchase: { wechatId: 'purchase_test', phone: '13800000003' },
-  chef: { wechatId: 'chef_test', phone: '13800000004' },
-  waiter: { wechatId: 'waiter_test', phone: '13800000005' },
+  boss: { wechatId: 'a', expectedRole: 'boss' },
 }
 
 const PAGES = {

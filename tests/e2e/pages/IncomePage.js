@@ -9,6 +9,10 @@ class IncomePage extends BasePage {
     return this.getData('currentMonth')
   }
 
+  async getTypeOptions() {
+    return this.getData('typeOptions')
+  }
+
   async getActiveType() {
     return this.getData('activeType')
   }

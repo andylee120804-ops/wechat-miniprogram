@@ -78,6 +78,6 @@
     <text class="fab-icon" style="color: {{theme.textInverse || '#0F0F1A'}};">+</text>
   </view>
 
-  <!-- Bottom Spacer -->
-  <view class="safe-bottom" style="height: 120rpx;"></view>
+  <!-- Bottom Spacer for tab bar -->
+  <view class="tab-bar-safe-bottom"></view>
 </view>

@@ -240,3 +240,8 @@
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* Tab bar bottom spacing: tab bar height (120rpx) + safe area */
+.tab-bar-safe-bottom {
+  height: calc(128rpx + env(safe-area-inset-bottom));
+}

@@ -3,6 +3,7 @@ const { formatDateTime, formatDate } = require('../../utils/helpers')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
+const { hasPermission } = require('../../utils/permission')
 
 Page({
   data: {
@@ -11,15 +12,25 @@ Page({
     loading: true,
     announcement: null,
     formattedTime: '',
+    formattedDate: '',
+    displayDateText: '',
     needsConfirm: false,
     confirming: false,
-    dayAnnouncements: []
+    dayAnnouncements: [],
+    canEdit: false,
+    showEditModal: false,
+    editTitle: '',
+    editContent: '',
+    editPriority: 'normal',
+    editNeedsConfirm: false,
+    editStartDate: '',
+    editEndDate: ''
   },
 
   onLoad(options) {
     const theme = app.getThemePageData()
-    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
-    // Validate id: must be non-empty string
+    const canEdit = hasPermission('announcement', 'edit')
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, canEdit })
     const id = options.id && typeof options.id === 'string' ? options.id.trim() : ''
     if (id) {
       this.setData({ announcementId: id })
@@ -48,21 +59,21 @@ Page({
       const announcement = res.data
       const userInfo = app.globalData.userInfo
       const isRead = (announcement.readBy || []).includes(userInfo._id)
-      // needsConfirm 默认为 false，兼容旧公告（没有此字段）
       const needsConfirm = !!(announcement.needsConfirm === true && !isRead)
 
-
-      // Always show today's announcements in the "当日其他公告" section
       const dateStr = formatDate(new Date())
-
-      // Query all active announcements and filter by date in JavaScript
       const allRes = await db.queryAll(COLLECTIONS.ANNOUNCEMENT, { active: true }, 'createdAt', 'desc')
       const allAnnouncements = allRes.data || []
+      const dayList = allAnnouncements.filter(a => {
+        if (formatDate(a.createdAt) !== dateStr) return false
+        if (!a.startDate && !a.endDate) {
+          return formatDate(a.createdAt) === dateStr
+        }
+        if (a.startDate && a.startDate > dateStr) return false
+        if (a.endDate && a.endDate < dateStr) return false
+        return true
+      })
 
-      // Filter same day in local time
-      const dayList = allAnnouncements.filter(a => formatDate(a.createdAt) === dateStr)
-
-      // Build read/unread staff lists for needsConfirm announcements
       let readStaff = []
       let unreadStaff = []
       if (announcement.needsConfirm) {
@@ -82,6 +93,8 @@ Page({
         loading: false,
         announcement,
         formattedTime: formatDateTime(announcement.createdAt),
+        formattedDate: formatDate(announcement.createdAt),
+        displayDateText: this._calcDisplayDate(announcement),
         needsConfirm,
         dayAnnouncements: dayList,
         readStaff,
@@ -93,8 +106,84 @@ Page({
     }
   },
 
+  _calcDisplayDate(announcement) {
+    const start = announcement.startDate || formatDate(announcement.createdAt)
+    const end = announcement.endDate && announcement.endDate !== start ? announcement.endDate : ''
+    return end ? start + ' 至 ' + end : start
+  },
+
   onBack() {
     wx.navigateBack()
+  },
+
+  onEdit() {
+    const { announcement } = this.data
+    if (!announcement) return
+    this.setData({
+      showEditModal: true,
+      editTitle: announcement.title,
+      editContent: announcement.content,
+      editPriority: announcement.priority || 'normal',
+      editNeedsConfirm: !!announcement.needsConfirm,
+      editStartDate: announcement.startDate || '',
+      editEndDate: announcement.endDate || ''
+    })
+  },
+
+  onCloseEditModal() {
+    this.setData({ showEditModal: false })
+  },
+
+  onEditTitleInput(e) {
+    this.setData({ editTitle: e.detail.value })
+  },
+
+  onEditContentInput(e) {
+    this.setData({ editContent: e.detail.value })
+  },
+
+  onEditPriorityChange(e) {
+    this.setData({ editPriority: e.currentTarget.dataset.priority })
+  },
+
+  onEditNeedsConfirmChange(e) {
+    this.setData({ editNeedsConfirm: e.detail.value })
+  },
+
+  onEditStartDateChange(e) {
+    this.setData({ editStartDate: e.detail.value })
+  },
+
+  onEditEndDateChange(e) {
+    this.setData({ editEndDate: e.detail.value })
+  },
+
+  async onSaveEdit() {
+    const { announcement, editTitle, editContent, editPriority, editNeedsConfirm, editStartDate, editEndDate } = this.data
+    if (!editTitle.trim() || !editContent.trim()) {
+      wx.showToast({ title: '请填写标题和内容', icon: 'none' })
+      return
+    }
+    try {
+      await wx.cloud.callFunction({
+        name: 'sendMessage',
+        data: {
+          action: 'updateAnnouncement',
+          announcementId: announcement._id,
+          title: editTitle.trim(),
+          content: editContent.trim(),
+          priority: editPriority,
+          needsConfirm: editNeedsConfirm,
+          startDate: editStartDate,
+          endDate: editEndDate
+        }
+      })
+      wx.showToast({ title: '修改成功', icon: 'success' })
+      this.setData({ showEditModal: false })
+      this.loadData(announcement._id)
+    } catch (err) {
+      handleCloudError(err, '修改公告')
+    }
   },
 
   async onConfirmRead() {
@@ -113,13 +202,67 @@ Page({
       })
       wx.showToast({ title: '已确认', icon: 'success' })
       this.setData({ needsConfirm: false })
-      // Reload to update readBy count
       this.loadData(announcement._id)
     } catch (err) {
       handleCloudError(err, '确认已读')
     } finally {
       this.setData({ confirming: false })
     }
+  },
+
+  onDeleteDirect() {
+    const { announcement } = this.data
+    if (!announcement) return
+    wx.showModal({
+      title: '确认删除',
+      content: '删除后无法恢复，确定要删除此公告吗？',
+      confirmText: '删除',
+      confirmColor: '#F87171',
+      success: async (res) => {
+        if (!res.confirm) return
+        try {
+          await wx.cloud.callFunction({
+            name: 'sendMessage',
+            data: {
+              action: 'deleteAnnouncement',
+              announcementId: announcement._id
+            }
+          })
+          wx.showToast({ title: '已删除', icon: 'success' })
+          setTimeout(() => wx.navigateBack(), 1000)
+        } catch (err) {
+          handleCloudError(err, '删除公告')
+        }
+      }
+    })
+  },
+
+  onDeleteFromEdit() {
+    const { announcement } = this.data
+    if (!announcement) return
+    wx.showModal({
+      title: '确认删除',
+      content: '删除后无法恢复，确定要删除此公告吗？',
+      confirmText: '删除',
+      confirmColor: '#F87171',
+      success: async (res) => {
+        if (!res.confirm) return
+        try {
+          await wx.cloud.callFunction({
+            name: 'sendMessage',
+            data: {
+              action: 'deleteAnnouncement',
+              announcementId: announcement._id
+            }
+          })
+          wx.showToast({ title: '已删除', icon: 'success' })
+          this.setData({ showEditModal: false })
+          setTimeout(() => wx.navigateBack(), 1000)
+        } catch (err) {
+          handleCloudError(err, '删除公告')
+        }
+      }
+    })
   },
 
   onDayAnnouncementTap(e) {

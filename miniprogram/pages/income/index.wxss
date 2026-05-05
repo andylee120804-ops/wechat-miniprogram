@@ -129,7 +129,7 @@
 
 .fab {
   position: fixed;
-  bottom: 160rpx;
+  bottom: calc(136rpx + env(safe-area-inset-bottom));
   right: 40rpx;
   width: 100rpx;
   height: 100rpx;

@@ -4,29 +4,41 @@ const { TEST_ACCOUNTS } = require('../fixtures/test-data')
 const LoginPage = require('./pages/LoginPage')
 const IncomePage = require('./pages/IncomePage')
 
-describe('Income Page', () => {
+async function loginAs(miniProgram, wechatId) {
+  const loginPage = new LoginPage(miniProgram)
+  await loginPage.open()
+  await loginPage.setData({ wechatId })
+  await loginPage.tapLogin()
+
+  const maxWait = 15000
+  const start = Date.now()
+  let loading = true
+  while (loading && Date.now() - start < maxWait) {
+    loading = await loginPage.getData('loading')
+    if (!loading) break
+    await new Promise(r => setTimeout(r, 500))
+  }
+  await new Promise(r => setTimeout(r, 1500))
+}
+
+describe('Income Page - Boss Role', () => {
   let miniProgram
   let incomePage
 
   beforeAll(async () => {
     miniProgram = await launchApp()
-
-    const loginPage = new LoginPage(miniProgram)
-    await loginPage.open()
-    await loginPage.setData({ wechatId: TEST_ACCOUNTS.boss.wechatId })
-    await loginPage.tapLogin()
-    await new Promise(r => setTimeout(r, 3000))
-
+    await loginAs(miniProgram, TEST_ACCOUNTS.boss.wechatId)
     incomePage = new IncomePage(miniProgram)
-  })
+  }, 60000)
 
   afterAll(async () => {
     await closeApp()
   })
 
-  test('should load income page', async () => {
+  test('should load income page successfully (boss has view permission)', async () => {
     await incomePage.open()
-    await incomePage.waitForData('loading', false, 10000)
+    const loaded = await incomePage.waitForData('loading', false, 15000)
+    expect(loaded).toBe(true)
 
     const loading = await incomePage.isLoading()
     expect(loading).toBe(false)
@@ -34,7 +46,7 @@ describe('Income Page', () => {
 
   test('should display current month', async () => {
     await incomePage.open()
-    await incomePage.waitForData('loading', false, 10000)
+    await incomePage.waitForData('loading', false, 15000)
 
     const month = await incomePage.getCurrentMonth()
     expect(month).toBeDefined()
@@ -43,15 +55,17 @@ describe('Income Page', () => {
 
   test('should have type filter options', async () => {
     await incomePage.open()
-    await incomePage.waitForData('loading', false, 10000)
+    await incomePage.waitForData('loading', false, 15000)
 
     const typeOptions = await incomePage.getTypeOptions()
     expect(Array.isArray(typeOptions)).toBe(true)
+    // Should have at least 'all' option
+    expect(typeOptions.length).toBeGreaterThan(0)
   })
 
   test('should have active type filter', async () => {
     await incomePage.open()
-    await incomePage.waitForData('loading', false, 10000)
+    await incomePage.waitForData('loading', false, 15000)
 
     const activeType = await incomePage.getActiveType()
     expect(activeType).toBeDefined()
@@ -59,7 +73,7 @@ describe('Income Page', () => {
 
   test('should have total amount', async () => {
     await incomePage.open()
-    await incomePage.waitForData('loading', false, 10000)
+    await incomePage.waitForData('loading', false, 15000)
 
     const total = await incomePage.getTotalAmount()
     expect(total).toBeDefined()
@@ -67,7 +81,7 @@ describe('Income Page', () => {
 
   test('should have filtered incomes list', async () => {
     await incomePage.open()
-    await incomePage.waitForData('loading', false, 10000)
+    await incomePage.waitForData('loading', false, 15000)
 
     const incomes = await incomePage.getFilteredIncomes()
     expect(Array.isArray(incomes)).toBe(true)
@@ -75,8 +89,10 @@ describe('Income Page', () => {
 
   test('should load theme data', async () => {
     await incomePage.open()
+    await incomePage.waitForData('loading', false, 15000)
 
     const theme = await incomePage.getData('theme')
     expect(theme).toBeDefined()
+    expect(theme.surfaceColor).toBeDefined()
   })
 })

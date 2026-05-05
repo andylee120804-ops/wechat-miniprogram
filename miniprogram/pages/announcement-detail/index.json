@@ -2,6 +2,7 @@
   "navigationStyle": "custom",
   "usingComponents": {
     "theme-badge": "/components/theme-badge/index",
-    "theme-btn": "/components/theme-btn/index"
+    "theme-btn": "/components/theme-btn/index",
+    "theme-modal": "/components/theme-modal/index"
   }
 }

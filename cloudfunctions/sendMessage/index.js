@@ -16,6 +16,8 @@ exports.main = async (event, context) => {
         return await markRead(event)
       case 'deleteAnnouncement':
         return await deleteAnnouncement(event)
+      case 'updateAnnouncement':
+        return await updateAnnouncement(event)
       case 'getSettings':
         return await getSettings(event)
       case 'updateSettings':
@@ -97,6 +99,34 @@ async function deleteAnnouncement(event) {
 
   await db.collection('announcement').doc(announcementId).update({
     data: { active: false }
+  })
+
+  return { success: true }
+}
+
+async function updateAnnouncement(event) {
+  const { announcementId, title, content, priority, needsConfirm, startDate, endDate } = event
+
+  if (!announcementId) {
+    return { success: false, message: '缺少公告ID' }
+  }
+
+  if (!title || !content) {
+    return { success: false, message: '标题和内容不能为空' }
+  }
+
+  const updateData = {
+    title: title.trim(),
+    content: content.trim(),
+    priority: priority || 'normal',
+    needsConfirm: !!needsConfirm,
+    startDate: startDate || '',
+    endDate: endDate || '',
+    updatedAt: db.serverDate()
+  }
+
+  await db.collection('announcement').doc(announcementId).update({
+    data: updateData
   })
 
   return { success: true }
