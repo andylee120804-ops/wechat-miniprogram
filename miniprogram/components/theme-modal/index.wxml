@@ -6,7 +6,7 @@
     <view class="modal-body">
       <slot></slot>
     </view>
-    <view class="modal-footer">
+    <view class="modal-footer" wx:if="{{showFooter}}">
       <view class="modal-btn cancel" wx:if="{{showCancel}}" bindtap="onCancel" style="color: {{theme.textSecondary || '#9A9AB0'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.1)'}};">{{cancelText}}</view>
       <view class="modal-btn confirm" bindtap="onConfirm" style="background: {{theme.buttonGradient || 'linear-gradient(135deg, #C9A96E, #E8D5A8)'}}; color: {{theme.textInverse || '#0F0F1A'}};">{{confirmText}}</view>
     </view>

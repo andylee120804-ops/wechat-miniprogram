@@ -79,6 +79,13 @@
           </view>
           <text class="detail-value detail-value-remark">{{remark}}</text>
         </view>
+        <view wx:if="{{shareRemark}}" class="detail-item">
+          <view class="detail-label">
+            <text class="label-icon">💌</text>
+            <text class="label-text">温馨提示</text>
+          </view>
+          <text class="detail-value detail-value-remark">{{shareRemark}}</text>
+        </view>
       </view>
     </view>
 

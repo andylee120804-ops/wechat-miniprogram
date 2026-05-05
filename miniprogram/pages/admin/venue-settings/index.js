@@ -56,29 +56,68 @@ Page({
   },
 
   onPickLocation() {
-    var that = this
-    wx.authorize({
-      scope: 'scope.userLocation',
-      success() {
-        wx.chooseLocation({
-          success(res) {
-            that.setData({
-              venueLatitude: String(res.latitude),
-              venueLongitude: String(res.longitude),
-              venueAddress: res.address || that.data.venueAddress
-            })
-          },
-          fail() {
-            wx.showToast({ title: '取消选择', icon: 'none' })
-          }
-        })
+    const that = this
+    // Step 1: check current permission status
+    wx.getSetting({
+      success(settingRes) {
+        const locationAuth = settingRes.authSetting['scope.userLocation']
+        if (locationAuth === false) {
+          // User previously denied — guide to settings
+          wx.showModal({
+            title: '需要位置权限',
+            content: '您之前拒绝了位置权限，请在设置中手动开启',
+            confirmText: '去设置',
+            success(modalRes) {
+              if (modalRes.confirm) {
+                wx.openSetting({
+                  success(openRes) {
+                    if (openRes.authSetting['scope.userLocation']) {
+                      that._doChooseLocation()
+                    }
+                  }
+                })
+              }
+            }
+          })
+        } else {
+          // Not yet authorized or already authorized — try directly
+          that._doChooseLocation()
+        }
       },
       fail() {
-        wx.showModal({
-          title: '需要位置权限',
-          content: '请先在开发者工具顶部模拟器工具栏点击「📍定位」按钮，设置一个模拟位置后再试',
-          showCancel: false
+        // getSetting failed, try chooseLocation directly
+        that._doChooseLocation()
+      }
+    })
+  },
+
+  _doChooseLocation() {
+    const that = this
+    wx.chooseLocation({
+      latitude: that.data.venueLatitude ? Number(that.data.venueLatitude) : undefined,
+      longitude: that.data.venueLongitude ? Number(that.data.venueLongitude) : undefined,
+      success(res) {
+        that.setData({
+          venueLatitude: String(res.latitude),
+          venueLongitude: String(res.longitude),
+          venueAddress: res.address || res.name || that.data.venueAddress
         })
+      },
+      fail(err) {
+        const msg = err.errMsg || ''
+        if (msg.indexOf('cancel') !== -1) return
+        if (msg.indexOf('auth deny') !== -1 || msg.indexOf('authorize') !== -1) {
+          wx.showModal({
+            title: '需要位置权限',
+            content: '请在设置中允许使用位置信息后重试',
+            confirmText: '去设置',
+            success(modalRes) {
+              if (modalRes.confirm) wx.openSetting()
+            }
+          })
+        } else {
+          wx.showToast({ title: '请先在工具栏设置模拟位置', icon: 'none', duration: 3000 })
+        }
       }
     })
   },

@@ -1,4 +1,4 @@
-<view class="login-page" style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}}; position: relative; left: 0rpx; top: 66rpx; height: 1619rpx; display: flex; box-sizing: border-box">
+<view class="login-page" style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}}; position: relative; left: 0rpx; top: 65rpx; height: 1619rpx; display: flex; box-sizing: border-box; width: 753rpx">
   <!-- Background decoration -->
   <view class="login-bg-decor">
     <view class="bg-circle circle-1" style="background: {{theme.accentColor || '#C9A96E'}}; opacity: 0.05;"></view>
@@ -6,8 +6,8 @@
   </view>
 
   <!-- Brand section -->
-  <view class="login-brand safe-top" style="padding-top: {{statusBarHeight}}px; width: 582rpx; display: block; box-sizing: border-box; height: 291rpx">
-    <text class="brand-name" style="color: {{theme.textPrimary || '#F5F0E8'}}; width: 582rpx; height: 199rpx; display: block; box-sizing: border-box; left: 0rpx; top: 0rpx">❤️ {{venueName || '听澜轩'}} ❤️</text>
+  <view class="login-brand safe-top" style="padding-top: {{statusBarHeight}}px; width: 648rpx; display: block; box-sizing: border-box; height: 291rpx">
+    <text class="brand-name" style="color: {{theme.textPrimary || '#F5F0E8'}}; width: 648rpx; height: 181rpx; display: block; box-sizing: border-box; left: 0rpx; top: 0rpx">❤️ {{venueName || '听澜轩'}} ❤️</text>
     <text class="brand-subtitle" style="color: {{theme.textMuted || '#5C5C72'}}; position: relative; left: 0rpx; top: -54rpx">等风，也等你</text>
   </view>
 

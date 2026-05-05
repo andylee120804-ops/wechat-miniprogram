@@ -17,7 +17,8 @@ Page({
     shareTitle: '',
     shareAddress: '',
     shareLatitude: '',
-    shareLongitude: ''
+    shareLongitude: '',
+    shareRemark: ''
   },
 
   onLoad(options) {
@@ -131,7 +132,14 @@ Page({
     }
     const r = this.data.reservation
     const defaultTitle = (r.customerName || '预约') + ' · 预定信息'
-    this.setData({ showShareModal: true, shareTitle: defaultTitle })
+    // Restore previously saved share config, or use defaults
+    const saved = r.shareConfig || {}
+    this.setData({
+      showShareModal: true,
+      shareTitle: saved.shareTitle || defaultTitle,
+      shareAddress: saved.shareAddress || this.data.shareAddress,
+      shareRemark: saved.shareRemark || ''
+    })
   },
 
   onCloseShareModal() {
@@ -146,29 +154,39 @@ Page({
     this.setData({ shareAddress: e.detail.value })
   },
 
+  onShareRemarkInput(e) {
+    this.setData({ shareRemark: e.detail.value })
+  },
+
+  async onConfirmShare() {
+    const { id, shareTitle, shareAddress, shareRemark, shareLatitude, shareLongitude } = this.data
+    const shareConfig = {
+      shareTitle: shareTitle,
+      shareAddress: shareAddress,
+      shareRemark: shareRemark,
+      shareLatitude: shareLatitude,
+      shareLongitude: shareLongitude
+    }
+    try {
+      await db.updateDoc(COLLECTIONS.RESERVATION, id, { shareConfig })
+      // Also update the local reservation data
+      const reservation = Object.assign({}, this.data.reservation, { shareConfig })
+      this.setData({ showShareModal: false, reservation })
+      wx.showToast({ title: '分享详情已保存', icon: 'success' })
+    } catch (err) {
+      handleCloudError(err, '保存分享详情')
+    }
+  },
+
   // Called via bindtap before open-type="share" triggers onShareAppMessage
   onShareAndSave() {
     this.setData({ showShareModal: false })
-    // Fire-and-forget: save the updated address to cloud in background
-    const addr = this.data.shareAddress || ''
-    const lat = this.data.shareLatitude || ''
-    const lng = this.data.shareLongitude || ''
-    wx.cloud.callFunction({
-      name: 'sendMessage',
-      data: { action: 'getSettings' }
-    }).then(settingsRes => {
-      if (!settingsRes.result || !settingsRes.result.success) return
-      wx.cloud.callFunction({
-        name: 'sendMessage',
-        data: {
-          action: 'updateSettings',
-          venueName: settingsRes.result.data.venueName || '听澜轩',
-          venueAddress: addr,
-          venueLatitude: lat,
-          venueLongitude: lng
-        }
-      }).catch(() => {})
-    }).catch(() => {})
+    // Save share config to reservation record
+    const { id, shareTitle, shareAddress, shareRemark, shareLatitude, shareLongitude } = this.data
+    const shareConfig = {
+      shareTitle, shareAddress, shareRemark, shareLatitude, shareLongitude
+    }
+    db.updateDoc(COLLECTIONS.RESERVATION, id, { shareConfig }).catch(() => {})
   },
 
   onShareAppMessage() {
@@ -176,10 +194,12 @@ Page({
     var addr = this.data.shareAddress || ''
     var lat = this.data.shareLatitude || ''
     var lng = this.data.shareLongitude || ''
+    var remark = this.data.shareRemark || ''
     var path = '/pages/reservation-share/index?id=' + this.data.id
     path += '&title=' + encodeURIComponent(title)
     if (addr) path += '&addr=' + encodeURIComponent(addr)
     if (lat && lng) path += '&lat=' + lat + '&lng=' + lng
+    if (remark) path += '&sremark=' + encodeURIComponent(remark)
     return {
       title: title,
       path: path

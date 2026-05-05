@@ -17,7 +17,8 @@ Page({
     time: '',
     roomName: '',
     guestCount: '',
-    remark: ''
+    remark: '',
+    shareRemark: ''
   },
 
   onLoad(options) {
@@ -30,11 +31,13 @@ Page({
     const addr = options.addr || ''
     const lat = options.lat || ''
     const lng = options.lng || ''
+    const sremark = options.sremark || ''
     var initData = {}
     if (title) initData.shareTitle = decodeURIComponent(title)
     if (addr) initData.venueAddress = decodeURIComponent(addr)
     if (lat) initData.venueLatitude = lat
     if (lng) initData.venueLongitude = lng
+    if (sremark) initData.shareRemark = decodeURIComponent(sremark)
     if (Object.keys(initData).length > 0) this.setData(initData)
     this.loadData(options.id, !!addr)
   },

@@ -24,6 +24,10 @@ Component({
       type: Boolean,
       value: true
     },
+    showFooter: {
+      type: Boolean,
+      value: true
+    },
     position: {
       type: String,
       value: 'center'
