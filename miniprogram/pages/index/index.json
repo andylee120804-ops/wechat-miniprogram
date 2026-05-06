@@ -2,9 +2,7 @@
   "navigationStyle": "custom",
   "usingComponents": {
     "glass-card": "/components/glass-card/index",
-    "stat-card": "/components/stat-card/index",
     "theme-badge": "/components/theme-badge/index",
-    "notification-bar": "/components/notification-bar/index",
     "skeleton": "/components/skeleton/index",
     "theme-btn": "/components/theme-btn/index"
   }

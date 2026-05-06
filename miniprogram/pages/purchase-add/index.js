@@ -3,7 +3,7 @@ const { formatDate } = require('../../utils/helpers')
 const { validateRequired, validateAmount } = require('../../utils/validators')
 const { log, LOG_TYPES } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
-const { checkPermission } = require('../../utils/permission')
+const { checkPermission, ACTIONS, hasPermission } = require('../../utils/permission')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 
@@ -35,22 +35,27 @@ Page({
   },
 
   onLoad: function(options) {
+    const isEdit = !!(options && options.id)
+    const canEdit = isEdit ? hasPermission('purchase', ACTIONS.EDIT) : hasPermission('purchase', ACTIONS.ADD)
+    if (!canEdit) {
+      wx.showToast({ title: '无权限', icon: 'none' })
+      setTimeout(function() { wx.navigateBack() }, 1500)
+      return
+    }
     const sysInfo = wx.getWindowInfo()
-    this.setData({ statusBarHeight: sysInfo.statusBarHeight || 44 })
-    this.setData({ theme: app.getThemePageData() })
+    this.setData({ statusBarHeight: sysInfo.statusBarHeight || 44, theme: app.getThemePageData(), isEdit, id: options.id || '', canEdit })
 
     // Set today's date as default
-    var today = formatDate(new Date())
+    const today = formatDate(new Date())
     this.setData({ date: today })
 
-    if (options.id) {
-      this.setData({ isEdit: true, id: options.id })
+    if (isEdit) {
       this.loadPurchase(options.id)
     }
   },
 
   loadPurchase: function(id) {
-    var that = this
+    const that = this
     wx.showLoading({ title: '加载中...' })
 
     db.getDoc(COLLECTIONS.PURCHASE, id).then(function(data) {
@@ -93,7 +98,7 @@ Page({
   },
 
   onCategorySelect: function(e) {
-    var value = e.currentTarget.dataset.value
+    const value = e.currentTarget.dataset.value
     this.setData({ category: value })
   },
 
@@ -102,11 +107,11 @@ Page({
   },
 
   validate: function() {
-    var errors = {}
-    var itemResult = validateRequired(this.data.item, '物品名称')
+    const errors = {}
+    const itemResult = validateRequired(this.data.item, '物品名称')
     if (!itemResult.valid) errors.item = itemResult.message
 
-    var amountResult = validateAmount(this.data.amount)
+    const amountResult = validateAmount(this.data.amount)
     if (!amountResult.valid) errors.amount = amountResult.message
 
     this.setData({ errors: errors })
@@ -117,10 +122,10 @@ Page({
     if (this.data.submitting) return
     if (!this.validate()) return
 
-    var that = this
-    var userInfo = app.globalData.userInfo || {}
+    const that = this
+    const userInfo = app.globalData.userInfo || {}
 
-    var data = {
+    const data = {
       item: this.data.item.trim(),
       amount: Number(this.data.amount),
       category: this.data.category,
@@ -139,7 +144,7 @@ Page({
     wx.showLoading({ title: that.data.isEdit ? '保存中...' : '添加中...' })
 
     if (that.data.isEdit) {
-      if (!checkPermission('purchase', 'edit')) {
+      if (!checkPermission('purchase', ACTIONS.EDIT)) {
         that.setData({ submitting: false })
         wx.hideLoading()
         return
@@ -155,7 +160,7 @@ Page({
         handleCloudError(err, '保存采购记录')
       })
     } else {
-      if (!checkPermission('purchase', 'add')) {
+      if (!checkPermission('purchase', ACTIONS.ADD)) {
         that.setData({ submitting: false })
         wx.hideLoading()
         return
@@ -178,10 +183,10 @@ Page({
   },
 
   onDeleteConfirm: function() {
-    var that = this
+    const that = this
     this.setData({ showDeleteModal: false })
 
-    if (!checkPermission('purchase', 'delete')) return
+    if (!checkPermission('purchase', ACTIONS.DELETE)) return
 
     wx.showLoading({ title: '删除中...' })
     db.deleteDoc(COLLECTIONS.PURCHASE, that.data.id).then(function() {

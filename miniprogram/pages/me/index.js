@@ -6,7 +6,7 @@ const { log, LOG_TYPES } = require('../../utils/logger')
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     userInfo: null,
     roleName: '',
     managementGroup: [],
@@ -15,6 +15,9 @@ Page({
   },
 
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ active: 4 })
+    }
     const theme = app.getThemePageData()
     const userInfo = app.globalData.userInfo || null
     const roleName = userInfo ? getRoleName(userInfo.role) : ''

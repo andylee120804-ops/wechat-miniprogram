@@ -7,7 +7,6 @@ class BasePage {
 
   async open() {
     this.page = await this.miniProgram.reLaunch(`/pages/${this.pagePath}`)
-    // Wait for page to stabilize
     await new Promise(r => setTimeout(r, 1000))
     return this.page
   }
@@ -39,6 +38,51 @@ class BasePage {
       await new Promise(r => setTimeout(r, 500))
     }
     return false
+  }
+
+  // --- Element-level helpers ---
+
+  async getElement(selector) {
+    const page = this.page || await this.miniProgram.currentPage()
+    return page.$(selector)
+  }
+
+  async getElementText(selector) {
+    const el = await this.getElement(selector)
+    if (!el) return null
+    return el.text()
+  }
+
+  async getElementWxml(selector) {
+    const el = await this.getElement(selector)
+    if (!el) return null
+    return el.wxml()
+  }
+
+  async getElementProperty(selector, prop) {
+    const el = await this.getElement(selector)
+    if (!el) return null
+    return el.property(prop)
+  }
+
+  async tapElement(selector) {
+    const el = await this.getElement(selector)
+    if (el) await el.tap()
+  }
+
+  async inputTextField(selector, text) {
+    const el = await this.getElement(selector)
+    if (el) await el.input(text)
+  }
+
+  async screenshot(path) {
+    const page = this.page || await this.miniProgram.currentPage()
+    return page.screenshot({ path })
+  }
+
+  async elementScreenshot(selector, path) {
+    const el = await this.getElement(selector)
+    if (el) return el.screenshot({ path })
   }
 }
 

@@ -1,13 +1,13 @@
 .theme-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 999rpx;
   font-weight: 600;
   transition: all 0.2s;
-  border: none;
   padding: 20rpx 40rpx;
   font-size: 30rpx;
+  box-sizing: border-box;
 }
 
 .normal {
@@ -60,8 +60,4 @@
 
 .btn-icon {
   margin-right: 8rpx;
-}
-
-.btn-no-border::after {
-  border: none;
 }

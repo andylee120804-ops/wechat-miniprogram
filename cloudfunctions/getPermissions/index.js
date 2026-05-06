@@ -3,6 +3,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 exports.main = async (event, context) => {
   const { staffId } = event
+  const { OPENID } = cloud.getWXContext()
 
   if (!staffId) {
     return { success: false, message: '请提供员工ID' }
@@ -11,6 +12,19 @@ exports.main = async (event, context) => {
   const db = cloud.database()
 
   try {
+    // Verify caller identity: must be requesting own permissions or be boss/admin
+    const callerRes = await db.collection('staff').where({ _openid: OPENID }).get()
+    const caller = callerRes.data && callerRes.data[0]
+    if (!caller) {
+      return { success: false, message: '无法验证调用者身份' }
+    }
+
+    const isSelfRequest = caller._id === staffId
+    const isAuthorized = isSelfRequest || caller.role === 'boss' || caller.role === 'admin'
+    if (!isAuthorized) {
+      return { success: false, message: '无权限查看他人权限' }
+    }
+
     const staffResult = await db.collection('staff').doc(staffId).get()
     if (staffResult.data.role === 'boss') {
       return {

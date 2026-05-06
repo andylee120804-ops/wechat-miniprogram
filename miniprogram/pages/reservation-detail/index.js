@@ -1,5 +1,5 @@
-const { formatDate, getRoomName, getReservationStatusText } = require('../../utils/helpers')
-const { hasPermission } = require('../../utils/permission')
+const { formatDate, getRoomName, getReservationStatusText, getExclusiveTypeName } = require('../../utils/helpers')
+const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { log, LOG_TYPES } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
@@ -8,7 +8,7 @@ const db = require('../../utils/db')
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     id: '',
     reservation: null,
     loading: true,
@@ -25,7 +25,6 @@ Page({
     const app = getApp()
     const theme = app.getThemePageData()
     this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, id: options.id })
-    this.loadData()
   },
 
   onShow() {
@@ -43,21 +42,21 @@ Page({
       ])
       if (!res) {
         wx.showToast({ title: '预约不存在', icon: 'none' })
-        setTimeout(function() { wx.navigateBack() }, 1500)
+        setTimeout(() => wx.navigateBack(), 1500)
         return
       }
 
-      res.statusText = getReservationStatusText(res.status)
-      res.dateDisplay = formatDate(res.date)
-      // exclusiveType兼容
       const et = res.exclusiveType || (res.isExclusive ? 'full' : 'none')
-      res.roomNameDisplay = et === 'none' ? getRoomName(res.room) :
-                           (et === 'noon' ? '包场（午）' :
-                            et === 'night' ? '包场（晚）' : '包场（全体）')
-      res.exclusiveType = et
+      const reservation = {
+        ...res,
+        statusText: getReservationStatusText(res.status),
+        dateDisplay: formatDate(res.date),
+        roomNameDisplay: getExclusiveTypeName(et, res.room),
+        exclusiveType: et
+      }
 
       this.setData({
-        reservation: res,
+        reservation,
         loading: false
       })
     } catch (err) {
@@ -72,7 +71,7 @@ Page({
         name: 'sendMessage',
         data: { action: 'getSettings' }
       })
-      if (res.result && res.result.success) {
+      if (res.result && res.result.success && res.result.data) {
         this.setData({
           shareAddress: res.result.data.venueAddress || '',
           shareLatitude: res.result.data.venueLatitude || '',
@@ -80,7 +79,7 @@ Page({
         })
       }
     } catch (err) {
-      // Silent fail
+      console.warn('加载场地设置失败:', err)
     }
   },
 
@@ -89,7 +88,7 @@ Page({
   },
 
   onEdit() {
-    if (!hasPermission('reservation', 'edit')) {
+    if (!hasPermission('reservation', ACTIONS.EDIT)) {
       wx.showToast({ title: '无权限操作', icon: 'none' })
       return
     }
@@ -99,7 +98,7 @@ Page({
   },
 
   onCancel() {
-    if (!hasPermission('reservation', 'edit')) {
+    if (!hasPermission('reservation', ACTIONS.EDIT)) {
       wx.showToast({ title: '无权限操作', icon: 'none' })
       return
     }
@@ -126,7 +125,7 @@ Page({
   },
 
   onShareToGuest() {
-    if (!hasPermission('reservation', 'edit')) {
+    if (!hasPermission('reservation', ACTIONS.EDIT)) {
       wx.showToast({ title: '无权限操作', icon: 'none' })
       return
     }
@@ -158,19 +157,16 @@ Page({
     this.setData({ shareRemark: e.detail.value })
   },
 
+  _buildShareConfig() {
+    const { shareTitle, shareAddress, shareRemark, shareLatitude, shareLongitude } = this.data
+    return { shareTitle, shareAddress, shareRemark, shareLatitude, shareLongitude }
+  },
+
   async onConfirmShare() {
-    const { id, shareTitle, shareAddress, shareRemark, shareLatitude, shareLongitude } = this.data
-    const shareConfig = {
-      shareTitle: shareTitle,
-      shareAddress: shareAddress,
-      shareRemark: shareRemark,
-      shareLatitude: shareLatitude,
-      shareLongitude: shareLongitude
-    }
+    const shareConfig = this._buildShareConfig()
     try {
-      await db.updateDoc(COLLECTIONS.RESERVATION, id, { shareConfig })
-      // Also update the local reservation data
-      const reservation = Object.assign({}, this.data.reservation, { shareConfig })
+      await db.updateDoc(COLLECTIONS.RESERVATION, this.data.id, { shareConfig })
+      const reservation = { ...this.data.reservation, shareConfig }
       this.setData({ showShareModal: false, reservation })
       wx.showToast({ title: '分享详情已保存', icon: 'success' })
     } catch (err) {
@@ -178,31 +174,19 @@ Page({
     }
   },
 
-  // Called via bindtap before open-type="share" triggers onShareAppMessage
   onShareAndSave() {
     this.setData({ showShareModal: false })
-    // Save share config to reservation record
-    const { id, shareTitle, shareAddress, shareRemark, shareLatitude, shareLongitude } = this.data
-    const shareConfig = {
-      shareTitle, shareAddress, shareRemark, shareLatitude, shareLongitude
-    }
-    db.updateDoc(COLLECTIONS.RESERVATION, id, { shareConfig }).catch(() => {})
+    const shareConfig = this._buildShareConfig()
+    db.updateDoc(COLLECTIONS.RESERVATION, this.data.id, { shareConfig }).catch(err => {
+      console.warn('保存分享配置失败:', err)
+    })
   },
 
   onShareAppMessage() {
-    var title = this.data.shareTitle || (this.data.reservation ? this.data.reservation.customerName + ' · 预定信息' : '预定信息')
-    var addr = this.data.shareAddress || ''
-    var lat = this.data.shareLatitude || ''
-    var lng = this.data.shareLongitude || ''
-    var remark = this.data.shareRemark || ''
-    var path = '/pages/reservation-share/index?id=' + this.data.id
-    path += '&title=' + encodeURIComponent(title)
-    if (addr) path += '&addr=' + encodeURIComponent(addr)
-    if (lat && lng) path += '&lat=' + lat + '&lng=' + lng
-    if (remark) path += '&sremark=' + encodeURIComponent(remark)
+    const title = this.data.shareTitle || (this.data.reservation ? this.data.reservation.customerName + ' · 预定信息' : '预定信息')
     return {
-      title: title,
-      path: path
+      title,
+      path: '/pages/reservation-share/index?id=' + this.data.id
     }
   }
 })

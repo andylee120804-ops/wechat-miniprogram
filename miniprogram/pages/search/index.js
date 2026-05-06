@@ -1,10 +1,12 @@
 const app = getApp()
 const { COLLECTIONS } = require('../../utils/db')
+const db = require('../../utils/db')
+const { formatDate, formatAmount } = require('../../utils/helpers')
 
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     keyword: '',
     recentSearches: [],
     activeTab: 'all',
@@ -41,37 +43,48 @@ Page({
 
   async searchAll(keyword) {
     this.setData({ searching: true })
-    const db = wx.cloud.database()
-    const kw = db.command.regExp({ regexp: keyword, options: 'i' })
+    const dbInst = db.getDb()
+    const kw = dbInst.command.regExp({ regexp: keyword, options: 'i' })
     try {
       const [resRes, incRes, purRes] = await Promise.all([
-        db.collection(COLLECTIONS.RESERVATION).where({
+        dbInst.collection(COLLECTIONS.RESERVATION).where({
           customerName: kw,
-          status: db.command.neq('cancelled')
+          status: dbInst.command.neq('cancelled')
         }).limit(10).get(),
-        db.collection(COLLECTIONS.INCOME).where({
+        dbInst.collection(COLLECTIONS.INCOME).where({
           source: kw
         }).limit(10).get(),
-        db.collection(COLLECTIONS.PURCHASE).where({
+        dbInst.collection(COLLECTIONS.PURCHASE).where({
           item: kw
         }).limit(10).get()
       ])
 
       // Derive customers from reservations
       const customerMap = {}
-      resRes.data.forEach(r => {
+      ;(resRes.data || []).forEach(r => {
         if (!customerMap[r.customerName]) {
           customerMap[r.customerName] = { name: r.customerName, count: 0 }
         }
         customerMap[r.customerName].count++
       })
 
+      // Pre-format values for template rendering
+      const reservations = (resRes.data || []).map(r => ({
+        ...r, formattedDate: formatDate(r.date)
+      }))
+      const income = (incRes.data || []).map(i => ({
+        ...i, formattedDate: formatDate(i.date), formattedAmount: formatAmount(i.amount)
+      }))
+      const purchases = (purRes.data || []).map(p => ({
+        ...p, formattedAmount: formatAmount(p.amount)
+      }))
+
       this.setData({
         searching: false,
         results: {
-          reservations: resRes.data,
-          income: incRes.data,
-          purchases: purRes.data,
+          reservations,
+          income,
+          purchases,
           customers: Object.values(customerMap)
         }
       })

@@ -1,13 +1,14 @@
 const app = getApp()
 const { formatAmount, formatDate } = require('../../utils/helpers')
 const { handleCloudError } = require('../../utils/error-handler')
+const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     loading: true,
     busiestDay: { date: '', count: 0 },
     avgDailyRevenue: '0.00',
@@ -15,6 +16,11 @@ Page({
   },
 
   onShow() {
+    if (!hasPermission('dashboard', ACTIONS.VIEW)) {
+      wx.showToast({ title: '无权限查看', icon: 'none' })
+      setTimeout(function() { wx.navigateBack() }, 1500)
+      return
+    }
     const theme = app.getThemePageData()
     this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
     this.loadData()
@@ -27,7 +33,7 @@ Page({
   async loadData() {
     this.setData({ loading: true })
     try {
-      const dbInst = wx.cloud.database()
+      const dbInst = db.getDb()
       const _ = dbInst.command
       const now = new Date()
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -53,14 +59,14 @@ Page({
         date: _.gte(monthStart)
       })
 
-      const totalMonthIncome = monthIncome.data.reduce((s, i) => s + (i.amount || 0), 0)
+      const totalMonthIncome = (monthIncome.data || []).reduce((s, i) => s + (i.amount || 0), 0)
       const daysInMonth = now.getDate()
       const avgDaily = daysInMonth > 0 ? totalMonthIncome / daysInMonth : 0
 
       // Process insights
       const insights = []
 
-      if (busiestRes.result.success && busiestRes.result.data.length > 0) {
+      if (busiestRes.result && busiestRes.result.success && busiestRes.result.data && busiestRes.result.data.length > 0) {
         const bd = busiestRes.result.data[0]
         insights.push({
           icon: '📅',
@@ -75,7 +81,7 @@ Page({
         teatime: '茶水', service: '服务', other: '其他'
       }
 
-      if (topSourceRes.result.success && topSourceRes.result.data.length > 0) {
+      if (topSourceRes.result && topSourceRes.result.success && topSourceRes.result.data && topSourceRes.result.data.length > 0) {
         const ts = topSourceRes.result.data[0]
         insights.push({
           icon: '💰',
@@ -85,7 +91,7 @@ Page({
         })
       }
 
-      if (customerRes.result.success && customerRes.result.data.length > 0) {
+      if (customerRes.result && customerRes.result.success && customerRes.result.data && customerRes.result.data.length > 0) {
         const tc = customerRes.result.data[0]
         insights.push({
           icon: '🏆',
@@ -111,8 +117,8 @@ Page({
         date: _.gte(lastMonthStart).and(_.lte(lastMonthEnd))
       })
 
-      const curTotal = purchaseRes.data.reduce((s, p) => s + (p.amount || 0), 0)
-      const prevTotal = lastPurchase.data.reduce((s, p) => s + (p.amount || 0), 0)
+      const curTotal = (purchaseRes.data || []).reduce((s, p) => s + (p.amount || 0), 0)
+      const prevTotal = (lastPurchase.data || []).reduce((s, p) => s + (p.amount || 0), 0)
       if (prevTotal > 0) {
         const pct = Math.round(((curTotal - prevTotal) / prevTotal) * 100)
         insights.push({
@@ -124,13 +130,13 @@ Page({
       }
 
       // Room utilization: count unique days per room
-      var roomDays = { big: 0, small: 0 }
-      var timeCount = { noon: 0, night: 0 }
-      var roomDateSet = { big: {}, small: {} }
+      const roomDays = { big: 0, small: 0 }
+      const timeCount = { noon: 0, night: 0 }
+      const roomDateSet = { big: {}, small: {} }
       ;(reservationRes.data || []).forEach(function(r) {
-        var dateStr = formatDate(r.date)
-        var room = r.room || 'big'
-        var time = r.time
+        const dateStr = formatDate(r.date)
+        const room = r.room || 'big'
+        const time = r.time
         // Room utilization (count unique days per room)
         if (room === 'big' || room === 'small') {
           if (!roomDateSet[room][dateStr]) {
@@ -143,14 +149,14 @@ Page({
           timeCount[time === '中午' ? 'noon' : 'night']++
         }
       })
-      var totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+      const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
       insights.push({
         icon: '🚪',
         title: '包厢利用率',
         desc: '大包厢 ' + roomDays.big + '天 (' + Math.round(roomDays.big / totalDays * 100) + '%)  小包厢 ' + roomDays.small + '天 (' + Math.round(roomDays.small / totalDays * 100) + '%)',
         color: 'accent'
       })
-      var totalResTime = timeCount.noon + timeCount.night
+      const totalResTime = timeCount.noon + timeCount.night
       if (totalResTime > 0) {
         insights.push({
           icon: '⏰',
@@ -161,17 +167,17 @@ Page({
       }
 
       // Most popular purchase category
-      var categoryNameMap = {
+      const categoryNameMap = {
         meat: '肉类', seafood: '海鲜', vegetable: '蔬菜', fruit: '水果',
         drink: '饮品', seasoning: '调味品', supplies: '日用品', equipment: '设备', other: '其他'
       }
-      var categoryCount = {}
+      const categoryCount = {}
       ;(purchaseRes.data || []).forEach(function(p) {
-        var cat = p.category || 'other'
+        const cat = p.category || 'other'
         categoryCount[cat] = (categoryCount[cat] || 0) + 1
       })
-      var topCat = ''
-      var topCatCount = 0
+      let topCat = ''
+      let topCatCount = 0
       Object.keys(categoryCount).forEach(function(c) {
         if (categoryCount[c] > topCatCount) {
           topCat = c
@@ -189,7 +195,7 @@ Page({
 
       this.setData({
         loading: false,
-        busiestDay: busiestRes.result.success ? (busiestRes.result.data[0] || { date: '-', count: 0 }) : { date: '-', count: 0 },
+        busiestDay: (busiestRes.result && busiestRes.result.success && busiestRes.result.data) ? (busiestRes.result.data[0] || { date: '-', count: 0 }) : { date: '-', count: 0 },
         avgDailyRevenue: formatAmount(avgDaily),
         insights
       })

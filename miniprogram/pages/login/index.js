@@ -3,7 +3,7 @@ const app = getApp()
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     wechatId: '',
     phone: '',
     loading: false,
@@ -23,7 +23,9 @@ Page({
         app.globalData.venueName = res.result.data.venueName
         this.setData({ venueName: res.result.data.venueName })
       }
-    } catch (_) {}
+    } catch (err) {
+      console.warn('[Login] 加载场地名称失败:', err)
+    }
   },
 
   onWechatIdInput(e) {
@@ -65,7 +67,7 @@ Page({
         data: { staffId: result.data._id }
       })
 
-      if (permRes.result.success) {
+      if (permRes.result && permRes.result.success && permRes.result.data) {
         app.globalData.permissions = permRes.result.data
       }
 

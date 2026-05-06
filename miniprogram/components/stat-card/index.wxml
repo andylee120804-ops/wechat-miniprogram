@@ -6,6 +6,6 @@
   </view>
   <view class="stat-change" wx:if="{{change !== 0}}">
     <text class="change-arrow {{trend}}">{{trend === 'up' ? '↑' : trend === 'down' ? '↓' : '-'}}</text>
-    <text class="change-value" style="color: {{trend === 'up' ? (theme.statusSuccess || '#4ADE80') : (trend === 'down' ? (theme.statusDanger || '#F87171') : (theme.textMuted || '#5C5C72'))}};">{{Math.abs(change)}}%</text>
+    <text class="change-value" style="color: {{trend === 'up' ? (theme.statusSuccess || '#4ADE80') : (trend === 'down' ? (theme.statusDanger || '#F87171') : (theme.textMuted || '#5C5C72'))}};">{{absChange}}%</text>
   </view>
 </view>

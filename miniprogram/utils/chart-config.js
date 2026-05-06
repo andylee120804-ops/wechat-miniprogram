@@ -205,7 +205,7 @@ function getBarChartConfig(theme, categories, series, opts) {
         activeBgColor: tc.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
         activeBgOpacity: 0.5,
         barBorderRadius: opts.barBorderRadius || [4, 4, 0, 0],
-        meterBorde: 0,
+        meterBorder: 0,
         meterFillColor: palette[0]
       },
       tooltip: {
@@ -239,10 +239,8 @@ function getLineChartConfig(theme, categories, series, opts) {
   const height = opts.height || 280
 
   // Apply per-series custom colors
-  var coloredSeries = series.map(function(s, i) {
-    return Object.assign({}, s, {
-      color: s.color || palette[i % palette.length]
-    })
+  const coloredSeries = series.map(function(s, i) {
+    return { ...s, color: s.color || palette[i % palette.length] }
   })
 
   return {

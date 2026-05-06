@@ -32,11 +32,18 @@ exports.main = async (event, context) => {
 }
 
 async function createAnnouncement(event) {
-  const { title, content, priority, needsConfirm, createdBy, createdByName, startDate, endDate } = event
+  const { title, content, priority, needsConfirm, startDate, endDate } = event
+  const { OPENID } = cloud.getWXContext()
 
   if (!title || !content) {
     return { success: false, message: '标题和内容不能为空' }
   }
+
+  // Derive creator identity from caller, not from event data
+  const callerRes = await db.collection('staff').where({ _openid: OPENID }).get()
+  const caller = callerRes.data && callerRes.data[0]
+  const createdBy = caller ? caller._id : ''
+  const createdByName = caller ? caller.name : ''
 
   const result = await db.collection('announcement').add({
     data: {
@@ -76,9 +83,17 @@ async function getAnnouncements(event) {
 
 async function markRead(event) {
   const { announcementId, staffId } = event
+  const { OPENID } = cloud.getWXContext()
 
   if (!announcementId || !staffId) {
     return { success: false, message: '参数不完整' }
+  }
+
+  // Verify caller identity: staffId must belong to the caller
+  const callerRes = await db.collection('staff').where({ _openid: OPENID }).get()
+  const caller = callerRes.data && callerRes.data[0]
+  if (!caller || caller._id !== staffId) {
+    return { success: false, message: '无权限操作' }
   }
 
   await db.collection('announcement').doc(announcementId).update({

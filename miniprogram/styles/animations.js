@@ -73,19 +73,19 @@ const EASING = {
 function createAnimation(type, options) {
   if (options === void 0) options = {}
 
-  var preset = ANIMATIONS[type]
+  const preset = ANIMATIONS[type]
   if (!preset) {
     console.warn('[animations] Unknown animation type: ' + type)
     return null
   }
 
-  var duration = options.duration !== undefined ? options.duration : preset.duration
-  var timingFunction = options.timingFunction || EASING.default
-  var delay = options.delay || 0
-  var transformOrigin = options.transformOrigin || '50% 50% 0'
+  const duration = options.duration !== undefined ? options.duration : preset.duration
+  const timingFunction = options.timingFunction || EASING.default
+  const delay = options.delay || 0
+  const transformOrigin = options.transformOrigin || '50% 50% 0'
 
   // Build the base wx.createAnimation config
-  var config = {
+  const config = {
     duration: duration,
     timingFunction: timingFunction,
     delay: delay,
@@ -93,22 +93,22 @@ function createAnimation(type, options) {
   }
 
   // Build step instructions for applying the animation
-  var steps = []
+  const steps = []
 
   // Handle multi-step animations (shakeX, pulse)
   if (type === 'shakeX') {
-    var values = preset.translateX
-    for (var i = 0; i < values.length; i++) {
+    const values = preset.translateX
+    for (let i = 0; i < values.length; i++) {
       steps.push({ translateX: values[i] })
     }
   } else if (type === 'pulse') {
-    var scaleValues = preset.scale
-    for (var j = 0; j < scaleValues.length; j++) {
+    const scaleValues = preset.scale
+    for (let j = 0; j < scaleValues.length; j++) {
       steps.push({ scale: scaleValues[j] })
     }
   } else {
     // Standard two-value transitions
-    var step = {}
+    const step = {}
     if (preset.opacity) step.opacity = preset.opacity[1]
     if (preset.translateY) step.translateY = preset.translateY[1]
     if (preset.translateX) step.translateX = preset.translateX[1]
@@ -129,13 +129,13 @@ function createAnimation(type, options) {
     apply: function (animation) {
       if (!animation) return null
 
-      var anim = animation
+      let anim = animation
 
       // For multi-step animations, each step gets its own .step() call
       if (steps.length > 1) {
-        var stepDuration = Math.floor(duration / steps.length)
-        for (var k = 0; k < steps.length; k++) {
-          var s = steps[k]
+        const stepDuration = Math.floor(duration / steps.length)
+        for (let k = 0; k < steps.length; k++) {
+          const s = steps[k]
           if (s.translateX !== undefined) anim = anim.translateX(s.translateX)
           if (s.scale !== undefined) anim = anim.scale(s.scale)
           if (s.opacity !== undefined) anim = anim.opacity(s.opacity)
@@ -149,7 +149,7 @@ function createAnimation(type, options) {
         }
       } else {
         // Single-step animation
-        var singleStep = steps[0]
+        const singleStep = steps[0]
         if (singleStep.opacity !== undefined) anim = anim.opacity(singleStep.opacity)
         if (singleStep.translateY !== undefined) anim = anim.translateY(singleStep.translateY)
         if (singleStep.translateX !== undefined) anim = anim.translateX(singleStep.translateX)

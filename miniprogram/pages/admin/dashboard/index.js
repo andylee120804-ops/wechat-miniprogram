@@ -2,7 +2,7 @@ const app = getApp()
 const { getWeekRange, getMonthRange, getYearRange, getIncomeTypeText, getWeekNumber } = require('../../../utils/helpers')
 const { handleCloudError } = require('../../../utils/error-handler')
 const { getRingChartConfig, getIncomeTypeColors, getExpenseTypeColors } = require('../../../utils/chart-config')
-const { checkPermission } = require('../../../utils/permission')
+const { checkPermission, ACTIONS } = require('../../../utils/permission')
 const { COLLECTIONS } = require('../../../utils/db')
 const db = require('../../../utils/db')
 
@@ -10,7 +10,7 @@ Page({
   data: {
     theme: {},
     loading: true,
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     // Period controls
     periodType: 'month',
     periodOffset: 0,
@@ -41,16 +41,24 @@ Page({
   },
 
   onLoad: function() {
+    const sysInfo = wx.getWindowInfo()
     this.setData({ statusBarHeight: app.globalData.statusBarHeight || 44 })
+    // Calculate chart size based on screen width (account for mx-lg margins + internal padding)
+    const pxWidth = sysInfo.windowWidth
+    // mx-lg = 24rpx each side; 750rpx = pxWidth px, so 1rpx = pxWidth/750
+    const totalMargin = 48 * pxWidth / 750   // mx-lg both sides
+    const innerPadding = 32 * pxWidth / 750   // card internal padding
+    const chartSize = Math.min(Math.floor(pxWidth - totalMargin - innerPadding), 320)
+    this.setData({ chartSize: Math.max(chartSize, 240) })
     // Generate week numbers 1-53
-    var weeks = []
-    for (var i = 1; i <= 53; i++) weeks.push(i)
+    const weeks = []
+    for (let i = 1; i <= 53; i++) weeks.push(i)
     this.setData({ pickerWeeks: weeks })
     this.setPeriodRange()
   },
 
   onShow: function() {
-    if (!checkPermission('dashboard', 'view')) {
+    if (!checkPermission('dashboard', ACTIONS.VIEW)) {
       wx.navigateBack()
       return
     }
@@ -62,9 +70,9 @@ Page({
   // ==================== Period Range ====================
 
   setPeriodRange: function() {
-    var type = this.data.periodType
-    var offset = this.data.periodOffset
-    var range
+    const type = this.data.periodType
+    const offset = this.data.periodOffset
+    let range
 
     if (type === 'week') {
       range = getWeekRange(offset)
@@ -101,7 +109,7 @@ Page({
   },
 
   switchPeriodType: function(e) {
-    var type = e.currentTarget.dataset.type
+    const type = e.currentTarget.dataset.type
     this.setData({
       periodType: type,
       periodOffset: 0
@@ -111,8 +119,8 @@ Page({
   },
 
   quickSelect: function(e) {
-    var offset = parseInt(e.currentTarget.dataset.offset)
-    var type = e.currentTarget.dataset.type
+    const offset = parseInt(e.currentTarget.dataset.offset)
+    const type = e.currentTarget.dataset.type
     this.setData({
       periodType: type,
       periodOffset: offset
@@ -124,27 +132,27 @@ Page({
   // ==================== Period Picker ====================
 
   showPeriodPicker: function() {
-    var now = new Date()
+    const now = new Date()
     // Compute current year and period from current offset
-    var type = this.data.periodType
-    var offset = this.data.periodOffset
-    var targetDate = new Date(now.getFullYear(), now.getMonth() + offset, 1)
+    const type = this.data.periodType
+    const offset = this.data.periodOffset
+    const targetDate = new Date(now.getFullYear(), now.getMonth() + offset, 1)
 
-    var pickerYear = targetDate.getFullYear()
-    var pickerMonth = targetDate.getMonth() + 1
+    let pickerYear = targetDate.getFullYear()
+    let pickerMonth = targetDate.getMonth() + 1
 
     // For week type, compute the week number from current offset
-    var pickerWeek = 1
+    let pickerWeek = 1
     if (type === 'week') {
-      var weekRange = getWeekRange(offset)
+      const weekRange = getWeekRange(offset)
       pickerWeek = weekRange.weekNum || 1
       pickerYear = weekRange.year || pickerYear
     }
 
     // Build year list: current year ± 3
-    var currentYear = now.getFullYear()
-    var years = []
-    for (var y = currentYear - 3; y <= currentYear + 1; y++) {
+    const currentYear = now.getFullYear()
+    const years = []
+    for (let y = currentYear - 3; y <= currentYear + 1; y++) {
       years.push(y)
     }
 
@@ -170,10 +178,10 @@ Page({
   },
 
   onPickerConfirm: function() {
-    var type = this.data.periodType
-    var now = new Date()
-    var pickerYear = this.data.pickerYear
-    var offset
+    const type = this.data.periodType
+    const now = new Date()
+    const pickerYear = this.data.pickerYear
+    let offset
 
     if (type === 'year') {
       offset = pickerYear - now.getFullYear()
@@ -182,17 +190,17 @@ Page({
       offset = (pickerYear - now.getFullYear()) * 12 + (this.data.pickerMonth - 1 - now.getMonth())
     } else {
       // week — compute offset from current ISO week
-      var currentWeekInfo = getWeekNumber(now)
-      var currentYear = currentWeekInfo.year
-      var currentWeek = currentWeekInfo.week
-      var targetYear = pickerYear
-      var targetWeek = this.data.pickerWeek
+      const currentWeekInfo = getWeekNumber(now)
+      const currentYear = currentWeekInfo.year
+      const currentWeek = currentWeekInfo.week
+      const targetYear = pickerYear
+      const targetWeek = this.data.pickerWeek
       // Approximate week offset (years * 52 + week diff), then refine by checking Monday difference
-      var approxOffset = (targetYear - currentYear) * 52 + (targetWeek - currentWeek)
+      const approxOffset = (targetYear - currentYear) * 52 + (targetWeek - currentWeek)
       // Refine using actual Monday dates
-      var currentMonday = this.getMondayOfWeek(currentYear, currentWeek)
-      var targetMonday = this.getMondayOfWeek(targetYear, targetWeek)
-      var diffDays = (targetMonday.getTime() - currentMonday.getTime()) / 86400000
+      const currentMonday = this.getMondayOfWeek(currentYear, currentWeek)
+      const targetMonday = this.getMondayOfWeek(targetYear, targetWeek)
+      const diffDays = (targetMonday.getTime() - currentMonday.getTime()) / 86400000
       offset = Math.round(diffDays / 7)
     }
 
@@ -206,11 +214,11 @@ Page({
 
   // Helper to get Monday of a given ISO year/week
   getMondayOfWeek: function(year, week) {
-    var jan4 = new Date(year, 0, 4)
-    var jan4Day = jan4.getDay() || 7
-    var jan4Monday = new Date(jan4)
+    const jan4 = new Date(year, 0, 4)
+    const jan4Day = jan4.getDay() || 7
+    const jan4Monday = new Date(jan4)
     jan4Monday.setDate(jan4.getDate() - jan4Day + 1)
-    var target = new Date(jan4Monday)
+    const target = new Date(jan4Monday)
     target.setDate(jan4Monday.getDate() + (week - 1) * 7)
     target.setHours(0, 0, 0, 0)
     return target
@@ -223,7 +231,7 @@ Page({
   // ==================== Chart Mode Toggle ====================
 
   toggleChartMode: function() {
-    var mode = this.data.chartMode === 'income' ? 'expense' : 'income'
+    const mode = this.data.chartMode === 'income' ? 'expense' : 'income'
     this.setData({
       chartMode: mode,
       currentChartData: mode === 'income' ? this.data.incomeChartData : this.data.expenseChartData,
@@ -252,73 +260,73 @@ Page({
   // ==================== Data Loading ====================
 
   loadData: function() {
-    var that = this
+    const that = this
     that.setData({ loading: true })
 
-    var startDate = that.data.startDate
-    var endDate = that.data.endDate
+    const startDate = that.data.startDate
+    const endDate = that.data.endDate
 
     // Query current period data
-    var incomePromise = db.queryAll(COLLECTIONS.INCOME, {
+    const incomePromise = db.queryAll(COLLECTIONS.INCOME, {
       date: db.getDb().command.gte(startDate).and(db.getDb().command.lte(endDate))
     })
 
-    var purchasePromise = db.queryAll(COLLECTIONS.PURCHASE, {
+    const purchasePromise = db.queryAll(COLLECTIONS.PURCHASE, {
       date: db.getDb().command.gte(startDate).and(db.getDb().command.lte(endDate))
     })
 
-    var expensePromise = db.queryAll(COLLECTIONS.EXPENSE, {
+    const expensePromise = db.queryAll(COLLECTIONS.EXPENSE, {
       date: db.getDb().command.gte(startDate).and(db.getDb().command.lte(endDate))
     })
 
     // Fixed expenses: new format (monthlyAmount items) + old format (date-based records)
-    var fixedExpensePromise = db.queryAll(COLLECTIONS.FIXED_EXPENSE, {})
+    const fixedExpensePromise = db.queryAll(COLLECTIONS.FIXED_EXPENSE, {})
 
-    var salaryPromise = db.queryAll(COLLECTIONS.STAFF, {
+    const salaryPromise = db.queryAll(COLLECTIONS.STAFF, {
       status: db.getDb().command.neq('inactive')
     })
 
     Promise.all([
       incomePromise, purchasePromise, expensePromise, fixedExpensePromise, salaryPromise
     ]).then(function(results) {
-      var incomeData = results[0].data || []
-      var purchaseData = results[1].data || []
-      var expenseData = results[2].data || []
-      var fixedExpenseData = results[3].data || []
-      var staffData = results[4].data || []
+      const incomeData = results[0].data || []
+      const purchaseData = results[1].data || []
+      const expenseData = results[2].data || []
+      const fixedExpenseData = results[3].data || []
+      const staffData = results[4].data || []
 
       // Calculate income totals
-      var totalIncome = 0
-      var incomeByType = {}
+      let totalIncome = 0
+      const incomeByType = {}
       incomeData.forEach(function(item) {
-        var amount = Number(item.amount) || 0
+        const amount = Number(item.amount) || 0
         totalIncome += amount
-        var type = item.type || 'other'
+        const type = item.type || 'other'
         incomeByType[type] = (incomeByType[type] || 0) + amount
       })
 
       // Calculate purchase totals
-      var totalPurchase = 0
+      let totalPurchase = 0
       purchaseData.forEach(function(item) {
         totalPurchase += Number(item.amount) || 0
       })
 
       // Calculate expense totals (expense + fixed_expense)
-      var totalExpense = 0
-      var expenseByCategory = {}
+      let totalExpense = 0
+      const expenseByCategory = {}
       expenseData.forEach(function(item) {
-        var amount = Number(item.amount) || 0
+        const amount = Number(item.amount) || 0
         totalExpense += amount
-        var category = item.category || 'other'
+        const category = item.category || 'other'
         expenseByCategory[category] = (expenseByCategory[category] || 0) + amount
       })
 
       // Fixed expenses: new format (monthlyAmount) scaled to period; old format (date) matched by range
-      var periodMonths = 1
+      let periodMonths = 1
       if (that.data.periodType === 'year') periodMonths = 12
       else if (that.data.periodType === 'week') periodMonths = 0.23
 
-      var fixedByName = {}
+      const fixedByName = {}
 
       fixedExpenseData.forEach(function(item) {
         if (item.monthlyAmount) {
@@ -327,44 +335,44 @@ Page({
           if (item.startDate && item.startDate > endDate) return
           if (item.endDate && item.endDate < startDate) return
 
-          var monthlyVal = Number(item.monthlyAmount) || 0
-          var amount = monthlyVal * periodMonths
+          const monthlyVal = Number(item.monthlyAmount) || 0
+          const amount = monthlyVal * periodMonths
           totalExpense += amount
-          var name = item.name || '固定成本'
+          const name = item.name || '固定成本'
           fixedByName[name] = (fixedByName[name] || 0) + amount
         } else if (item.date && item.date >= startDate && item.date <= endDate) {
           // Old format: date-range matched record — use original category
-          var amount = Number(item.amount || 0)
+          const amount = Number(item.amount || 0)
           totalExpense += amount
-          var cat = item.category || 'other'
+          const cat = item.category || 'other'
           expenseByCategory[cat] = (expenseByCategory[cat] || 0) + amount
         }
       })
 
       // Calculate salary totals (respect hireDate and scale by periodMonths)
-      var totalSalary = 0
+      let totalSalary = 0
       staffData.forEach(function(item) {
         // Only include salary if staff was hired on or before the period end date
         if (item.hireDate && item.hireDate > endDate) return
         totalSalary += (Number(item.salary) || 0) * periodMonths
       })
 
-      var totalExpenseAll = totalPurchase + totalExpense + totalSalary
+      let totalExpenseAll = totalPurchase + totalExpense + totalSalary
       // Guard against NaN from bad data — prevents crash in .toFixed()
       if (isNaN(totalExpenseAll)) totalExpenseAll = 0
-      var profit = totalIncome - totalExpenseAll
+      const profit = totalIncome - totalExpenseAll
 
       // Prepare chart data — pass purchase and salary for expense chart
-      var incomeResult = that.prepareIncomeChart(incomeByType)
-      var expenseResult = that.prepareExpenseChart(expenseByCategory, totalPurchase, totalSalary, fixedByName)
+      const incomeResult = that.prepareIncomeChart(incomeByType)
+      const expenseResult = that.prepareExpenseChart(expenseByCategory, totalPurchase, totalSalary, fixedByName)
 
-      var incomeChartData = incomeResult.chartConfig
-      var incomeBreakdown = incomeResult.breakdown
-      var expenseChartData = expenseResult.chartConfig
-      var expenseBreakdown = expenseResult.breakdown
+      const incomeChartData = incomeResult.chartConfig
+      const incomeBreakdown = incomeResult.breakdown
+      const expenseChartData = expenseResult.chartConfig
+      const expenseBreakdown = expenseResult.breakdown
 
-      var currentChartData = that.data.chartMode === 'income' ? incomeChartData : expenseChartData
-      var currentBreakdown = that.data.chartMode === 'income' ? incomeBreakdown : expenseBreakdown
+      const currentChartData = that.data.chartMode === 'income' ? incomeChartData : expenseChartData
+      const currentBreakdown = that.data.chartMode === 'income' ? incomeBreakdown : expenseBreakdown
 
       that.setData({
         totalIncome: totalIncome.toFixed(2),
@@ -388,23 +396,23 @@ Page({
   // ==================== Charts ====================
 
   prepareIncomeChart: function(incomeByType) {
-    var themeId = app.getTheme()
-    var colors = getIncomeTypeColors(themeId)
-    var types = ['dining', 'chess', 'liquor', 'teatime', 'service', 'other']
+    const themeId = app.getTheme()
+    const colors = getIncomeTypeColors(themeId)
+    const types = ['dining', 'chess', 'liquor', 'teatime', 'service', 'other']
 
-    var series = []
-    var breakdown = []
-    var totalForPercent = 0
+    const series = []
+    const breakdown = []
+    let totalForPercent = 0
 
     types.forEach(function(type) {
-      var value = incomeByType[type] || 0
+      const value = incomeByType[type] || 0
       totalForPercent += value
     })
 
     types.forEach(function(type, index) {
-      var value = incomeByType[type] || 0
+      const value = incomeByType[type] || 0
       if (value > 0) {
-        var color = colors[index]
+        const color = colors[index]
         series.push({ name: getIncomeTypeText(type), data: value, color: color })
         breakdown.push({
           name: getIncomeTypeText(type),
@@ -419,9 +427,9 @@ Page({
       series.push({ name: '暂无数据', data: 1, color: colors[5] })
     }
 
-    var chartConfig = getRingChartConfig(themeId, series, {
-      width: 280,
-      height: 280,
+    const chartConfig = getRingChartConfig(themeId, series, {
+      width: this.data.chartSize,
+      height: this.data.chartSize,
       colors: colors
     })
 
@@ -429,10 +437,10 @@ Page({
   },
 
   prepareExpenseChart: function(expenseByCategory, totalPurchase, totalSalary, fixedByName) {
-    var themeId = app.getTheme()
-    var colors = getExpenseTypeColors(themeId)
+    const themeId = app.getTheme()
+    const colors = getExpenseTypeColors(themeId)
     // Expense composition: 采购 + 各类支出 + 工资
-    var expenseItems = [
+    const expenseItems = [
       { key: 'purchase', name: '采购', value: totalPurchase || 0 },
       { key: 'salary', name: '工资', value: totalSalary || 0 },
       { key: 'rent', name: '房租', value: expenseByCategory['rent'] || 0 },
@@ -443,26 +451,26 @@ Page({
 
     // Break down fixed costs by name into separate chart entries
     if (fixedByName) {
-      var fixedNames = Object.keys(fixedByName).sort()
+      const fixedNames = Object.keys(fixedByName).sort()
       fixedNames.forEach(function(name) {
         expenseItems.push({ key: 'fixed_' + name, name: name, value: fixedByName[name] })
       })
     }
 
-    var series = []
-    var breakdown = []
-    var totalForPercent = 0
+    const series = []
+    const breakdown = []
+    let totalForPercent = 0
 
     expenseItems.forEach(function(item) {
       totalForPercent += item.value
     })
 
     // Use distinct colors for each expense item (base 6 + extended for fixed cost names)
-    var expenseColors = ['#F87171', '#C9A96E', '#60A5FA', '#4ADE80', '#FBBF24', '#6B7B8D', '#A78BFA', '#F472B6', '#34D399', '#FB923C', '#22D3EE', '#E879F9', '#FDE047']
+    const expenseColors = ['#F87171', '#C9A96E', '#60A5FA', '#4ADE80', '#FBBF24', '#6B7B8D', '#A78BFA', '#F472B6', '#34D399', '#FB923C', '#22D3EE', '#E879F9', '#FDE047']
 
     expenseItems.forEach(function(item, index) {
       if (item.value > 0) {
-        var color = expenseColors[index]
+        const color = expenseColors[index]
         series.push({ name: item.name, data: item.value, color: color })
         breakdown.push({
           name: item.name,
@@ -477,9 +485,9 @@ Page({
       series.push({ name: '暂无数据', data: 1, color: expenseColors[5] })
     }
 
-    var chartConfig = getRingChartConfig(themeId, series, {
-      width: 280,
-      height: 280,
+    const chartConfig = getRingChartConfig(themeId, series, {
+      width: this.data.chartSize,
+      height: this.data.chartSize,
       colors: expenseColors
     })
 

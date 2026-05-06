@@ -1,6 +1,6 @@
 <view class="ann-detail-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 180rpx; padding-top: {{statusBarHeight + 44}}px;">
   <!-- Custom Navigation Bar -->
-  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor || '#1A1A2E'}}; padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor || '#1A1A2E'}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">
     <view class="nav-bar-content">
       <view class="nav-back" bindtap="onBack">
         <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
@@ -34,7 +34,7 @@
         <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">·</text>
         <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">{{formattedTime}}</text>
         <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">·</text>
-        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">{{announcement.readBy.length}}人已读</text>
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">{{readCount}}人已读</text>
       </view>
       <!-- Display Time -->
       <view style="display: flex; align-items: center; gap: 8rpx; margin-bottom: 24rpx; background: {{theme.elevated || '#252540'}}; border-radius: 12rpx; padding: 14rpx 20rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.08)'}};">

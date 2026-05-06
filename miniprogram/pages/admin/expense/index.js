@@ -2,7 +2,7 @@ const app = getApp()
 const { formatAmount, formatDate } = require('../../../utils/helpers')
 const { log, LOG_TYPES } = require('../../../utils/logger')
 const { handleCloudError } = require('../../../utils/error-handler')
-const { checkPermission } = require('../../../utils/permission')
+const { hasPermission, checkPermission, ACTIONS } = require('../../../utils/permission')
 const { COLLECTIONS } = require('../../../utils/db')
 const db = require('../../../utils/db')
 
@@ -27,8 +27,9 @@ Page({
   },
 
   onShow() {
-    if (!checkPermission('expense', 'view')) {
-      wx.navigateBack()
+    if (!hasPermission('expense', ACTIONS.VIEW)) {
+      wx.showToast({ title: '无权限查看', icon: 'none' })
+      setTimeout(function() { wx.navigateBack() }, 1500)
       return
     }
     this.setData({
@@ -142,7 +143,7 @@ Page({
     const monthlyAmount = cycle === 'yearly' ? numAmount / 12 : numAmount
 
     wx.showLoading({ title: '保存中...' })
-    const db = wx.cloud.database()
+    const dbInst = db.getDb()
     const data = {
       name: name.trim(),
       amount: numAmount,
@@ -151,11 +152,11 @@ Page({
       description: description || '',
       startDate: startDate || formatDate(new Date()),
       endDate: endDate || '',
-      updatedAt: db.serverDate()
+      updatedAt: dbInst.serverDate()
     }
 
     if (this.data.isEdit && this.data.editId) {
-      db.collection(COLLECTIONS.FIXED_EXPENSE).doc(this.data.editId).update({ data })
+      db.updateDoc(COLLECTIONS.FIXED_EXPENSE, this.data.editId, data)
         .then(() => {
           wx.hideLoading()
           log(LOG_TYPES.EXPENSE_UPDATE, '更新固定成本: ' + data.name + ' ¥' + numAmount + '/' + (cycle === 'yearly' ? '年' : '月'))
@@ -168,8 +169,8 @@ Page({
           handleCloudError(err, '更新固定成本')
         })
     } else {
-      data.createdAt = db.serverDate()
-      db.collection(COLLECTIONS.FIXED_EXPENSE).add({ data })
+      data.createdAt = dbInst.serverDate()
+      db.addDoc(COLLECTIONS.FIXED_EXPENSE, data)
         .then(() => {
           wx.hideLoading()
           log(LOG_TYPES.EXPENSE_CREATE, '新增固定成本: ' + data.name + ' ¥' + numAmount + '/' + (cycle === 'yearly' ? '年' : '月'))
@@ -191,8 +192,12 @@ Page({
       confirmColor: '#F87171',
       success: (res) => {
         if (!res.confirm) return
+        if (!checkPermission('expense', ACTIONS.DELETE)) {
+          wx.showToast({ title: '无权限删除', icon: 'none' })
+          return
+        }
         wx.showLoading({ title: '删除中...' })
-        wx.cloud.database().collection(COLLECTIONS.FIXED_EXPENSE).doc(this.data.editId).remove()
+        db.deleteDoc(COLLECTIONS.FIXED_EXPENSE, this.data.editId)
           .then(() => {
             wx.hideLoading()
             log(LOG_TYPES.EXPENSE_DELETE, '删除固定成本: ' + this.data.name)
@@ -217,10 +222,20 @@ Page({
   },
 
   onStartDateChange(e) {
-    this.setData({ startDate: e.detail.value })
+    const val = e.detail.value
+    if (this.data.endDate && val > this.data.endDate) {
+      wx.showToast({ title: '起始日期不能晚于结束日期', icon: 'none' })
+      return
+    }
+    this.setData({ startDate: val })
   },
 
   onEndDateChange(e) {
-    this.setData({ endDate: e.detail.value })
+    const val = e.detail.value
+    if (this.data.startDate && val < this.data.startDate) {
+      wx.showToast({ title: '结束日期不能早于起始日期', icon: 'none' })
+      return
+    }
+    this.setData({ endDate: val })
   }
 })

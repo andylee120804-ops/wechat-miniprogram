@@ -47,28 +47,26 @@
   justify-content: flex-end;
 }
 
-.month-header {
-  padding-top: 48rpx;
+/* Filter Bar - unified with purchase page */
+.filter-bar {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  padding-top: calc(var(--status-bar-height, 44px) + 88rpx);
 }
 
-.month-nav {
+.month-picker {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 32rpx;
+  padding: 16rpx 32rpx;
 }
 
-.nav-arrow {
-  width: 64rpx;
-  height: 64rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 40rpx;
+.month-arrow {
+  font-size: 36rpx;
+  font-weight: 300;
+  padding: 8rpx 16rpx;
   color: rgba(255,255,255,0.6);
-  border: 1rpx solid rgba(255,255,255,0.1);
-  border-radius: 50%;
-  transition: opacity 0.2s;
 }
 
 .nav-arrow-disabled {
@@ -83,10 +81,11 @@
   text-align: center;
 }
 
-.filter-bar {
-  border-bottom: 1rpx solid rgba(255,255,255,0.04);
+.search-wrapper {
+  padding: 0 32rpx 16rpx;
 }
 
+/* Summary Card */
 .summary-card {
   position: relative;
   overflow: hidden;

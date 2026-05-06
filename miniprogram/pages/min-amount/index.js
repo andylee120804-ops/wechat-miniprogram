@@ -5,7 +5,7 @@ const db = require('../../utils/db')
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     min_room: '',
     min_noon: '',
     min_night: '',

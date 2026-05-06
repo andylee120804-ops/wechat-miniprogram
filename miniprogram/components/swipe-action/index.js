@@ -34,9 +34,9 @@ Component({
 
     onTouchMove: function(e) {
       if (this.data.disabled) return;
-      var deltaX = e.touches[0].clientX - this.data.startX;
-      var maxSwipe = -this.data.threshold * this.data.actions.length;
-      var newTranslateX = this.data.isRevealed ? deltaX + maxSwipe : deltaX;
+      let deltaX = e.touches[0].clientX - this.data.startX;
+      const maxSwipe = -this.data.threshold * this.data.actions.length;
+      let newTranslateX = this.data.isRevealed ? deltaX + maxSwipe : deltaX;
 
       // Limit translateX between maxSwipe and 0
       if (newTranslateX > 0) newTranslateX = 0;
@@ -49,8 +49,8 @@ Component({
 
     onTouchEnd: function() {
       if (this.data.disabled) return;
-      var maxSwipe = -this.data.threshold * this.data.actions.length;
-      var halfThreshold = this.data.threshold / 2;
+      const maxSwipe = -this.data.threshold * this.data.actions.length;
+      const halfThreshold = this.data.threshold / 2;
 
       if (this.data.isRevealed) {
         // Currently revealed, check if we should close
@@ -82,8 +82,8 @@ Component({
     },
 
     onActionTap: function(e) {
-      var index = e.currentTarget.dataset.index;
-      var action = this.data.actions[index];
+      const index = e.currentTarget.dataset.index;
+      const action = this.data.actions[index];
       this.triggerEvent('actiontap', { index: index, action: action });
       // Close after action tap
       this.close();

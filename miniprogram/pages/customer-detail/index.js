@@ -1,13 +1,15 @@
 const app = getApp()
 const { formatDate, formatAmount } = require('../../utils/helpers')
 const { COLLECTIONS } = require('../../utils/db')
+const { hasPermission, ACTIONS } = require('../../utils/permission')
 const db = require('../../utils/db')
 
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     customerName: '',
+    customerNameInitial: '',
     loading: true,
     totalVisits: 0,
     totalSpending: '0.00',
@@ -17,10 +19,18 @@ Page({
   },
 
   onLoad(options) {
+    if (!hasPermission('customer', ACTIONS.VIEW)) {
+      wx.showToast({ title: '无权限查看', icon: 'none' })
+      setTimeout(function() { wx.navigateBack() }, 1500)
+      return
+    }
     const theme = app.getThemePageData()
     const name = decodeURIComponent(options.name || '')
-    this.setData({ theme, customerName: name, statusBarHeight: app.globalData.statusBarHeight || 44 })
-    this.loadData()
+    this.setData({ theme, customerName: name, customerNameInitial: (name || '?').charAt(0), statusBarHeight: app.globalData.statusBarHeight || 44 })
+  },
+
+  onShow() {
+    if (this.data.customerName) this.loadData()
   },
 
   onBack: function() {
@@ -29,19 +39,18 @@ Page({
 
   async loadData() {
     try {
-      const dbInst = wx.cloud.database()
       const [resRes, incRes] = await Promise.all([
         db.queryAll(COLLECTIONS.RESERVATION, {
           customerName: this.data.customerName,
-          status: dbInst.command.neq('cancelled')
+          status: db.getDb().command.neq('cancelled')
         }, 'date', 'desc'),
         db.queryAll(COLLECTIONS.INCOME, {
           source: this.data.customerName
         })
       ])
 
-      const history = resRes.data
-      const totalSpending = incRes.data.reduce((s, i) => s + (i.amount || 0), 0)
+      const history = resRes.data || []
+      const totalSpending = (incRes.data || []).reduce((s, i) => s + (i.amount || 0), 0)
 
       // Preferred room
       const roomCount = {}
@@ -57,7 +66,9 @@ Page({
         totalSpending: formatAmount(totalSpending),
         preferredRoom,
         lastVisit: history[0] ? formatDate(history[0].date) : '-',
-        visitHistory: history.slice(0, 20)
+        visitHistory: history.slice(0, 20).map(h => ({
+          ...h, formattedDate: formatDate(h.date)
+        }))
       })
     } catch (err) {
       this.setData({ loading: false })

@@ -5,8 +5,14 @@ class PurchasePage extends BasePage {
     super(miniProgram, 'purchase/index')
   }
 
+  // --- Data assertions ---
+
   async getMonthStr() {
     return this.getData('monthStr')
+  }
+
+  async getMonthLabel() {
+    return this.getData('monthLabel')
   }
 
   async getCategories() {
@@ -27,6 +33,26 @@ class PurchasePage extends BasePage {
 
   async isLoading() {
     return this.getData('loading')
+  }
+
+  // --- Element-level rendering checks ---
+
+  async getMonthLabelText() {
+    const text = await this.getElementText('.month-label')
+    return text ? text.trim() : null
+  }
+
+  async getSummaryAmountText() {
+    const text = await this.getElementText('.text-display')
+    return text ? text.trim() : null
+  }
+
+  async navigatePrevMonth() {
+    await this.callMethod('onMonthPrev')
+  }
+
+  async navigateNextMonth() {
+    await this.callMethod('onMonthNext')
   }
 }
 

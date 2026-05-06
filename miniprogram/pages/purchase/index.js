@@ -1,7 +1,7 @@
 const app = getApp()
 const { formatDate, formatAmount, getCategoryName, getMonthRange } = require('../../utils/helpers')
 const { handleCloudError } = require('../../utils/error-handler')
-const { checkPermission } = require('../../utils/permission')
+const { checkPermission, ACTIONS, hasPermission } = require('../../utils/permission')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 
@@ -48,39 +48,44 @@ Page({
   },
 
   onShow: function() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ active: 2 })
+    }
     this.loadData()
   },
 
   loadData: function() {
-    var that = this
+    const that = this
     that.setData({ loading: true, page: 1, purchases: [], filteredPurchases: [] })
 
-    var range = getMonthRange(that.data.currentMonth)
+    const range = getMonthRange(that.data.currentMonth)
 
     // Query all records in month for accurate total amount
-    var totalPromise = db.queryAll(COLLECTIONS.PURCHASE, {
+    const totalPromise = db.queryAll(COLLECTIONS.PURCHASE, {
       date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
     })
 
     // Query first page for display
-    var pagePromise = db.queryPage(COLLECTIONS.PURCHASE, {
+    const pagePromise = db.queryPage(COLLECTIONS.PURCHASE, {
       date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
     }, 1, that.data.pageSize, 'date', 'desc')
 
     Promise.all([totalPromise, pagePromise]).then(function(results) {
-      var allData = results[0].data || []
-      var totalAmount = 0
+      const allData = results[0].data || []
+      let totalAmount = 0
       allData.forEach(function(p) { totalAmount += Number(p.amount) || 0 })
 
-      var res = results[1]
-      var purchases = (res.data || []).map(function(p) {
-        p.categoryName = getCategoryName(p.category)
-        p.formattedAmount = formatAmount(p.amount)
-        p.formattedDate = formatDate(p.date)
-        return p
+      const res = results[1]
+      const purchases = (res.data || []).map(function(p) {
+        return {
+          ...p,
+          categoryName: getCategoryName(p.category),
+          formattedAmount: formatAmount(p.amount),
+          formattedDate: formatDate(p.date)
+        }
       })
 
-      var categoryCounts = {}
+      const categoryCounts = {}
       ALL_CATEGORIES.forEach(function(cat) { categoryCounts[cat.id] = 0 })
 
       allData.forEach(function(p) {
@@ -89,10 +94,10 @@ Page({
       categoryCounts[''] = allData.length
 
       // Only show categories that have records, plus "全部" (all)
-      var updatedCategories = ALL_CATEGORIES.filter(function(cat) {
+      const updatedCategories = ALL_CATEGORIES.filter(function(cat) {
         return cat.id === '' || (categoryCounts[cat.id] || 0) > 0
       }).map(function(cat) {
-        return Object.assign({}, cat, { count: categoryCounts[cat.id] || 0 })
+        return { ...cat, count: categoryCounts[cat.id] || 0 }
       })
 
       that.setData({
@@ -118,20 +123,22 @@ Page({
 
   onReachBottom: function() {
     if (this.data.loadingMore || !this.data.hasMore) return
-    var that = this
+    const that = this
     that.setData({ loadingMore: true })
-    var range = getMonthRange(that.data.currentMonth)
+    const range = getMonthRange(that.data.currentMonth)
 
     db.queryPage(COLLECTIONS.PURCHASE, {
       date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
     }, that.data.page + 1, that.data.pageSize, 'date', 'desc').then(function(res) {
-      var newItems = (res.data || []).map(function(p) {
-        p.categoryName = getCategoryName(p.category)
-        p.formattedAmount = formatAmount(p.amount)
-        p.formattedDate = formatDate(p.date)
-        return p
+      const newItems = (res.data || []).map(function(p) {
+        return {
+          ...p,
+          categoryName: getCategoryName(p.category),
+          formattedAmount: formatAmount(p.amount),
+          formattedDate: formatDate(p.date)
+        }
       })
-      var allItems = that.data.purchases.concat(newItems)
+      const allItems = that.data.purchases.concat(newItems)
       that.setData({
         purchases: allItems,
         filteredPurchases: allItems,
@@ -146,8 +153,8 @@ Page({
   },
 
   onMonthChange: function(e) {
-    var offset = e.currentTarget.dataset.offset
-    var newMonth = this.data.currentMonth + (offset || 0)
+    const offset = e.currentTarget.dataset.offset
+    const newMonth = this.data.currentMonth + (offset || 0)
     this.setData({ currentMonth: newMonth })
     this.loadData()
   },
@@ -178,17 +185,17 @@ Page({
   },
 
   applyFilter: function() {
-    var purchases = this.data.purchases
-    var activeCategory = this.data.activeCategory
-    var keyword = this.data.searchKeyword.trim().toLowerCase()
+    const purchases = this.data.purchases
+    const activeCategory = this.data.activeCategory
+    const keyword = this.data.searchKeyword.trim().toLowerCase()
 
-    var filtered = purchases.filter(function(p) {
-      var matchCategory = !activeCategory || p.category === activeCategory
-      var matchSearch = !keyword ||
-        (p.item && p.item.toLowerCase().indexOf(keyword) !== -1) ||
-        (p.remark && p.remark.toLowerCase().indexOf(keyword) !== -1) ||
-        (p.purchaseByName && p.purchaseByName.toLowerCase().indexOf(keyword) !== -1) ||
-        (p.categoryName && p.categoryName.toLowerCase().indexOf(keyword) !== -1)
+    const filtered = purchases.filter(function(p) {
+      const matchCategory = !activeCategory || p.category === activeCategory
+      const matchSearch = !keyword ||
+        (p.item && p.item.toLowerCase().includes(keyword)) ||
+        (p.remark && p.remark.toLowerCase().includes(keyword)) ||
+        (p.purchaseByName && p.purchaseByName.toLowerCase().includes(keyword)) ||
+        (p.categoryName && p.categoryName.toLowerCase().includes(keyword))
       return matchCategory && matchSearch
     })
 
@@ -196,12 +203,12 @@ Page({
   },
 
   onAddPurchase: function() {
-    if (!checkPermission('purchase', 'add')) return
+    if (!checkPermission('purchase', ACTIONS.ADD)) return
     wx.navigateTo({ url: '/pages/purchase-add/index' })
   },
 
   onItemTap: function(e) {
-    var id = e.currentTarget.dataset.id
+    const id = e.currentTarget.dataset.id
     wx.navigateTo({ url: '/pages/purchase-detail/index?id=' + id })
   }
 })

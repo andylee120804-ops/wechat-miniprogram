@@ -1,5 +1,5 @@
 const { formatDate, getReservationStatusText } = require('../../utils/helpers')
-const { hasPermission } = require('../../utils/permission')
+const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
@@ -7,7 +7,7 @@ const db = require('../../utils/db')
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     loading: true,
     currentYear: 0,
     currentMonth: 0,
@@ -18,7 +18,10 @@ Page({
   },
 
   onShow() {
-    if (!hasPermission('reservation', 'view')) {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ active: 1 })
+    }
+    if (!hasPermission('reservation', ACTIONS.VIEW)) {
       wx.showToast({ title: '无权限查看预约', icon: 'none' })
       return
     }
@@ -49,16 +52,16 @@ Page({
         date: _.gte(startDate).and(_.lte(endDate))
       }, 'date', 'asc')
 
-      const reservations = res.data || []
+      const rawData = res.data || []
       const markDates = []
       const markDateSet = {}
-      reservations.forEach(function(r) {
+      const reservations = rawData.map(function(r) {
         const dateStr = formatDate(r.date)
         if (!markDateSet[dateStr]) {
           markDateSet[dateStr] = true
           markDates.push(dateStr)
         }
-        r.statusText = getReservationStatusText(r.status)
+        return { ...r, statusText: getReservationStatusText(r.status) }
       })
 
       this.setData({ markDates })
@@ -86,10 +89,9 @@ Page({
         date: _.gte(dayStart).and(_.lte(dayEnd))
       }, 'time', 'asc')
 
-      const reservations = res.data || []
-      // Add statusText to each reservation
-      reservations.forEach(function(r) {
-        r.statusText = getReservationStatusText(r.status)
+      const rawData = res.data || []
+      const reservations = rawData.map(function(r) {
+        return { ...r, statusText: getReservationStatusText(r.status) }
       })
       const grouped = this.groupByRoom(reservations)
 
@@ -135,7 +137,7 @@ Page({
   },
 
   onAddReservation() {
-    if (!hasPermission('reservation', 'add')) {
+    if (!hasPermission('reservation', ACTIONS.ADD)) {
       wx.showToast({ title: '无权限创建预约', icon: 'none' })
       return
     }

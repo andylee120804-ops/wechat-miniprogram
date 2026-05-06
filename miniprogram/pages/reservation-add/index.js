@@ -1,5 +1,5 @@
-const { formatDate, getRoomName } = require('../../utils/helpers')
-const { hasPermission } = require('../../utils/permission')
+const { formatDate, getRoomName, getExclusiveTypeName } = require('../../utils/helpers')
+const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { validateRequired, validateGuestCount } = require('../../utils/validators')
 const { log, LOG_TYPES } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
@@ -9,7 +9,7 @@ const db = require('../../utils/db')
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     isEdit: false,
     id: '',
     date: '',
@@ -150,10 +150,8 @@ Page({
   },
 
   clearError(field) {
-    const errors = this.data.errors
-    if (errors[field]) {
-      errors[field] = ''
-      this.setData({ errors })
+    if (this.data.errors[field]) {
+      this.setData({ errors: { ...this.data.errors, [field]: '' } })
     }
   },
 
@@ -193,11 +191,11 @@ Page({
       return
     }
 
-    if (this.data.isEdit && !hasPermission('reservation', 'edit')) {
+    if (this.data.isEdit && !hasPermission('reservation', ACTIONS.EDIT)) {
       wx.showToast({ title: '无权限修改预约', icon: 'none' })
       return
     }
-    if (!this.data.isEdit && !hasPermission('reservation', 'add')) {
+    if (!this.data.isEdit && !hasPermission('reservation', ACTIONS.ADD)) {
       wx.showToast({ title: '无权限创建预约', icon: 'none' })
       return
     }
@@ -213,16 +211,7 @@ Page({
       const userInfo = app.globalData.userInfo || {}
 
       const et = this.data.exclusiveType
-      let roomName = ''
-      if (et === 'none') {
-        roomName = getRoomName(this.data.room)
-      } else if (et === 'noon') {
-        roomName = '包场（中午）'
-      } else if (et === 'night') {
-        roomName = '包场（晚上）'
-      } else if (et === 'full') {
-        roomName = '包场全天'
-      }
+      const roomName = getExclusiveTypeName(et, this.data.room)
 
       const docData = {
         date: new Date(this.data.date + 'T00:00:00'),
@@ -245,11 +234,11 @@ Page({
         await db.updateDoc(COLLECTIONS.RESERVATION, this.data.id, docData)
         // Log changes with before/after details
         if (oldData) {
-          var changes = {}
-          var trackedFields = { standard: '餐标', roomName: '包厢', time: '时段', customerName: '客户', phone: '电话', guestCount: '人数', date: '日期', exclusiveType: '包场类型', remark: '备注', isPartner: '股东' }
+          const changes = {}
+          const trackedFields = { standard: '餐标', roomName: '包厢', time: '时段', customerName: '客户', phone: '电话', guestCount: '人数', date: '日期', exclusiveType: '包场类型', remark: '备注', isPartner: '股东' }
           Object.keys(trackedFields).forEach(function(f) {
-            var oldVal = oldData[f]
-            var newVal = docData[f]
+            const oldVal = oldData[f]
+            const newVal = docData[f]
             if (String(oldVal) !== String(newVal)) {
               changes[trackedFields[f]] = { from: oldVal, to: newVal }
             }
@@ -292,7 +281,7 @@ Page({
       const et = this.data.exclusiveType
 
       // Build conditions
-      var conditions = [
+      const conditions = [
         { date: _.gte(dayStart).and(_.lte(dayEnd)) },
         { status: _.neq('cancelled') }
       ]
@@ -323,7 +312,7 @@ Page({
       }
       // 'full': check ALL reservations on this date (no extra filter needed)
 
-      var where = _.and(conditions)
+      const where = _.and(conditions)
 
       const res = await db.queryAll(COLLECTIONS.RESERVATION, where)
       if (res.data && res.data.length > 0) {
@@ -344,7 +333,7 @@ Page({
   },
 
   onDelete() {
-    if (!hasPermission('reservation', 'delete')) {
+    if (!hasPermission('reservation', ACTIONS.DELETE)) {
       wx.showToast({ title: '无权限删除预约', icon: 'none' })
       return
     }

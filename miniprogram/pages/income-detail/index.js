@@ -1,13 +1,15 @@
 const app = getApp()
-const { checkPermission } = require('../../utils/permission')
+const { hasPermission, checkPermission, ACTIONS } = require('../../utils/permission')
 const { log } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
+const { formatDate, formatAmount, getIncomeTypeText } = require('../../utils/helpers')
+const db = require('../../utils/db')
 
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     id: '',
     income: null,
     loading: true,
@@ -18,19 +20,38 @@ Page({
 
   onLoad(options) {
     const theme = app.getThemePageData()
-    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, id: options.id })
-    this.loadData()
+    this.setData({
+      theme,
+      statusBarHeight: app.globalData.statusBarHeight || 44,
+      id: options.id,
+      canEdit: hasPermission('income', ACTIONS.EDIT),
+      canDelete: hasPermission('income', ACTIONS.DELETE)
+    })
+  },
+
+  onShow() {
+    if (this.data.id) this.loadData()
   },
 
   async loadData() {
     try {
-      const db = wx.cloud.database()
-      const res = await db.collection(COLLECTIONS.INCOME).doc(this.data.id).get()
+      const res = await db.getDoc(COLLECTIONS.INCOME, this.data.id)
+      if (!res) {
+        wx.showToast({ title: '记录不存在', icon: 'none' })
+        setTimeout(() => wx.navigateBack(), 1500)
+        return
+      }
+      const income = {
+        ...res,
+        typeName: getIncomeTypeText(res.type),
+        formattedAmount: formatAmount(res.amount),
+        formattedDate: formatDate(res.date)
+      }
       this.setData({
-        income: res.data,
+        income,
         loading: false,
-        canEdit: checkPermission('income', 'edit'),
-        canDelete: checkPermission('income', 'delete')
+        canEdit: hasPermission('income', ACTIONS.EDIT),
+        canDelete: hasPermission('income', ACTIONS.DELETE)
       })
     } catch (err) {
       handleCloudError(err, '加载收入详情')
@@ -38,16 +59,12 @@ Page({
     }
   },
 
-  onShow() {
-    if (this.data.id) this.loadData()
-  },
-
   onBack() {
     wx.navigateBack()
   },
 
   onEdit() {
-    if (!checkPermission('income', 'edit')) {
+    if (!checkPermission('income', ACTIONS.EDIT)) {
       wx.showToast({ title: '无权限', icon: 'none' })
       return
     }
@@ -55,7 +72,7 @@ Page({
   },
 
   onDelete() {
-    if (!checkPermission('income', 'delete')) {
+    if (!checkPermission('income', ACTIONS.DELETE)) {
       wx.showToast({ title: '无权限', icon: 'none' })
       return
     }
@@ -65,11 +82,10 @@ Page({
   async onConfirmDelete() {
     this.setData({ showDeleteModal: false })
     try {
-      const db = wx.cloud.database()
       const income = this.data.income
-      await db.collection(COLLECTIONS.INCOME).doc(this.data.id).remove()
+      await db.deleteDoc(COLLECTIONS.INCOME, this.data.id)
       if (income.reservationId) {
-        await db.collection(COLLECTIONS.RESERVATION).doc(income.reservationId).update({ data: { hasIncome: false } })
+        await db.updateDoc(COLLECTIONS.RESERVATION, income.reservationId, { hasIncome: false })
       }
       log('INCOME_DELETE', { type: income.type, amount: income.amount })
       wx.showToast({ title: '已删除', icon: 'success' })

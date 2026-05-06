@@ -1,5 +1,5 @@
 const { getCurrentThemeId, getThemePageData, THEMES } = require('./utils/theme')
-const { COLLECTIONS } = require('./utils/db')
+const { COLLECTIONS, CLOUD_ENV } = require('./utils/db')
 
 App({
   globalData: {
@@ -12,7 +12,7 @@ App({
   },
 
   onLaunch() {
-    wx.cloud.init({ env: 'cloud1-d9gwvttcr864f8021', traceUser: true })
+    wx.cloud.init({ env: CLOUD_ENV, traceUser: true })
     // Get status bar height - use new API if available, fallback otherwise
     try {
       if (typeof wx.getWindowInfo === 'function') {
@@ -41,7 +41,7 @@ App({
         this.globalData.venueName = res.result.data.venueName
       }
     } catch (err) {
-      // Silent — fallback to '听澜轩' in pages
+      console.warn('[App] 加载场地名称失败:', err)
     }
   },
 
@@ -100,12 +100,13 @@ App({
       const db = wx.cloud.database()
       const staffRes = await db.collection(COLLECTIONS.STAFF).doc(userInfo._id).get()
       if (staffRes.data) {
-        let updatedInfo = Object.assign({}, userInfo, {
+        let updatedInfo = {
+          ...userInfo,
           name: staffRes.data.name,
           role: staffRes.data.role,
           phone: staffRes.data.phone || '',
           permissionsUpdatedAt: staffRes.data.permissionsUpdatedAt || userInfo.permissionsUpdatedAt
-        })
+        }
         this.setUserInfo(updatedInfo)
       }
     } catch (err) {

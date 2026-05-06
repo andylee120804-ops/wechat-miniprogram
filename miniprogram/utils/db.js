@@ -58,16 +58,16 @@ async function queryAll(collection, where, orderBy, orderDir) {
   }
 
   // Batch query to fetch all records
-  var allData = []
-  var batchTimes = Math.ceil(total / MAX_LIMIT)
-  for (var i = 0; i < batchTimes; i++) {
-    var res = await db.collection(collection)
+  let allData = []
+  const batchTimes = Math.ceil(total / MAX_LIMIT)
+  for (let i = 0; i < batchTimes; i++) {
+    const res = await db.collection(collection)
       .where(where)
       .orderBy(orderBy, orderDir)
       .skip(i * MAX_LIMIT)
       .limit(MAX_LIMIT)
       .get()
-    allData = allData.concat(res.data)
+    allData.push(...res.data)
   }
 
   return { data: allData, total: total }
@@ -91,16 +91,16 @@ async function queryPage(collection, where, page, pageSize, orderBy, orderDir) {
   orderDir = orderDir || 'desc'
 
   const db = getDb()
-  var skip = (page - 1) * pageSize
+  const skip = (page - 1) * pageSize
 
-  var res = await db.collection(collection)
+  const res = await db.collection(collection)
     .where(where)
     .orderBy(orderBy, orderDir)
     .skip(skip)
     .limit(pageSize)
     .get()
 
-  var countRes = await db.collection(collection).where(where).count()
+  const countRes = await db.collection(collection).where(where).count()
 
   return {
     data: res.data,
@@ -120,11 +120,8 @@ async function queryPage(collection, where, page, pageSize, orderBy, orderDir) {
  */
 async function addDoc(collection, data) {
   const db = getDb()
-  var now = db.serverDate()
-  var doc = Object.assign({}, data, {
-    createdAt: now,
-    updatedAt: now
-  })
+  const now = db.serverDate()
+  const doc = { ...data, createdAt: now, updatedAt: now }
   return await db.collection(collection).add({ data: doc })
 }
 
@@ -137,10 +134,10 @@ async function addDoc(collection, data) {
 async function getDoc(collection, id) {
   const db = getDb()
   try {
-    var res = await db.collection(collection).doc(id).get()
+    const res = await db.collection(collection).doc(id).get()
     return res.data
   } catch (err) {
-    if (err.errCode === -1 || err.errMsg.indexOf('not exist') !== -1) {
+    if (err.errCode === -1 || (err.errMsg && err.errMsg.includes('not exist'))) {
       return null
     }
     throw err
@@ -157,9 +154,7 @@ async function getDoc(collection, id) {
  */
 async function updateDoc(collection, id, data) {
   const db = getDb()
-  var updateData = Object.assign({}, data, {
-    updatedAt: db.serverDate()
-  })
+  const updateData = { ...data, updatedAt: db.serverDate() }
   return await db.collection(collection).doc(id).update({ data: updateData })
 }
 
@@ -183,5 +178,6 @@ module.exports = {
   updateDoc,
   deleteDoc,
   PAGE_SIZE,
-  COLLECTIONS
+  COLLECTIONS,
+  CLOUD_ENV
 }

@@ -16,7 +16,7 @@ Component({
 
   methods: {
     onChipTap: function(e) {
-      var id = e.currentTarget.dataset.id;
+      const id = e.currentTarget.dataset.id;
       this.triggerEvent('change', { id: id });
     }
   }

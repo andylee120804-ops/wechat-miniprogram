@@ -3,12 +3,12 @@ const { formatDateTime, formatDate } = require('../../utils/helpers')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
-const { hasPermission } = require('../../utils/permission')
+const { hasPermission, ACTIONS } = require('../../utils/permission')
 
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     loading: true,
     announcement: null,
     formattedTime: '',
@@ -29,7 +29,7 @@ Page({
 
   onLoad(options) {
     const theme = app.getThemePageData()
-    const canEdit = hasPermission('announcement', 'edit')
+    const canEdit = hasPermission('announcement', ACTIONS.EDIT)
     this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, canEdit })
     const id = options.id && typeof options.id === 'string' ? options.id.trim() : ''
     if (id) {
@@ -49,7 +49,7 @@ Page({
     }
     this.setData({ loading: true })
     try {
-      const dbInst = wx.cloud.database()
+      const dbInst = db.getDb()
       const res = await dbInst.collection(COLLECTIONS.ANNOUNCEMENT).doc(id).get()
       if (!res.data) {
         wx.showToast({ title: '公告不存在', icon: 'none' })
@@ -58,8 +58,10 @@ Page({
       }
       const announcement = res.data
       const userInfo = app.globalData.userInfo
-      const isRead = (announcement.readBy || []).includes(userInfo._id)
+      const readBy = announcement.readBy || []
+      const isRead = readBy.includes(userInfo._id)
       const needsConfirm = !!(announcement.needsConfirm === true && !isRead)
+      const readCount = readBy.length
 
       const dateStr = formatDate(new Date())
       const allRes = await db.queryAll(COLLECTIONS.ANNOUNCEMENT, { active: true }, 'createdAt', 'desc')
@@ -96,6 +98,7 @@ Page({
         formattedDate: formatDate(announcement.createdAt),
         displayDateText: this._calcDisplayDate(announcement),
         needsConfirm,
+        readCount,
         dayAnnouncements: dayList,
         readStaff,
         unreadStaff
@@ -151,17 +154,31 @@ Page({
   },
 
   onEditStartDateChange(e) {
-    this.setData({ editStartDate: e.detail.value })
+    const val = e.detail.value
+    if (this.data.editEndDate && val > this.data.editEndDate) {
+      wx.showToast({ title: '起始日期不能晚于结束日期', icon: 'none' })
+      return
+    }
+    this.setData({ editStartDate: val })
   },
 
   onEditEndDateChange(e) {
-    this.setData({ editEndDate: e.detail.value })
+    const val = e.detail.value
+    if (this.data.editStartDate && val < this.data.editStartDate) {
+      wx.showToast({ title: '结束日期不能早于起始日期', icon: 'none' })
+      return
+    }
+    this.setData({ editEndDate: val })
   },
 
   async onSaveEdit() {
     const { announcement, editTitle, editContent, editPriority, editNeedsConfirm, editStartDate, editEndDate } = this.data
     if (!editTitle.trim() || !editContent.trim()) {
       wx.showToast({ title: '请填写标题和内容', icon: 'none' })
+      return
+    }
+    if (editStartDate && editEndDate && editStartDate > editEndDate) {
+      wx.showToast({ title: '起始日期不能晚于结束日期', icon: 'none' })
       return
     }
     try {

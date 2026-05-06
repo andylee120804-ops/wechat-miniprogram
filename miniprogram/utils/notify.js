@@ -4,7 +4,11 @@
  * plus checks for upcoming reservations.
  */
 
-var UNREAD_COUNT_KEY = 'unreadCount'
+const { formatDate, formatTime } = require('./helpers')
+const { COLLECTIONS } = require('./db')
+
+const UNREAD_COUNT_KEY = 'unreadCount'
+const TAB_NOTIFICATION_INDEX = 4
 
 /**
  * Get the current unread notification count from local storage.
@@ -12,12 +16,12 @@ var UNREAD_COUNT_KEY = 'unreadCount'
  */
 function getUnreadCount() {
   try {
-    var count = wx.getStorageSync(UNREAD_COUNT_KEY)
+    const count = wx.getStorageSync(UNREAD_COUNT_KEY)
     if (typeof count === 'number' && count > 0) {
       return count
     }
   } catch (e) {
-    // ignore
+    console.warn('[Notify] Failed to get unread count:', e)
   }
   return 0
 }
@@ -33,14 +37,18 @@ function setUnreadCount(count) {
     if (count > 0) {
       wx.setStorageSync(UNREAD_COUNT_KEY, count)
       wx.setTabBarBadge({
-        index: 4,
+        index: TAB_NOTIFICATION_INDEX,
         text: String(count)
-      }).catch(function() {})
+      }).catch(err => {
+        console.warn('[Notify] Failed to set tab bar badge:', err)
+      })
     } else {
       wx.removeStorageSync(UNREAD_COUNT_KEY)
       wx.removeTabBarBadge({
-        index: 4
-      }).catch(function() {})
+        index: TAB_NOTIFICATION_INDEX
+      }).catch(err => {
+        console.warn('[Notify] Failed to remove tab bar badge:', err)
+      })
     }
   } catch (e) {
     console.error('[Notify] Failed to set unread count:', e)
@@ -54,8 +62,10 @@ function clearUnreadCount() {
   try {
     wx.removeStorageSync(UNREAD_COUNT_KEY)
     wx.removeTabBarBadge({
-      index: 4
-    }).catch(function() {})
+      index: TAB_NOTIFICATION_INDEX
+    }).catch(err => {
+      console.warn('[Notify] Failed to remove tab bar badge on clear:', err)
+    })
   } catch (e) {
     console.error('[Notify] Failed to clear unread count:', e)
   }
@@ -67,7 +77,7 @@ function clearUnreadCount() {
  */
 function incrementUnread(delta) {
   delta = delta || 1
-  var current = getUnreadCount()
+  const current = getUnreadCount()
   setUnreadCount(current + delta)
 }
 
@@ -77,50 +87,29 @@ function incrementUnread(delta) {
  * a start time within the next 2 hours and are not cancelled.
  * @returns {Promise<Array>} Array of upcoming reservation objects
  */
-function checkUpcomingReservations() {
-  var { COLLECTIONS } = require('./db')
-  var db = wx.cloud.database({ env: 'cloud1-d9gwvttcr864f8021' })
-  var now = new Date()
-  var todayStr = _formatDate(now)
-  var twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000)
-  var twoHoursStr = _formatTime(twoHoursLater)
-  var nowStr = _formatTime(now)
+async function checkUpcomingReservations() {
+  try {
+    const db = wx.cloud.database()
+    const now = new Date()
+    const todayStr = formatDate(now)
+    const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000)
+    const twoHoursStr = formatTime(twoHoursLater)
+    const nowStr = formatTime(now)
 
-  return db.collection(COLLECTIONS.RESERVATION)
-    .where({
-      date: todayStr,
-      time: db.command.gte(nowStr).and(db.command.lte(twoHoursStr)),
-      status: db.command.in(['reserved', 'confirmed'])
-    })
-    .orderBy('time', 'asc')
-    .limit(20)
-    .get()
-    .then(function(res) {
-      return res.data || []
-    })
-    .catch(function(err) {
-      console.error('[Notify] Failed to check upcoming reservations:', err)
-      return []
-    })
-}
-
-/**
- * Internal: format date as YYYY-MM-DD
- */
-function _formatDate(d) {
-  var year = d.getFullYear()
-  var month = String(d.getMonth() + 1).padStart(2, '0')
-  var day = String(d.getDate()).padStart(2, '0')
-  return year + '-' + month + '-' + day
-}
-
-/**
- * Internal: format time as HH:mm
- */
-function _formatTime(d) {
-  var hours = String(d.getHours()).padStart(2, '0')
-  var minutes = String(d.getMinutes()).padStart(2, '0')
-  return hours + ':' + minutes
+    const res = await db.collection(COLLECTIONS.RESERVATION)
+      .where({
+        date: todayStr,
+        time: db.command.gte(nowStr).and(db.command.lte(twoHoursStr)),
+        status: db.command.in(['reserved', 'confirmed'])
+      })
+      .orderBy('time', 'asc')
+      .limit(20)
+      .get()
+    return res.data || []
+  } catch (err) {
+    console.error('[Notify] Failed to check upcoming reservations:', err)
+    return []
+  }
 }
 
 module.exports = {

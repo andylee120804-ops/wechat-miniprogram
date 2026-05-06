@@ -1,11 +1,13 @@
 const app = getApp()
 const { COLLECTIONS } = require('../../utils/db')
+const { formatDate, formatAmount } = require('../../utils/helpers')
+const { hasPermission, ACTIONS } = require('../../utils/permission')
 const db = require('../../utils/db')
 
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     loading: true,
     customers: [],
     filteredCustomers: [],
@@ -14,6 +16,11 @@ Page({
   },
 
   onShow() {
+    if (!hasPermission('customer', ACTIONS.VIEW)) {
+      wx.showToast({ title: '无权限查看', icon: 'none' })
+      setTimeout(function() { wx.navigateBack() }, 1500)
+      return
+    }
     const theme = app.getThemePageData()
     this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
     this.loadCustomers()
@@ -26,14 +33,13 @@ Page({
   async loadCustomers() {
     this.setData({ loading: true })
     try {
-      const dbInst = wx.cloud.database()
       const res = await db.queryAll(COLLECTIONS.RESERVATION, {
-        status: dbInst.command.neq('cancelled')
+        status: db.getDb().command.neq('cancelled')
       })
 
       // Aggregate by customerName
       const map = {}
-      res.data.forEach(r => {
+      ;(res.data || []).forEach(r => {
         const name = r.customerName || '未知'
         if (!map[name]) {
           map[name] = { name, visits: 0, totalAmount: 0, lastVisit: r.date, preferredRoom: r.roomName || r.room }
@@ -47,7 +53,7 @@ Page({
 
       // Also query income to get spending
       const incomeRes = await db.queryAll(COLLECTIONS.INCOME, {})
-      incomeRes.data.forEach(i => {
+      ;(incomeRes.data || []).forEach(i => {
         const name = i.source
         if (map[name]) {
           map[name].totalAmount = (map[name].totalAmount || 0) + (i.amount || 0)
@@ -56,6 +62,13 @@ Page({
 
       let customers = Object.values(map)
       customers.sort((a, b) => b.visits - a.visits)
+      // Pre-format values for template rendering
+      customers = customers.map(c => ({
+        ...c,
+        nameInitial: (c.name || '?').charAt(0),
+        formattedAmount: formatAmount(c.totalAmount || 0),
+        formattedLastVisit: formatDate(c.lastVisit)
+      }))
       this.setData({ loading: false, customers, filteredCustomers: customers })
       this.applyFilter()
     } catch (err) {

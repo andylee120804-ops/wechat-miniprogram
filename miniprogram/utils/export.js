@@ -18,40 +18,40 @@ function generateMonthlySummary(incomeData, purchaseData, expenseData, monthStr)
   expenseData = expenseData || []
 
   // Calculate total income
-  var totalIncome = 0
-  var incomeByType = {}
-  for (var i = 0; i < incomeData.length; i++) {
-    var amount = Number(incomeData[i].amount) || 0
+  let totalIncome = 0
+  const incomeByType = {}
+  for (let i = 0; i < incomeData.length; i++) {
+    const amount = Number(incomeData[i].amount) || 0
     totalIncome += amount
-    var type = incomeData[i].type || 'other'
+    const type = incomeData[i].type || 'other'
     incomeByType[type] = (incomeByType[type] || 0) + amount
   }
 
   // Calculate total purchases
-  var totalPurchase = 0
-  var purchaseByCategory = {}
-  for (var j = 0; j < purchaseData.length; j++) {
-    var pAmount = Number(purchaseData[j].totalAmount || purchaseData[j].amount) || 0
+  let totalPurchase = 0
+  const purchaseByCategory = {}
+  for (let j = 0; j < purchaseData.length; j++) {
+    const pAmount = Number(purchaseData[j].totalAmount || purchaseData[j].amount) || 0
     totalPurchase += pAmount
-    var category = purchaseData[j].category || 'other'
+    const category = purchaseData[j].category || 'other'
     purchaseByCategory[category] = (purchaseByCategory[category] || 0) + pAmount
   }
 
   // Calculate total expenses
-  var totalExpense = 0
-  var expenseByCategory = {}
-  for (var k = 0; k < expenseData.length; k++) {
-    var eAmount = Number(expenseData[k].amount) || 0
+  let totalExpense = 0
+  const expenseByCategory = {}
+  for (let k = 0; k < expenseData.length; k++) {
+    const eAmount = Number(expenseData[k].amount) || 0
     totalExpense += eAmount
-    var eCat = expenseData[k].category || 'other'
+    const eCat = expenseData[k].category || 'other'
     expenseByCategory[eCat] = (expenseByCategory[eCat] || 0) + eAmount
   }
 
   // Net profit calculation
-  var netProfit = totalIncome - totalPurchase - totalExpense
+  const netProfit = totalIncome - totalPurchase - totalExpense
 
   // Build income breakdown for charts
-  var incomeBreakdown = Object.keys(incomeByType).map(function(type) {
+  const incomeBreakdown = Object.keys(incomeByType).map(function(type) {
     return {
       type: type,
       amount: incomeByType[type],
@@ -61,7 +61,7 @@ function generateMonthlySummary(incomeData, purchaseData, expenseData, monthStr)
   })
 
   // Build purchase breakdown for charts
-  var purchaseBreakdown = Object.keys(purchaseByCategory).map(function(cat) {
+  const purchaseBreakdown = Object.keys(purchaseByCategory).map(function(cat) {
     return {
       category: cat,
       amount: purchaseByCategory[cat],
@@ -71,7 +71,7 @@ function generateMonthlySummary(incomeData, purchaseData, expenseData, monthStr)
   })
 
   // Build expense breakdown for charts
-  var expenseBreakdown = Object.keys(expenseByCategory).map(function(cat) {
+  const expenseBreakdown = Object.keys(expenseByCategory).map(function(cat) {
     return {
       category: cat,
       amount: expenseByCategory[cat],

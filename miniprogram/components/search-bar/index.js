@@ -33,14 +33,14 @@ Component({
 
   methods: {
     onInput: function(e) {
-      var value = e.detail.value;
+      const value = e.detail.value;
       this.setData({ innerValue: value });
 
       if (this.data.debounceTimer) {
         clearTimeout(this.data.debounceTimer);
       }
 
-      var timer = setTimeout(function() {
+      let timer = setTimeout(function() {
         this.triggerEvent('search', { value: value });
       }.bind(this), this.data.debounce);
 

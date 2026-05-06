@@ -1,14 +1,16 @@
 const app = getApp()
 const { formatDate, formatTime, getRoleName, getMonthRange } = require('../../../utils/helpers')
+const { hasPermission, ACTIONS } = require('../../../utils/permission')
 const { COLLECTIONS } = require('../../../utils/db')
 const db = require('../../../utils/db')
 
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     loading: true,
     currentMonth: '',
+    monthOffset: 0,
     staffAttendance: [],
     workStartTime: '09:00',
     workEndTime: '18:00',
@@ -18,7 +20,7 @@ Page({
   },
 
   onLoad() {
-    if (!app.hasPermission('attendance', 'view')) {
+    if (!hasPermission('attendance', ACTIONS.VIEW)) {
       wx.showToast({ title: '无权限查看考勤', icon: 'none' })
       setTimeout(() => wx.navigateBack(), 1500)
       return
@@ -27,11 +29,10 @@ Page({
     const range = getMonthRange(0)
     this.setData({ theme, currentMonth: range.label, statusBarHeight: app.globalData.statusBarHeight || 44 })
     this.loadSettings()
-    this.loadData()
   },
 
   onShow() {
-    // No permission check here - menu already validated permission before allowing navigation
+    this.loadData()
   },
 
   onBack: function() {
@@ -84,7 +85,7 @@ Page({
   async loadData() {
     this.setData({ loading: true })
     try {
-      const range = getMonthRange(0)
+      const range = getMonthRange(this.data.monthOffset)
 
       const [staffRes, clockinRes] = await Promise.all([
         db.queryAll(COLLECTIONS.STAFF, { status: 'active' }),
@@ -94,7 +95,7 @@ Page({
       ])
 
       const clockinMap = {}
-      clockinRes.data.forEach(c => {
+      ;(clockinRes.data || []).forEach(c => {
         if (!clockinMap[c.staffId]) clockinMap[c.staffId] = []
         clockinMap[c.staffId].push(c)
       })
@@ -103,7 +104,7 @@ Page({
       const startMinutes = this.getTimeMinutes(workStartTime)
       const endMinutes = this.getTimeMinutes(workEndTime)
 
-      const staffAttendance = staffRes.data.map(s => {
+      const staffAttendance = (staffRes.data || []).map(s => {
         const records = clockinMap[s._id] || []
         const days = records.length
         let totalHours = 0
@@ -145,6 +146,7 @@ Page({
         return {
           _id: s._id,
           name: s.name,
+          nameInitial: (s.name || '?').charAt(0),
           role: s.role,
           roleName: getRoleName(s.role),
           days,
@@ -164,14 +166,16 @@ Page({
   },
 
   prevMonth() {
-    const range = getMonthRange(-1)
-    this.setData({ currentMonth: range.label })
+    const offset = this.data.monthOffset - 1
+    const range = getMonthRange(offset)
+    this.setData({ monthOffset: offset, currentMonth: range.label })
     this.loadData()
   },
 
   nextMonth() {
-    const range = getMonthRange(1)
-    this.setData({ currentMonth: range.label })
+    const offset = this.data.monthOffset + 1
+    const range = getMonthRange(offset)
+    this.setData({ monthOffset: offset, currentMonth: range.label })
     this.loadData()
   },
 

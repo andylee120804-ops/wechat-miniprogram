@@ -1,6 +1,6 @@
 <view class="customer-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx; padding-top: {{statusBarHeight + 44}}px;">
   <!-- Custom Navigation Bar -->
-  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">
     <view class="nav-bar-content">
       <view class="nav-back" bindtap="onBack">
         <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
@@ -32,7 +32,7 @@
     <view class="customer-item stagger-item" wx:for="{{filteredCustomers}}" wx:key="name" bindtap="onCustomerTap" data-name="{{item.name}}" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 24rpx; margin: 0 32rpx 16rpx; padding: 28rpx;">
       <view class="customer-header">
         <view class="customer-avatar" style="background: {{theme.accentBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.accentColor || '#C9A96E'}}; width: 80rpx; height: 80rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36rpx; font-weight: 700; margin-right: 20rpx;">
-          {{item.name.substr(0, 1)}}
+          {{item.nameInitial}}
         </view>
         <view class="customer-info" style="flex: 1;">
           <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 32rpx; font-weight: 600; display: block;">{{item.name}}</text>
@@ -42,11 +42,11 @@
         </view>
         <view class="customer-stats" style="text-align: right;">
           <theme-badge theme="{{theme}}" status="visits" type="role" text="{{item.visits}}次" size="sm" />
-          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx; font-weight: 700; font-family: 'DIN Alternate', monospace; display: block; margin-top: 8rpx;">¥{{formatAmount(item.totalAmount || 0)}}</text>
+          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx; font-weight: 700; font-family: 'DIN Alternate', monospace; display: block; margin-top: 8rpx;">¥{{item.formattedAmount}}</text>
         </view>
       </view>
       <view class="customer-footer" style="margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid {{theme.divider || 'rgba(255,255,255,0.04)'}}; display: flex; justify-content: space-between;">
-        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">最近: {{formatDate(item.lastVisit)}}</text>
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">最近: {{item.formattedLastVisit}}</text>
         <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 24rpx;">查看详情 ›</text>
       </view>
     </view>

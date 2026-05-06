@@ -1,10 +1,8 @@
 <view class="page" style="background: {{theme.surfaceColor || '#1A1A2E'}};">
   <!-- Custom Navigation Bar -->
-  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">
     <view class="nav-bar-content">
-      <view class="nav-back" bindtap="onBack">
-        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
-      </view>
+      <view class="nav-back"></view>
       <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">采购管理</text>
       <view class="nav-action" wx:if="{{theme.accentColor}}">
         <text style="color: {{theme.textMuted || '#5C5C72'}};">{{monthLabel}}</text>
@@ -15,9 +13,9 @@
   <!-- Sticky Filter Bar -->
   <view class="filter-bar" style="background: {{theme.surfaceColor || '#1A1A2E'}};">
     <!-- Month Picker -->
-    <view class="month-picker flex-row flex-between">
+    <view class="month-picker">
       <view class="month-arrow" bindtap="onMonthPrev" style="color: {{theme.textSecondary || '#9A9AB0'}};">‹</view>
-      <view class="month-label text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{monthStr}}</view>
+      <text class="month-label" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{monthLabel}}</text>
       <view class="month-arrow" bindtap="onMonthNext" style="color: {{theme.textSecondary || '#9A9AB0'}};">›</view>
     </view>
     <!-- Category Filter Chips -->
@@ -30,7 +28,7 @@
 
   <!-- Monthly Summary Card -->
   <view class="summary-card mx-lg mt-md" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
-    <view class="summary-inner p-lg" style="width: 705rpx; display: flex; box-sizing: content-box">
+    <view class="summary-inner p-lg" style="width: 100%; display: flex; box-sizing: border-box">
       <text class="text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">本月采购总额</text>
       <view class="summary-amount-row flex-row flex-between mt-xs" style="width: 576rpx; display: flex; box-sizing: border-box">
         <text class="text-display font-mono" style="color: {{theme.amountNegative || '#F87171'}};">¥{{totalFormatted}}</text>

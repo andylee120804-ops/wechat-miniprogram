@@ -109,16 +109,18 @@ function log(type, detail, extra) {
     // Only persist important operations (money + permission changes)
     if (PERSISTED_TYPES.has(type)) {
       const db = wx.cloud.database()
-      db.collection(COLLECTIONS.OPERATION_LOG).add({ data: entry }).catch(() => {})
+      db.collection(COLLECTIONS.OPERATION_LOG).add({ data: entry }).catch(err => {
+        console.warn('[Logger] Failed to persist log to cloud:', err)
+      })
     }
 
     // Local cache keeps all types for debugging, but trimmed to retention period
     const logs = _getLogStorage()
     logs.unshift(entry)
-    _trimLogs(logs)
-    wx.setStorageSync(STORAGE_KEY, logs)
+    const trimmed = _trimLogs(logs)
+    wx.setStorageSync(STORAGE_KEY, trimmed)
 
-    console.log(`[Log] ${entry.typeName} - ${entry.detail}`)
+    console.warn(`[Log] ${entry.typeName} - ${entry.detail}`)
   } catch (e) {
     console.error('[Logger] Failed to write log:', e)
   }
@@ -129,15 +131,11 @@ function log(type, detail, extra) {
  */
 function _trimLogs(logs) {
   const cutoff = Date.now() - LOG_RETENTION_DAYS * 86400000
-  // Remove logs older than 30 days
-  let i = logs.length - 1
-  while (i >= 0 && logs[i].timestamp < cutoff) {
-    logs.splice(i, 1)
-    i--
+  const filtered = logs.filter(entry => entry.timestamp >= cutoff)
+  if (filtered.length > MAX_LOG_ENTRIES) {
+    return filtered.slice(0, MAX_LOG_ENTRIES)
   }
-  if (logs.length > MAX_LOG_ENTRIES) {
-    logs.length = MAX_LOG_ENTRIES
-  }
+  return filtered
 }
 
 /**
@@ -159,11 +157,10 @@ async function getRecentLogs(limit) {
       .get()
     return res.data || []
   } catch (e) {
+    console.warn('[Logger] Failed to fetch cloud logs, falling back to local:', e)
     const logs = _getLogStorage()
     const cutoff = Date.now() - LOG_RETENTION_DAYS * 86400000
-    return logs.filter(function(entry) {
-      return entry.timestamp >= cutoff
-    }).slice(0, limit)
+    return logs.filter(entry => entry.timestamp >= cutoff).slice(0, limit)
   }
 }
 
@@ -188,11 +185,10 @@ async function getLogsByType(type, limit) {
       .get()
     return res.data || []
   } catch (e) {
+    console.warn('[Logger] Failed to fetch cloud logs by type, falling back to local:', e)
     const logs = _getLogStorage()
     const cutoff = Date.now() - LOG_RETENTION_DAYS * 86400000
-    return logs.filter(function(entry) {
-      return entry.type === type && entry.timestamp >= cutoff
-    }).slice(0, limit)
+    return logs.filter(entry => entry.type === type && entry.timestamp >= cutoff).slice(0, limit)
   }
 }
 
@@ -206,7 +202,7 @@ function _getLogStorage() {
       return raw
     }
   } catch (e) {
-    // ignore
+    console.warn('[Logger] Failed to read local log storage:', e)
   }
   return []
 }

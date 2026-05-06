@@ -6,7 +6,7 @@ const db = require('../../../utils/db')
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     staffId: '',
     staffName: '',
     currentMonth: '',
@@ -72,7 +72,7 @@ Page({
       let totalLates = 0
       let totalEarlyLeaves = 0
 
-      const records = res.data.map(r => {
+      const records = (res.data || []).map(r => {
         let isLate = false
         let isEarlyLeave = false
 
@@ -160,14 +160,14 @@ Page({
   },
 
   prevMonth() {
-    var offset = (this.data.monthOffset || 0) - 1
+    const offset = (this.data.monthOffset || 0) - 1
     const range = getMonthRange(offset)
     this.setData({ monthOffset: offset, currentMonth: range.label })
     this.loadData()
   },
 
   nextMonth() {
-    var offset = (this.data.monthOffset || 0) + 1
+    const offset = (this.data.monthOffset || 0) + 1
     if (offset > 0) return
     const range = getMonthRange(offset)
     this.setData({ monthOffset: offset, currentMonth: range.label })

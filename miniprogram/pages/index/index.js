@@ -1,12 +1,13 @@
 const app = getApp()
 const { formatDate } = require('../../utils/helpers')
+const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     loading: true,
     todayDate: '',
     announcements: [],
@@ -31,16 +32,19 @@ Page({
   },
 
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ active: 0 })
+    }
     const theme = app.getThemePageData()
     this.setData({
       theme,
       statusBarHeight: app.globalData.statusBarHeight || 44,
       venueName: app.globalData.venueName,
       todayDate: formatDate(new Date()),
-      showSummary: app.hasPermission('income', 'view'),
-      canAddReservation: app.hasPermission('reservation', 'add'),
-      canAddPurchase: app.hasPermission('purchase', 'add'),
-      canAddIncome: app.hasPermission('income', 'add')
+      showSummary: hasPermission('income', ACTIONS.VIEW),
+      canAddReservation: hasPermission('reservation', ACTIONS.ADD),
+      canAddPurchase: hasPermission('purchase', ACTIONS.ADD),
+      canAddIncome: hasPermission('income', ACTIONS.ADD)
     })
     this.loadData()
   },
@@ -57,7 +61,7 @@ Page({
     }, 10000) // 10 second timeout
 
     try {
-      const dbInst = wx.cloud.database()
+      const dbInst = db.getDb()
       const _ = dbInst.command
       const now = new Date()
       const today = formatDate(now)
@@ -173,7 +177,7 @@ Page({
   },
 
   onAddReservation() {
-    if (!app.hasPermission('reservation', 'add')) {
+    if (!hasPermission('reservation', ACTIONS.ADD)) {
       wx.showToast({ title: '无权限', icon: 'none' })
       return
     }
@@ -181,7 +185,7 @@ Page({
   },
 
   onAddPurchase() {
-    if (!app.hasPermission('purchase', 'add')) {
+    if (!hasPermission('purchase', ACTIONS.ADD)) {
       wx.showToast({ title: '无权限', icon: 'none' })
       return
     }
@@ -189,7 +193,7 @@ Page({
   },
 
   onAddIncome() {
-    if (!app.hasPermission('income', 'add')) {
+    if (!hasPermission('income', ACTIONS.ADD)) {
       wx.showToast({ title: '无权限', icon: 'none' })
       return
     }

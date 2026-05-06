@@ -20,32 +20,25 @@ const ACTIONS = {
  */
 function hasPermission(module, action) {
   try {
-    var app = getApp()
+    const app = getApp()
     if (!app || !app.globalData) return false
 
-    var userInfo = app.globalData.userInfo
+    const userInfo = app.globalData.userInfo
     if (!userInfo) return false
 
     // Boss has all permissions
     if (userInfo.role === 'boss') return true
 
-    var perms = app.globalData.permissions || []
+    const perms = app.globalData.permissions || []
     if (perms.length === 0) return false
 
     // Find the permission entry for this module
-    var perm = null
-    for (var i = 0; i < perms.length; i++) {
-      if (perms[i].module === module) {
-        perm = perms[i]
-        break
-      }
-    }
-
+    const perm = perms.find(p => p.module === module)
     if (!perm) return false
 
     // Check if the action is allowed (wildcard '*' grants all actions)
-    var actions = perm.actions || []
-    return actions.indexOf(action) !== -1 || actions.indexOf('*') !== -1
+    const actions = perm.actions || []
+    return actions.includes(action) || actions.includes('*')
   } catch (e) {
     console.error('[Permission] Error checking permission:', e)
     return false

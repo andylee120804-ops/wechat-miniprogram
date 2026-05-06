@@ -1,7 +1,7 @@
 @import '../../styles/mixins.wxss';
 
 .login-page {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -38,21 +38,21 @@
 
 .login-brand {
   text-align: center;
-  margin-bottom: 48rpx;
-  padding-top: 80rpx;
+  margin-bottom: 24rpx;
 }
 
 .brand-name {
-  font-size: 56rpx;
+  font-size: 48rpx;
   font-weight: 800;
-  letter-spacing: 8rpx;
+  letter-spacing: 6rpx;
   display: block;
-  margin-bottom: 16rpx;
+  margin-bottom: 6rpx;
+  max-width: 90vw;
 }
 
 .brand-subtitle {
-  font-size: 26rpx;
-  letter-spacing: 4rpx;
+  font-size: 22rpx;
+  letter-spacing: 3rpx;
   display: block;
 }
 
@@ -61,19 +61,19 @@
 }
 
 .form-title {
-  font-size: 40rpx;
+  font-size: 36rpx;
   font-weight: 700;
-  margin-bottom: 8rpx;
+  margin-bottom: 4rpx;
 }
 
 .form-subtitle {
-  font-size: 26rpx;
-  margin-bottom: 48rpx;
+  font-size: 24rpx;
+  margin-bottom: 32rpx;
 }
 
 .input-group {
-  margin-bottom: 32rpx;
-  padding-bottom: 16rpx;
+  margin-bottom: 24rpx;
+  padding-bottom: 12rpx;
 }
 
 .input-label {
@@ -90,13 +90,19 @@
 }
 
 .login-btn-wrap {
-  margin-top: 48rpx;
+  margin-top: 32rpx;
+  width: 100%;
 }
 
 .login-hint {
   text-align: center;
-  font-size: 24rpx;
-  margin-top: 32rpx;
+  font-size: 22rpx;
+  margin-top: 24rpx;
+}
+
+.login-card {
+  width: 100% !important;
+  max-width: 560rpx;
 }
 
 .shake {

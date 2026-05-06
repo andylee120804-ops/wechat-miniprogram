@@ -1,21 +1,29 @@
 const app = getApp()
 const { handleCloudError } = require('../../../utils/error-handler')
+const { hasPermission, ACTIONS } = require('../../../utils/permission')
 
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     venueName: '',
     venueAddress: '',
     venueLatitude: '',
     venueLongitude: '',
     loading: true,
-    saving: false
+    saving: false,
+    canEdit: false
   },
 
   onLoad() {
+    const canEdit = hasPermission('staff', ACTIONS.EDIT)
+    if (!canEdit) {
+      wx.showToast({ title: '无权限修改设置', icon: 'none' })
+      setTimeout(function() { wx.navigateBack() }, 1500)
+      return
+    }
     const theme = app.getThemePageData()
-    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, canEdit })
     this.loadSettings()
   },
 
@@ -30,7 +38,7 @@ Page({
         name: 'sendMessage',
         data: { action: 'getSettings' }
       })
-      if (res.result && res.result.success) {
+      if (res.result && res.result.success && res.result.data) {
         this.setData({
           venueName: res.result.data.venueName || '',
           venueAddress: res.result.data.venueAddress || '',

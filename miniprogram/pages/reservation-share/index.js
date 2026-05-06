@@ -1,4 +1,4 @@
-const { formatDate, getRoomName } = require('../../utils/helpers')
+const { formatDate, getRoomName, getExclusiveTypeName } = require('../../utils/helpers')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 
@@ -26,30 +26,15 @@ Page({
       this.setData({ loading: false, error: true })
       return
     }
-    // Data passed from share modal (if shared via app)
-    const title = options.title || ''
-    const addr = options.addr || ''
-    const lat = options.lat || ''
-    const lng = options.lng || ''
-    const sremark = options.sremark || ''
-    var initData = {}
-    if (title) initData.shareTitle = decodeURIComponent(title)
-    if (addr) initData.venueAddress = decodeURIComponent(addr)
-    if (lat) initData.venueLatitude = lat
-    if (lng) initData.venueLongitude = lng
-    if (sremark) initData.shareRemark = decodeURIComponent(sremark)
-    if (Object.keys(initData).length > 0) this.setData(initData)
-    this.loadData(options.id, !!addr)
+    this.loadData(options.id)
   },
 
-  async loadData(id, hasAddress) {
+  async loadData(id) {
     try {
-      const tasks = [db.getDoc(COLLECTIONS.RESERVATION, id)]
-      // Only load venue settings if address not already provided from share modal
-      if (!hasAddress) {
-        tasks.push(this.loadVenueSettings())
-      }
-      const [reservationRes] = await Promise.all(tasks)
+      const [reservationRes] = await Promise.all([
+        db.getDoc(COLLECTIONS.RESERVATION, id),
+        this.loadVenueSettings()
+      ])
 
       if (!reservationRes) {
         this.setData({ loading: false, error: true })
@@ -57,21 +42,14 @@ Page({
       }
 
       const r = reservationRes
+      const sc = r.shareConfig || {}
       const et = r.exclusiveType || (r.isExclusive ? 'full' : 'none')
-      let roomName = ''
-      if (et === 'none') {
-        roomName = getRoomName(r.room)
-      } else if (et === 'noon') {
-        roomName = '包场（午）'
-      } else if (et === 'night') {
-        roomName = '包场（晚）'
-      } else if (et === 'full') {
-        roomName = '包场（全天）'
-      }
+      const roomName = getExclusiveTypeName(et, r.room)
 
       this.setData({
         loading: false,
-        shareTitle: this.data.shareTitle || (r.customerName || '预约') + ' · 预定信息',
+        shareTitle: sc.shareTitle || (r.customerName || '预约') + ' · 预定信息',
+        shareRemark: sc.shareRemark || '',
         customerName: r.customerName || '',
         phone: r.phone || '',
         date: formatDate(r.date) || '',
@@ -91,7 +69,7 @@ Page({
         name: 'sendMessage',
         data: { action: 'getSettings' }
       })
-      if (res.result && res.result.success) {
+      if (res.result && res.result.success && res.result.data) {
         this.setData({
           venueName: res.result.data.venueName || '听澜轩',
           venueAddress: res.result.data.venueAddress || '',
@@ -100,7 +78,7 @@ Page({
         })
       }
     } catch (err) {
-      // Silent fail, use defaults
+      console.warn('加载场地设置失败:', err)
     }
   },
 

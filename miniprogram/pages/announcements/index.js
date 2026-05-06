@@ -2,14 +2,14 @@ const app = getApp()
 const { formatDate } = require('../../utils/helpers')
 const { log } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
-const { hasPermission } = require('../../utils/permission')
+const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     loading: true,
     announcements: [],
     canAddAnnouncement: false,
@@ -27,9 +27,9 @@ Page({
 
   onShow() {
     const theme = app.getThemePageData()
-    const canAddAnnouncement = hasPermission('announcement', 'add')
-    const canEditAnnouncement = hasPermission('announcement', 'edit')
-    const canDeleteAnnouncement = hasPermission('announcement', 'delete')
+    const canAddAnnouncement = hasPermission('announcement', ACTIONS.ADD)
+    const canEditAnnouncement = hasPermission('announcement', ACTIONS.EDIT)
+    const canDeleteAnnouncement = hasPermission('announcement', ACTIONS.DELETE)
     this.setData({ theme, canAddAnnouncement, canEditAnnouncement, canDeleteAnnouncement, statusBarHeight: app.globalData.statusBarHeight || 44 })
     this.loadData()
   },
@@ -43,6 +43,7 @@ Page({
     try {
       const today = formatDate(new Date())
       const res = await db.queryAll(COLLECTIONS.ANNOUNCEMENT, { active: true }, 'createdAt', 'desc')
+      const userInfo = app.globalData.userInfo
       const announcements = (res.data || []).filter(ann => {
         if (!ann.startDate && !ann.endDate) {
           return formatDate(ann.createdAt) === today
@@ -53,8 +54,13 @@ Page({
       }).map(ann => {
         const startDate = ann.startDate || formatDate(ann.createdAt)
         const endDate = ann.endDate && ann.endDate !== startDate ? ann.endDate : ''
-        ann.displayDateRange = endDate ? startDate + '-' + endDate : startDate
-        return ann
+        const readBy = ann.readBy || []
+        return {
+          ...ann,
+          displayDateRange: endDate ? startDate + '-' + endDate : startDate,
+          isItemUnread: userInfo && !readBy.includes(userInfo._id),
+          readCount: readBy.length
+        }
       })
       this.setData({ loading: false, announcements })
     } catch (err) {
@@ -182,10 +188,5 @@ Page({
         }
       }
     })
-  },
-
-  isUnread(ann) {
-    const userInfo = app.globalData.userInfo
-    return userInfo && !ann.readBy.includes(userInfo._id)
   }
 })

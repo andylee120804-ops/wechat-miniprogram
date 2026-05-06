@@ -1,5 +1,6 @@
 const app = getApp()
 const { formatDate, formatAmount, getIncomeTypeText, getMonthRange } = require('../../utils/helpers')
+const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
@@ -7,7 +8,7 @@ const db = require('../../utils/db')
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     loading: true,
     monthOffset: 0,
     currentMonth: '',
@@ -34,20 +35,23 @@ Page({
   },
 
   onShow() {
-    if (!app.hasPermission('income', 'view')) {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ active: 3 })
+    }
+    if (!hasPermission('income', ACTIONS.VIEW)) {
       wx.showToast({ title: '无权限', icon: 'none' })
       wx.navigateBack()
       return
     }
     const theme = app.getThemePageData()
-    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
-    this.updateMonthLabel()
-    this.loadData()
-  },
-
-  updateMonthLabel() {
     const range = getMonthRange(this.data.monthOffset)
-    this.setData({ currentMonth: range.label, monthStr: range.monthStr })
+    this.setData({
+      theme,
+      statusBarHeight: app.globalData.statusBarHeight || 44,
+      currentMonth: range.label,
+      monthStr: range.monthStr
+    })
+    this.loadData()
   },
 
   async loadData() {
@@ -82,22 +86,22 @@ Page({
 
   onReachBottom: function() {
     if (this.data.loadingMore || !this.data.hasMore) return
-    var that = this
+    const that = this
     that.setData({ loadingMore: true })
-    var range = getMonthRange(that.data.monthOffset)
+    const range = getMonthRange(that.data.monthOffset)
 
     db.queryPage(COLLECTIONS.INCOME, {
       date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
     }, that.data.page + 1, that.data.pageSize, 'createdAt', 'desc').then(function(res) {
-      var newItems = (res.data || []).map(function(i) {
-        return Object.assign({}, i, {
+      const newItems = (res.data || []).map(function(i) {
+        return { ...i,
           typeText: getIncomeTypeText(i.type) || '其他',
           amountText: formatAmount(i.amount),
           dateText: formatDate(i.date)
-        })
+        }
       })
-      var allItems = that.data.incomes.concat(newItems)
-      var total = allItems.reduce(function(s, i) { return s + (i.amount || 0) }, 0)
+      const allItems = that.data.incomes.concat(newItems)
+      const total = allItems.reduce(function(s, i) { return s + (i.amount || 0) }, 0)
       that.setData({
         incomes: allItems,
         filteredIncomes: allItems,
@@ -113,15 +117,17 @@ Page({
   },
 
   onPrevMonth() {
-    this.setData({ monthOffset: this.data.monthOffset - 1, activeType: '', searchKeyword: '' })
-    this.updateMonthLabel()
+    const offset = this.data.monthOffset - 1
+    const range = getMonthRange(offset)
+    this.setData({ monthOffset: offset, activeType: '', searchKeyword: '', currentMonth: range.label, monthStr: range.monthStr })
     this.loadData()
   },
 
   onNextMonth() {
     if (this.data.monthOffset >= 0) return
-    this.setData({ monthOffset: this.data.monthOffset + 1, activeType: '', searchKeyword: '' })
-    this.updateMonthLabel()
+    const offset = this.data.monthOffset + 1
+    const range = getMonthRange(offset)
+    this.setData({ monthOffset: offset, activeType: '', searchKeyword: '', currentMonth: range.label, monthStr: range.monthStr })
     this.loadData()
   },
 
@@ -151,7 +157,7 @@ Page({
   },
 
   onAddIncome() {
-    if (!app.hasPermission('income', 'add')) {
+    if (!hasPermission('income', ACTIONS.ADD)) {
       wx.showToast({ title: '无权限', icon: 'none' })
       return
     }

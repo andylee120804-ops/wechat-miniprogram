@@ -25,7 +25,7 @@ Component({
 
   observers: {
     'type': function(type) {
-      var icons = {
+      const icons = {
         'info': 'ℹ️',
         'warning': '⚠️',
         'urgent': '🔴'

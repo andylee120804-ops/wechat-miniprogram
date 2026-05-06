@@ -1,6 +1,6 @@
 <view class="announcements-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx; padding-top: {{statusBarHeight + 44}}px;">
   <!-- Custom Navigation Bar -->
-  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">
     <view class="nav-bar-content">
       <view class="nav-back" bindtap="onBack">
         <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
@@ -18,7 +18,7 @@
     <view class="ann-item stagger-item" wx:for="{{announcements}}" wx:key="_id" bindtap="onAnnouncementTap" data-id="{{item._id}}" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 24rpx; padding: 28rpx; margin-bottom: 16rpx;">
       <view class="ann-header">
         <view style="display: flex; align-items: center; gap: 12rpx; flex: 1;">
-          <view wx:if="{{isUnread(item)}}" style="width: 16rpx; height: 16rpx; background: {{theme.statusDanger || '#F87171'}}; border-radius: 50%; flex-shrink: 0;"></view>
+          <view wx:if="{{item.isItemUnread}}" style="width: 16rpx; height: 16rpx; background: {{theme.statusDanger || '#F87171'}}; border-radius: 50%; flex-shrink: 0;"></view>
           <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600; flex: 1;">{{item.title}}</text>
         </view>
         <view style="display: flex; align-items: center; gap: 12rpx;">
@@ -31,7 +31,7 @@
 
       <view class="ann-meta" style="margin-top: 12rpx;">
         <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.createdByName}}</text>
-        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; margin-left: 8rpx;">{{item.readBy.length}}人已读</text>
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; margin-left: 8rpx;">{{item.readCount}}人已读</text>
         <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 22rpx; margin-left: 12rpx;">📅 {{item.displayDateRange}}</text>
       </view>
 

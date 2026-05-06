@@ -8,7 +8,7 @@ const db = require('../../utils/db')
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     loading: true,
     selectedDate: '',
     isToday: true,
@@ -382,7 +382,7 @@ Page({
     return new Promise(function(resolve) {
       wx.getSetting({
         success: function(res) {
-          var authSetting = res.authSetting
+          const authSetting = res.authSetting
           if (!authSetting['scope.userLocation']) {
             wx.authorize({
               scope: 'scope.userLocation',
@@ -418,8 +418,8 @@ Page({
         wx.getLocation({
           type: 'gcj02',
           success: function(res) {
-            var location = res.latitude + ',' + res.longitude
-            var locationText = res.latitude.toFixed(4) + '°, ' + res.longitude.toFixed(4) + '°'
+            const location = res.latitude + ',' + res.longitude
+            const locationText = res.latitude.toFixed(4) + '°, ' + res.longitude.toFixed(4) + '°'
             resolve({ location: location, locationText: locationText })
           },
           fail: function() {

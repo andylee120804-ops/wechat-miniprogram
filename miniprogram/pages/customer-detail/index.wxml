@@ -1,6 +1,6 @@
 <view class="customer-detail-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 32rpx; padding-top: {{statusBarHeight + 44}}px;">
   <!-- Custom Navigation Bar -->
-  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">
     <view class="nav-bar-content">
       <view class="nav-back" bindtap="onBack">
         <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
@@ -13,7 +13,7 @@
   <!-- Profile Header (avatar + name, kept below nav-bar) -->
   <view class="profile-header" style="background: {{theme.headerGradient || 'linear-gradient(135deg, #1A1A2E, #252540)'}}; padding: 48rpx 32rpx;">
     <view class="avatar" style="background: {{theme.accentBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.accentColor || '#C9A96E'}}; width: 120rpx; height: 120rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 56rpx; font-weight: 700; margin: 0 auto 24rpx;">
-      {{customerName.substr(0, 1)}}
+      {{customerNameInitial}}
     </view>
     <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 40rpx; font-weight: 700; display: block; text-align: center;">{{customerName}}</text>
   </view>
@@ -43,7 +43,7 @@
     <view wx:else>
       <view class="timeline-item" wx:for="{{visitHistory}}" wx:key="_id" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; padding: 24rpx; margin-bottom: 16rpx;">
         <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rpx;">
-          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 600;">{{formatDate(item.date)}}</text>
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 600;">{{item.formattedDate}}</text>
           <theme-badge theme="{{theme}}" status="{{item.status}}" type="status" text="{{item.status === 'reserved' ? '已预约' : item.status === 'confirmed' ? '已确认' : item.status === 'completed' ? '已完成' : '已取消'}}" size="sm" />
         </view>
         <view style="display: flex; align-items: center; gap: 24rpx;">

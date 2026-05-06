@@ -31,9 +31,9 @@ Component({
 
   lifetimes: {
     attached: function() {
-      var now = new Date();
-      var year = this.data.year || now.getFullYear();
-      var month = this.data.month || (now.getMonth() + 1);
+      const now = new Date();
+      const year = this.data.year || now.getFullYear();
+      let month = this.data.month || (now.getMonth() + 1);
       this.setData({
         currentYear: year,
         currentMonth: month
@@ -65,35 +65,35 @@ Component({
 
   methods: {
     computeDays: function() {
-      var year = this.data.currentYear;
-      var month = this.data.currentMonth;
+      const year = this.data.currentYear;
+      const month = this.data.currentMonth;
       if (!year || !month) return;
 
-      var markDates = this.data.markDates || [];
-      var selectedDate = this.data.selectedDate || '';
-      var now = new Date();
-      var todayStr = now.getFullYear() + '-' + this._pad(now.getMonth() + 1) + '-' + this._pad(now.getDate());
+      const markDates = this.data.markDates || [];
+      const selectedDate = this.data.selectedDate || '';
+      const now = new Date();
+      const todayStr = now.getFullYear() + '-' + this._pad(now.getMonth() + 1) + '-' + this._pad(now.getDate());
 
       // First day of the month (0=Sun, 1=Mon, ...)
-      var firstDay = new Date(year, month - 1, 1).getDay();
+      const firstDay = new Date(year, month - 1, 1).getDay();
       // Total days in the month
-      var daysInMonth = new Date(year, month, 0).getDate();
+      const daysInMonth = new Date(year, month, 0).getDate();
       // Total days in previous month
-      var daysInPrevMonth = new Date(year, month - 1, 0).getDate();
+      const daysInPrevMonth = new Date(year, month - 1, 0).getDate();
 
-      var days = [];
-      var totalCells = 42; // 6 rows x 7 cols
+      const days = [];
+      const totalCells = 42; // 6 rows x 7 cols
 
-      for (var i = 0; i < totalCells; i++) {
-        var day = 0;
-        var dateStr = '';
-        var isCurrentMonth = false;
+      for (let i = 0; i < totalCells; i++) {
+        let day = 0;
+        let dateStr = '';
+        let isCurrentMonth = false;
 
         if (i < firstDay) {
           // Previous month days
           day = daysInPrevMonth - firstDay + 1 + i;
-          var prevMonth = month - 1;
-          var prevYear = year;
+          let prevMonth = month - 1;
+          let prevYear = year;
           if (prevMonth === 0) {
             prevMonth = 12;
             prevYear = year - 1;
@@ -108,8 +108,8 @@ Component({
         } else {
           // Next month days
           day = i - firstDay - daysInMonth + 1;
-          var nextMonth = month + 1;
-          var nextYear = year;
+          let nextMonth = month + 1;
+          let nextYear = year;
           if (nextMonth === 13) {
             nextMonth = 1;
             nextYear = year + 1;
@@ -122,7 +122,7 @@ Component({
           day: day,
           dateStr: dateStr,
           isToday: dateStr === todayStr,
-          isMarked: markDates.indexOf(dateStr) !== -1,
+          isMarked: markDates.includes(dateStr),
           isSelected: dateStr === selectedDate,
           isCurrentMonth: isCurrentMonth
         });
@@ -132,8 +132,8 @@ Component({
     },
 
     prevMonth: function() {
-      var year = this.data.currentYear;
-      var month = this.data.currentMonth;
+      let year = this.data.currentYear;
+      let month = this.data.currentMonth;
       month--;
       if (month === 0) {
         month = 12;
@@ -148,8 +148,8 @@ Component({
     },
 
     nextMonth: function() {
-      var year = this.data.currentYear;
-      var month = this.data.currentMonth;
+      let year = this.data.currentYear;
+      let month = this.data.currentMonth;
       month++;
       if (month === 13) {
         month = 1;
@@ -164,7 +164,7 @@ Component({
     },
 
     onDayTap: function(e) {
-      var info = e.currentTarget.dataset.info;
+      const info = e.currentTarget.dataset.info;
       if (!info || !info.isCurrentMonth) return;
       this.triggerEvent('daytap', {
         date: info.dateStr,

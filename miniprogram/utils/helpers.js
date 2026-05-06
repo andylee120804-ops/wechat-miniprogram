@@ -108,7 +108,7 @@ function getYearRange(offset) {
   const start = new Date(year, 0, 1)
   start.setHours(0, 0, 0, 0)
   // For current year, use today as end date (YTD); for past years, use Dec 31
-  var end
+  let end
   if (offset === 0) {
     end = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     end.setHours(23, 59, 59, 999)
@@ -221,6 +221,15 @@ function getRoomName(room) {
   return roomMap[room] || room || '未知'
 }
 
+/**
+ * Get exclusive type display name
+ */
+function getExclusiveTypeName(exclusiveType, room) {
+  if (!exclusiveType || exclusiveType === 'none') return getRoomName(room)
+  const map = { noon: '包场（午）', night: '包场（晚）', full: '包场（全天）' }
+  return map[exclusiveType] || '包场'
+}
+
 // ==================== ISO Week ====================
 
 /**
@@ -304,6 +313,7 @@ module.exports = {
   getReservationStatusText,
   getExpenseCategoryName,
   getRoomName,
+  getExclusiveTypeName,
   calcWorkDuration,
   isLate
 }

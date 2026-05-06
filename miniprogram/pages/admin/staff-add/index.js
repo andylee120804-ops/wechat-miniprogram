@@ -1,13 +1,16 @@
 const app = getApp()
 const { log } = require('../../../utils/logger')
 const { handleCloudError } = require('../../../utils/error-handler')
+const { hasPermission, ACTIONS } = require('../../../utils/permission')
 const { COLLECTIONS } = require('../../../utils/db')
+const db = require('../../../utils/db')
 
 Page({
   data: {
     theme: {},
-    statusBarHeight: 0,
+    statusBarHeight: 44,
     isEdit: false,
+    canEdit: false,
     id: '',
     name: '',
     role: 'admin',
@@ -47,10 +50,16 @@ Page({
   },
 
   onLoad(options) {
+    const isEdit = !!(options && options.id)
+    const canEdit = isEdit ? hasPermission('staff', ACTIONS.EDIT) : hasPermission('staff', ACTIONS.ADD)
+    if (!canEdit) {
+      wx.showToast({ title: '无权限', icon: 'none' })
+      setTimeout(function() { wx.navigateBack() }, 1500)
+      return
+    }
     const theme = app.getThemePageData()
-    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
-    if (options.id) {
-      this.setData({ isEdit: true, id: options.id })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, isEdit, canEdit, id: options.id || '' })
+    if (isEdit) {
       this.loadExisting()
     }
   },
@@ -74,13 +83,17 @@ Page({
   async loadExisting() {
     this.setData({ loading: true })
     try {
-      const db = wx.cloud.database()
-      const [staffRes, permRes] = await Promise.all([
-        db.collection(COLLECTIONS.STAFF).doc(this.data.id).get(),
-        db.collection(COLLECTIONS.PERMISSIONS).where({ staffId: this.data.id }).get()
+      const [staffDoc, permRes] = await Promise.all([
+        db.getDoc(COLLECTIONS.STAFF, this.data.id),
+        db.queryAll(COLLECTIONS.PERMISSIONS, { staffId: this.data.id })
       ])
-      const s = staffRes.data
-      const perms = permRes.data[0]?.permissions || []
+      if (!staffDoc) {
+        wx.showToast({ title: '员工不存在', icon: 'none' })
+        setTimeout(function() { wx.navigateBack() }, 1500)
+        return
+      }
+      const s = staffDoc
+      const perms = (permRes.data && permRes.data[0]) ? permRes.data[0].permissions || [] : []
 
       // Build permMap: { module: ['view','add',...] } from stored data
       const permMap = {}
@@ -134,17 +147,25 @@ Page({
     if (!module || !action) return
     const perms = this.data.permissions
     if (!perms[module]) return
-    perms[module][action] = !perms[module][action]
-    this.setData({ permissions: perms })
+    this.setData({
+      permissions: {
+        ...perms,
+        [module]: { ...perms[module], [action]: !perms[module][action] }
+      }
+    })
   },
 
   onModuleSelectAll(e) {
     const module = e.currentTarget.dataset.module
     const perms = this.data.permissions
-    const allSelected = this.data.moduleOptions.find(m => m.key === module)?.actions.every(a => perms[module][a])
-    const actions = this.data.moduleOptions.find(m => m.key === module)?.actions || []
-    actions.forEach(a => { perms[module][a] = !allSelected })
-    this.setData({ permissions: perms })
+    const modOption = this.data.moduleOptions.find(m => m.key === module)
+    if (!modOption) return
+    const allSelected = modOption.actions.every(a => perms[module][a])
+    const updatedModule = { ...perms[module] }
+    modOption.actions.forEach(a => { updatedModule[a] = !allSelected })
+    this.setData({
+      permissions: { ...perms, [module]: updatedModule }
+    })
   },
 
   async onSubmit() {
@@ -155,7 +176,7 @@ Page({
     }
     this.setData({ submitting: true })
     try {
-      const db = wx.cloud.database()
+      const dbInst = db.getDb()
       const userInfo = app.globalData.userInfo
       const staffData = {
         name: name.trim(),
@@ -173,9 +194,9 @@ Page({
       }
 
       if (this.data.isEdit) {
-        await db.collection(COLLECTIONS.STAFF).doc(this.data.id).update({ data: staffData })
+        await db.updateDoc(COLLECTIONS.STAFF, this.data.id, staffData)
       } else {
-        const res = await db.collection(COLLECTIONS.STAFF).add({ data: staffData })
+        const res = await db.addDoc(COLLECTIONS.STAFF, staffData)
         this.setData({ id: res._id })
       }
 
@@ -184,19 +205,19 @@ Page({
         .filter(([key, vals]) => Object.values(vals).some(v => v))
         .map(([module, actions]) => ({ module, actions: Object.entries(actions).filter(([, v]) => v).map(([a]) => a) }))
 
-      const existingPerm = await db.collection(COLLECTIONS.PERMISSIONS).where({ staffId: this.data.id }).get()
-      if (existingPerm.data.length > 0) {
-        await db.collection(COLLECTIONS.PERMISSIONS).doc(existingPerm.data[0]._id).update({
-          data: { permissions: permArray, updatedBy: userInfo._id, updatedAt: new Date() }
+      const existingPerm = await db.queryAll(COLLECTIONS.PERMISSIONS, { staffId: this.data.id })
+      if (existingPerm.data && existingPerm.data.length > 0) {
+        await db.updateDoc(COLLECTIONS.PERMISSIONS, existingPerm.data[0]._id, {
+          permissions: permArray, updatedBy: userInfo._id, updatedAt: new Date()
         })
       } else {
-        await db.collection(COLLECTIONS.PERMISSIONS).add({
-          data: { staffId: this.data.id, permissions: permArray, updatedBy: userInfo._id, updatedAt: new Date() }
+        await db.addDoc(COLLECTIONS.PERMISSIONS, {
+          staffId: this.data.id, permissions: permArray, updatedBy: userInfo._id, updatedAt: new Date()
         })
       }
 
       // Update permissionsUpdatedAt to force re-login
-      await db.collection(COLLECTIONS.STAFF).doc(this.data.id).update({ data: { permissionsUpdatedAt: new Date() } })
+      await db.updateDoc(COLLECTIONS.STAFF, this.data.id, { permissionsUpdatedAt: new Date() })
 
       log(this.data.isEdit ? 'STAFF_UPDATE' : 'STAFF_CREATE', { name: staffData.name, role: staffData.role })
       wx.showToast({ title: '保存成功', icon: 'success' })
@@ -214,9 +235,12 @@ Page({
 
   async onConfirmDelete() {
     this.setData({ showDeleteModal: false })
+    if (!hasPermission('staff', ACTIONS.DELETE)) {
+      wx.showToast({ title: '无权限删除', icon: 'none' })
+      return
+    }
     try {
-      const db = wx.cloud.database()
-      await db.collection(COLLECTIONS.STAFF).doc(this.data.id).update({ data: { status: 'inactive' } })
+      await db.updateDoc(COLLECTIONS.STAFF, this.data.id, { status: 'inactive' })
       log('STAFF_DELETE', { name: this.data.name })
       wx.showToast({ title: '已删除', icon: 'success' })
       setTimeout(() => wx.navigateBack(), 1500)

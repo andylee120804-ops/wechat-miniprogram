@@ -29,7 +29,7 @@ Component({
 
   observers: {
     'type': function(type) {
-      var icons = {
+      const icons = {
         'no-data': '📭',
         'no-result': '🔍',
         'no-reservation': '📅',
@@ -37,7 +37,7 @@ Component({
         'no-purchase': '🛒',
         'no-attendance': '⏰'
       };
-      var defaultTitles = {
+      const defaultTitles = {
         'no-data': '暂无数据',
         'no-result': '未找到结果',
         'no-reservation': '暂无预约',

@@ -16,6 +16,10 @@ Component({
       type: Number,
       value: 0
     },
+    absChange: {
+      type: Number,
+      value: 0
+    },
     trend: {
       type: String,
       value: 'neutral'
@@ -31,6 +35,11 @@ Component({
     showPrefix: {
       type: Boolean,
       value: true
+    }
+  },
+  observers: {
+    'change': function(val) {
+      this.setData({ absChange: Math.abs(val || 0) })
     }
   }
 })

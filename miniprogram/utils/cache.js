@@ -4,10 +4,8 @@
  * with automatic expiration support.
  */
 
-// Prefix for all cache keys to avoid conflicts
-var CACHE_PREFIX = 'cache_'
-// Track all cache keys for the clear() function
-var CACHE_INDEX_KEY = '_cache_index'
+const CACHE_PREFIX = 'cache_'
+const CACHE_INDEX_KEY = '_cache_index'
 
 /**
  * Set a cache value with optional TTL.
@@ -17,8 +15,8 @@ var CACHE_INDEX_KEY = '_cache_index'
  */
 function set(key, value, ttlMs) {
   ttlMs = ttlMs || 5 * 60 * 1000
-  var fullKey = CACHE_PREFIX + key
-  var item = {
+  const fullKey = CACHE_PREFIX + key
+  const item = {
     value: value,
     expiry: Date.now() + ttlMs
   }
@@ -37,12 +35,12 @@ function set(key, value, ttlMs) {
  * @returns {*} The cached value, or null if expired/missing
  */
 function get(key) {
-  var fullKey = CACHE_PREFIX + key
+  const fullKey = CACHE_PREFIX + key
   try {
-    var raw = wx.getStorageSync(fullKey)
+    const raw = wx.getStorageSync(fullKey)
     if (!raw) return null
 
-    var item = JSON.parse(raw)
+    const item = JSON.parse(raw)
 
     // Check expiration
     if (Date.now() > item.expiry) {
@@ -53,11 +51,14 @@ function get(key) {
 
     return item.value
   } catch (e) {
+    console.warn('[Cache] Failed to read cache for key:', key, e)
     // Corrupted data, remove it
     try {
       wx.removeStorageSync(fullKey)
       _removeFromIndex(key)
-    } catch (ignore) {}
+    } catch (e2) {
+      console.warn('[Cache] Failed to remove corrupted cache entry:', key, e2)
+    }
     return null
   }
 }
@@ -67,12 +68,12 @@ function get(key) {
  * @param {string} key - Cache key
  */
 function remove(key) {
-  var fullKey = CACHE_PREFIX + key
+  const fullKey = CACHE_PREFIX + key
   try {
     wx.removeStorageSync(fullKey)
     _removeFromIndex(key)
   } catch (e) {
-    // ignore
+    console.warn('[Cache] Failed to remove cache for key:', key, e)
   }
 }
 
@@ -82,17 +83,21 @@ function remove(key) {
  */
 function clear() {
   try {
-    var index = _getIndex()
-    for (var i = 0; i < index.length; i++) {
-      var fullKey = CACHE_PREFIX + index[i]
+    const index = _getIndex()
+    for (let i = 0; i < index.length; i++) {
+      const fullKey = CACHE_PREFIX + index[i]
       try {
         wx.removeStorageSync(fullKey)
-      } catch (ignore) {}
+      } catch (e2) {
+        console.warn('[Cache] Failed to remove cache entry during clear:', index[i], e2)
+      }
     }
     // Clear the index itself
     try {
       wx.removeStorageSync(CACHE_PREFIX + CACHE_INDEX_KEY)
-    } catch (ignore) {}
+    } catch (e2) {
+      console.warn('[Cache] Failed to clear cache index:', e2)
+    }
   } catch (e) {
     console.error('[Cache] Failed to clear cache:', e)
   }
@@ -103,13 +108,13 @@ function clear() {
  */
 function _addToIndex(key) {
   try {
-    var index = _getIndex()
-    if (index.indexOf(key) === -1) {
-      index.push(key)
-      wx.setStorageSync(CACHE_PREFIX + CACHE_INDEX_KEY, JSON.stringify(index))
+    const index = _getIndex()
+    if (!index.includes(key)) {
+      const newIndex = [...index, key]
+      wx.setStorageSync(CACHE_PREFIX + CACHE_INDEX_KEY, JSON.stringify(newIndex))
     }
   } catch (e) {
-    // ignore
+    console.warn('[Cache] Failed to add key to index:', key, e)
   }
 }
 
@@ -118,14 +123,14 @@ function _addToIndex(key) {
  */
 function _removeFromIndex(key) {
   try {
-    var index = _getIndex()
-    var pos = index.indexOf(key)
+    const index = _getIndex()
+    const pos = index.indexOf(key)
     if (pos !== -1) {
-      index.splice(pos, 1)
-      wx.setStorageSync(CACHE_PREFIX + CACHE_INDEX_KEY, JSON.stringify(index))
+      const newIndex = [...index.slice(0, pos), ...index.slice(pos + 1)]
+      wx.setStorageSync(CACHE_PREFIX + CACHE_INDEX_KEY, JSON.stringify(newIndex))
     }
   } catch (e) {
-    // ignore
+    console.warn('[Cache] Failed to remove key from index:', key, e)
   }
 }
 
@@ -134,13 +139,13 @@ function _removeFromIndex(key) {
  */
 function _getIndex() {
   try {
-    var raw = wx.getStorageSync(CACHE_PREFIX + CACHE_INDEX_KEY)
+    const raw = wx.getStorageSync(CACHE_PREFIX + CACHE_INDEX_KEY)
     if (raw) {
-      var parsed = JSON.parse(raw)
+      const parsed = JSON.parse(raw)
       if (Array.isArray(parsed)) return parsed
     }
   } catch (e) {
-    // ignore
+    console.warn('[Cache] Failed to read cache index:', e)
   }
   return []
 }
