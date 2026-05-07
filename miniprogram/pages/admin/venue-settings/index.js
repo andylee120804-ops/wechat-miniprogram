@@ -21,6 +21,9 @@ Page({
     venueMapImage: '',
     venueMapImageFileID: '',
     uploadingMap: false,
+    shareCoverImage: '',
+    shareCoverImageFileID: '',
+    uploadingCover: false,
     loading: true,
     saving: false,
     canEdit: false
@@ -88,11 +91,16 @@ Page({
           defaultStandardValue: optionValues[defaultIndex] || '',
           allowNoStandard: d.allowNoStandard || false,
           venueMapImageFileID: d.venueMapImageFileID || '',
-          venueMapImage: '' // 先清空，下载完成后再设置
+          venueMapImage: '', // 先清空，下载完成后再设置
+          shareCoverImageFileID: d.shareCoverImageFileID || '',
+          shareCoverImage: ''
         })
         // 如果有 fileID，下载到本地展示
         if (d.venueMapImageFileID) {
           this._downloadMapImage(d.venueMapImageFileID)
+        }
+        if (d.shareCoverImageFileID) {
+          this._downloadCoverImage(d.shareCoverImageFileID)
         }
         console.log('setData venueMapImage:', this.data.venueMapImage, 'fileID:', this.data.venueMapImageFileID)
       }
@@ -232,6 +240,66 @@ Page({
 
   onRemoveMapImage() {
     this.setData({ venueMapImage: '', venueMapImageFileID: '' })
+  },
+
+  onUploadCoverImage() {
+    const that = this
+    if (this.data.uploadingCover) return
+
+    wx.chooseImage({
+      count: 1,
+      sizeType: ['compressed'],
+      sourceType: ['album', 'camera'],
+      success(res) {
+        const tempFilePath = res.tempFilePaths[0]
+        that.setData({ uploadingCover: true })
+        wx.showLoading({ title: '上传中' })
+
+        wx.cloud.uploadFile({
+          cloudPath: 'share-cover/' + Date.now() + '.jpg',
+          filePath: tempFilePath,
+          success(uploadRes) {
+            const fileID = uploadRes.fileID
+            wx.cloud.downloadFile({
+              fileID: fileID,
+              success: (dlRes) => {
+                that.setData({ shareCoverImage: dlRes.tempFilePath, shareCoverImageFileID: fileID, uploadingCover: false })
+                wx.hideLoading()
+                wx.showToast({ title: '上传成功', icon: 'success' })
+              },
+              fail: () => {
+                that.setData({ shareCoverImage: '', shareCoverImageFileID: fileID, uploadingCover: false })
+                wx.hideLoading()
+                wx.showToast({ title: '上传成功，请刷新页面', icon: 'none' })
+              }
+            })
+          },
+          fail(err) {
+            wx.hideLoading()
+            that.setData({ uploadingCover: false })
+            wx.showToast({ title: '上传失败', icon: 'none' })
+            console.error('上传封面图失败:', err)
+          }
+        })
+      }
+    })
+  },
+
+  onRemoveCoverImage() {
+    this.setData({ shareCoverImage: '', shareCoverImageFileID: '' })
+  },
+
+  _downloadCoverImage(fileID) {
+    if (!fileID) return
+    wx.cloud.downloadFile({
+      fileID: fileID,
+      success: (res) => {
+        this.setData({ shareCoverImage: res.tempFilePath })
+      },
+      fail: (err) => {
+        console.error('下载封面图失败:', err)
+      }
+    })
   },
 
   _downloadMapImage(fileID) {
@@ -383,7 +451,8 @@ Page({
           defaultStandard: defaultStdToSave,
           allowNoStandard: this.data.allowNoStandard,
           venueMapImage: this.data.venueMapImage,
-          venueMapImageFileID: this.data.venueMapImageFileID
+          venueMapImageFileID: this.data.venueMapImageFileID,
+          shareCoverImageFileID: this.data.shareCoverImageFileID
         }
       })
       console.log('保存 venueMapImage:', this.data.venueMapImage, 'fileID:', this.data.venueMapImageFileID)

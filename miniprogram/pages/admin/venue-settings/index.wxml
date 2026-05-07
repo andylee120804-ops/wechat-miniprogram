@@ -53,6 +53,26 @@
             <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; margin-top: 8rpx;">建议尺寸 1200×800，支持 JPG/PNG</text>
           </view>
         </view>
+
+        <!-- 分享封面图上传 -->
+        <view class="form-item" style="margin-top: 32rpx;">
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 30rpx; display: block; margin-bottom: 8rpx;">分享封面图</text>
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; display: block; margin-bottom: 16rpx;">分享预约给客人时，聊天列表显示的封面图片</text>
+
+          <!-- 已上传图片 -->
+          <view wx:if="{{shareCoverImage}}" style="position: relative; border-radius: 16rpx; overflow: hidden; margin-bottom: 16rpx;">
+            <image src="{{shareCoverImage}}" mode="aspectFit" style="width: 100%; height: 320rpx; display: block;" />
+            <view wx:if="{{canEdit}}" bindtap="onRemoveCoverImage" style="position: absolute; top: 16rpx; right: 16rpx; width: 56rpx; height: 56rpx; background: rgba(0,0,0,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <text style="color: white; font-size: 28rpx;">✕</text>
+            </view>
+          </view>
+
+          <!-- 上传按钮 -->
+          <view wx:if="{{canEdit && !shareCoverImage}}" bindtap="onUploadCoverImage" style="display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1rpx dashed {{theme.borderColor || 'rgba(255,255,255,0.15)'}}; border-radius: 16rpx; padding: 40rpx;">
+            <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx;">🖼 上传封面图</text>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; margin-top: 8rpx;">建议比例 5:4，如 500×400，支持 JPG/PNG</text>
+          </view>
+        </view>
       </view>
 
       <!-- 餐标设置 -->

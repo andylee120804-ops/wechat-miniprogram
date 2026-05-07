@@ -191,14 +191,15 @@ async function getSettings(event) {
       partnerStandard: data.partnerStandard || 300,
       defaultStandard: data.defaultStandard !== undefined ? data.defaultStandard : '',
       allowNoStandard: data.allowNoStandard || false,
-      venueMapImageFileID: data.venueMapImageFileID || ''
+      venueMapImageFileID: data.venueMapImageFileID || '',
+      shareCoverImageFileID: data.shareCoverImageFileID || ''
     }
   }
 }
 
 async function updateSettings(event) {
   const { OPENID } = cloud.getWXContext()
-  const { venueName, venueAddress, venueLatitude, venueLongitude, mealStandards, partnerStandard, defaultStandard, allowNoStandard, venueMapImageFileID } = event
+  const { venueName, venueAddress, venueLatitude, venueLongitude, mealStandards, partnerStandard, defaultStandard, allowNoStandard, venueMapImageFileID, shareCoverImageFileID } = event
 
   if (!venueName || !venueAddress) {
     return { success: false, message: '会所名称和地址不能为空' }
@@ -210,7 +211,7 @@ async function updateSettings(event) {
     return { success: false, message: '无权限执行此操作' }
   }
 
-  const updateData = { venueName, venueAddress, venueLatitude: venueLatitude || '', venueLongitude: venueLongitude || '', mealStandards: mealStandards || [500, 600, 800], partnerStandard: partnerStandard || 300, defaultStandard: defaultStandard !== undefined ? defaultStandard : '', allowNoStandard: !!allowNoStandard, venueMapImageFileID: venueMapImageFileID || '', updatedAt: db.serverDate() }
+  const updateData = { venueName, venueAddress, venueLatitude: venueLatitude || '', venueLongitude: venueLongitude || '', mealStandards: mealStandards || [500, 600, 800], partnerStandard: partnerStandard || 300, defaultStandard: defaultStandard !== undefined ? defaultStandard : '', allowNoStandard: !!allowNoStandard, venueMapImageFileID: venueMapImageFileID || '', shareCoverImageFileID: shareCoverImageFileID || '', updatedAt: db.serverDate() }
 
   const existing = await db.collection('settings').where({ key: 'venue_info' }).get()
   if (existing.data && existing.data.length > 0) {

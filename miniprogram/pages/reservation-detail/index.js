@@ -18,7 +18,8 @@ Page({
     shareAddress: '',
     shareLatitude: '',
     shareLongitude: '',
-    shareRemark: ''
+    shareRemark: '',
+    shareCoverImageUrl: ''
   },
 
   onLoad(options) {
@@ -73,10 +74,22 @@ Page({
         data: { action: 'getSettings' }
       })
       if (res.result && res.result.success && res.result.data) {
+        const d = res.result.data
+        // 下载分享封面图到本地临时路径
+        const coverFileID = d.shareCoverImageFileID || ''
+        if (coverFileID) {
+          wx.cloud.downloadFile({
+            fileID: coverFileID,
+            success: (dlRes) => {
+              this.setData({ shareCoverImageUrl: dlRes.tempFilePath })
+            },
+            fail: () => {}
+          })
+        }
         this.setData({
-          shareAddress: res.result.data.venueAddress || '',
-          shareLatitude: res.result.data.venueLatitude || '',
-          shareLongitude: res.result.data.venueLongitude || ''
+          shareAddress: d.venueAddress || '',
+          shareLatitude: d.venueLatitude || '',
+          shareLongitude: d.venueLongitude || ''
         })
       }
     } catch (err) {
@@ -193,9 +206,13 @@ Page({
 
   onShareAppMessage() {
     const title = this.data.shareTitle || (this.data.reservation ? this.data.reservation.customerName + ' · 预定信息' : '预定信息')
-    return {
+    const shareData = {
       title,
       path: '/pages/reservation-share/index?id=' + this.data.id
     }
+    if (this.data.shareCoverImageUrl) {
+      shareData.imageUrl = this.data.shareCoverImageUrl
+    }
+    return shareData
   }
 })
