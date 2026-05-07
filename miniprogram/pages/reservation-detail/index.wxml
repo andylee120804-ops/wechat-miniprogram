@@ -60,6 +60,10 @@
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">创建人</text>
           <text class="detail-value" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{reservation.createdByName}}</text>
         </view>
+        <view class="detail-row">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">创建时间</text>
+          <text class="detail-value" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{reservation.createdAtDisplay}}</text>
+        </view>
       </theme-card>
     </view>
 
@@ -142,9 +146,9 @@
   <!-- Action Bar - fixed at bottom, independent of content -->
   <view class="bottom-bar" wx:if="{{!loading && reservation && reservation.status !== 'cancelled'}}">
     <view class="bottom-bar-inner" style="justify-content: space-between;">
-      <view class="bar-btn bar-btn-danger" style="flex: 1; font-size: 26rpx; border-radius: 14rpx;" bindtap="onCancel">取消</view>
-      <view class="bar-btn bar-btn-primary" style="flex: 1; font-size: 26rpx; border-radius: 14rpx; margin: 0 12rpx;" bindtap="onEdit">编辑</view>
-      <view class="bar-btn" style="flex: 1; background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}}; font-weight: 700;" bindtap="onShareToGuest">分享给客人</view>
+      <view class="bar-btn bar-btn-danger" style="flex: 1; border-radius: 14rpx;" bindtap="onCancel">取消预定</view>
+      <view class="bar-btn bar-btn-primary" style="flex: 1; border-radius: 14rpx; margin: 0 12rpx;" bindtap="onEdit">编辑</view>
+      <view class="bar-btn" style="flex: 1; background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}}; font-weight: 700; border-radius: 14rpx;" bindtap="onShareToGuest">分享给客人</view>
     </view>
   </view>
 

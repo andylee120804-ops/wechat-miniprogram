@@ -99,12 +99,13 @@ Page({
     try {
       const that = this
       const now = new Date()
-      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000)
+      const _db = db.getDb()
+      const _ = _db.command
 
       const results = await db.queryAll(COLLECTIONS.RESERVATION, {
-        date: db.getDb().command.gte(thirtyDaysAgo).and(db.getDb().command.lte(todayEnd)),
-        status: db.getDb().command.in(['reserved', 'confirmed'])
+        date: _.gte(thirtyDaysAgo).and(_.lte(now)),
+        status: _.in(['reserved', 'confirmed'])
       })
 
       const allReservations = results.data || []
@@ -166,7 +167,7 @@ Page({
 
     // Calculate with partner discount
     let unitPrice = res.standard || 0
-    if (res.isPartner && unitPrice > 300) {
+    if (res.isPartner) {
       unitPrice = unitPrice * 0.8
     }
     let estimatedAmount = Math.round(unitPrice * (res.guestCount || 0))
@@ -176,8 +177,8 @@ Page({
   },
 
   async calculateFinalAmount(res, estimatedAmount, index) {
-    // Partner-only pricing (standard=300, no meal price selected) — skip minimum amount
-    if (res.isPartner && res.standard === 300) {
+    // Partner-only pricing — skip minimum amount
+    if (res.isPartner) {
       this.setData({
         reservationId: res._id,
         selectedReservation: res,
@@ -222,8 +223,8 @@ Page({
 
   async getMinAmountForReservation(reservation) {
     if (!reservation) return null
-    // 合作方简餐（standard=300，未选正餐）不检查最低消费
-    if (reservation.isPartner && reservation.standard === 300) return null
+    // 合作方不检查最低消费
+    if (reservation.isPartner) return null
     const key = this.getMinAmountKey(reservation)
     const minAmount = await this.getMinAmount(key)
     return minAmount || null

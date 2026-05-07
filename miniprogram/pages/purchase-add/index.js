@@ -1,6 +1,6 @@
 const app = getApp()
 const { formatDate } = require('../../utils/helpers')
-const { validateRequired, validateAmount } = require('../../utils/validators')
+const { validateAmount } = require('../../utils/validators')
 const { log, LOG_TYPES } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { checkPermission, ACTIONS, hasPermission } = require('../../utils/permission')
@@ -95,11 +95,17 @@ Page({
 
   onDateChange: function(e) {
     this.setData({ date: e.detail.value })
+    if (this.data.errors.date) {
+      this.setData({ 'errors.date': '' })
+    }
   },
 
   onCategorySelect: function(e) {
     const value = e.currentTarget.dataset.value
     this.setData({ category: value })
+    if (this.data.errors.category) {
+      this.setData({ 'errors.category': '' })
+    }
   },
 
   onRemarkInput: function(e) {
@@ -108,8 +114,14 @@ Page({
 
   validate: function() {
     const errors = {}
-    const itemResult = validateRequired(this.data.item, '物品名称')
-    if (!itemResult.valid) errors.item = itemResult.message
+
+    if (!this.data.date) {
+      errors.date = '请选择采购日期'
+    }
+
+    if (!this.data.category) {
+      errors.category = '请选择采购分类'
+    }
 
     const amountResult = validateAmount(this.data.amount)
     if (!amountResult.valid) errors.amount = amountResult.message

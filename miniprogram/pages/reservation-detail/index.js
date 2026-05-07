@@ -1,4 +1,4 @@
-const { formatDate, getRoomName, getReservationStatusText, getExclusiveTypeName } = require('../../utils/helpers')
+const { formatDate, formatDateTime, getRoomName, getReservationStatusText, getExclusiveTypeName } = require('../../utils/helpers')
 const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { log, LOG_TYPES } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
@@ -52,6 +52,7 @@ Page({
         statusText: getReservationStatusText(res.status),
         dateDisplay: formatDate(res.date),
         roomNameDisplay: getExclusiveTypeName(et, res.room),
+        createdAtDisplay: res._createTime ? formatDateTime(res._createTime) : (res.createTime ? formatDateTime(res.createTime) : ''),
         exclusiveType: et
       }
 
@@ -84,7 +85,12 @@ Page({
   },
 
   onBack() {
-    wx.navigateBack()
+    const pages = getCurrentPages()
+    if (pages.length > 1) {
+      wx.navigateBack()
+    } else {
+      wx.reLaunch({ url: '/pages/index/index' })
+    }
   },
 
   onEdit() {
@@ -177,6 +183,9 @@ Page({
   onShareAndSave() {
     this.setData({ showShareModal: false })
     const shareConfig = this._buildShareConfig()
+    // 同步更新本地数据，确保再次打开分享时能看到刚才保存的内容
+    const reservation = { ...this.data.reservation, shareConfig }
+    this.setData({ reservation })
     db.updateDoc(COLLECTIONS.RESERVATION, this.data.id, { shareConfig }).catch(err => {
       console.warn('保存分享配置失败:', err)
     })

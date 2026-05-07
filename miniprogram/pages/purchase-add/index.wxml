@@ -11,35 +11,24 @@
   </view>
 
   <view class="page-content px-lg pt-xl">
-    <!-- Item Name -->
+    <!-- Date (required - top) -->
     <theme-card theme="{{theme}}">
       <view class="p-lg">
-        <theme-form-item theme="{{theme}}" label="物品名称" required="{{true}}" error="{{errors.item || ''}}">
-          <input class="form-input" placeholder="请输入物品名称" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};"
-            value="{{item}}" bindinput="onItemInput"
-            style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+        <theme-form-item theme="{{theme}}" label="采购日期" required="{{true}}" error="{{errors.date || ''}}">
+          <picker mode="date" value="{{date}}" bindchange="onDateChange">
+            <view class="date-display flex-row flex-between" style="background: {{theme.elevated || '#252540'}}; border-radius: 12rpx; padding: 20rpx 24rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+              <text style="color: {{theme.textPrimary || '#F5F0E8'}};">{{date}}</text>
+              <text style="color: {{theme.textMuted || '#5C5C72'}};">▾</text>
+            </view>
+          </picker>
         </theme-form-item>
       </view>
     </theme-card>
 
-    <!-- Amount -->
+    <!-- Category (required - second) -->
     <theme-card theme="{{theme}}" class="mt-md">
       <view class="p-lg">
-        <theme-form-item theme="{{theme}}" label="金额" required="{{true}}" error="{{errors.amount || ''}}">
-          <view class="amount-input-wrapper flex-row" style="border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; background: {{theme.elevated || '#252540'}};">
-            <text class="amount-prefix text-title2" style="color: {{theme.textMuted || '#5C5C72'}};">¥</text>
-            <input class="amount-input" type="digit" placeholder="0.00" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};"
-              value="{{amount}}" bindinput="onAmountInput"
-              style="color: {{theme.amountNegative || '#F87171'}};" />
-          </view>
-        </theme-form-item>
-      </view>
-    </theme-card>
-
-    <!-- Category Selector -->
-    <theme-card theme="{{theme}}" class="mt-md">
-      <view class="p-lg">
-        <theme-form-item theme="{{theme}}" label="采购分类">
+        <theme-form-item theme="{{theme}}" label="采购分类" required="{{true}}" error="{{errors.category || ''}}">
           <view class="category-pills flex-row flex-wrap">
             <view class="category-pill {{category === item.value ? 'active' : ''}}"
               wx:for="{{categoryOptions}}" wx:key="value"
@@ -52,16 +41,27 @@
       </view>
     </theme-card>
 
-    <!-- Date -->
+    <!-- Item Name (optional - third) -->
     <theme-card theme="{{theme}}" class="mt-md">
       <view class="p-lg">
-        <theme-form-item theme="{{theme}}" label="采购日期">
-          <picker mode="date" value="{{date}}" bindchange="onDateChange">
-            <view class="date-display flex-row flex-between" style="background: {{theme.elevated || '#252540'}}; border-radius: 12rpx; padding: 20rpx 24rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
-              <text style="color: {{theme.textPrimary || '#F5F0E8'}};">{{date}}</text>
-              <text style="color: {{theme.textMuted || '#5C5C72'}};">▾</text>
-            </view>
-          </picker>
+        <theme-form-item theme="{{theme}}" label="物品名称" error="{{errors.item || ''}}">
+          <input class="form-input" placeholder="请输入物品名称(选填)" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};"
+            value="{{item}}" bindinput="onItemInput"
+            style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+        </theme-form-item>
+      </view>
+    </theme-card>
+
+    <!-- Amount (required - fourth) -->
+    <theme-card theme="{{theme}}" class="mt-md">
+      <view class="p-lg">
+        <theme-form-item theme="{{theme}}" label="金额" required="{{true}}" error="{{errors.amount || ''}}">
+          <view class="amount-input-wrapper flex-row" style="border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; background: {{theme.elevated || '#252540'}};">
+            <text class="amount-prefix text-title2" style="color: {{theme.textMuted || '#5C5C72'}};">¥</text>
+            <input class="amount-input" type="digit" placeholder="0.00" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};"
+              value="{{amount}}" bindinput="onAmountInput"
+              style="color: {{theme.amountNegative || '#F87171'}};" />
+          </view>
         </theme-form-item>
       </view>
     </theme-card>

@@ -16,7 +16,7 @@ Page({
     time: '中午',
     exclusiveType: 'none',
     room: 'big',
-    standard: 500,
+    standard: 0,
     isPartner: false,
     standardPicked: false,
     customerName: '',
@@ -29,22 +29,83 @@ Page({
       { value: 'big', label: '大包厢' },
       { value: 'small', label: '小包厢' }
     ],
-    standardOptions: [500, 600, 800],
+    standardOptions: [],
+    partnerStandard: 300,
+    defaultStandard: 500,
+    allowNoStandard: false,
+    bossList: [],
+    showBossPicker: false,
+    selectedBossIndex: -1,
     errors: {},
     showDeleteModal: false
   },
 
-  onLoad(options) {
+  async onLoad(options) {
     const app = getApp()
     const theme = app.getThemePageData()
     const today = formatDate(new Date())
-    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, date: today })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, date: today, todayDate: today })
+
+    // 先加载餐标配置和老板名单（确保默认值就绪）
+    await this.loadVenueSettings()
 
     if (options.id) {
       this.setData({ isEdit: true, id: options.id })
       this.loadReservation(options.id)
     } else if (options.date) {
       this.setData({ date: options.date })
+    }
+  },
+
+  async loadVenueSettings() {
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'sendMessage',
+        data: { action: 'getSettings' }
+      })
+      if (res.result && res.result.success && res.result.data) {
+        const d = res.result.data
+        const standards = d.mealStandards || [500, 600, 800]
+        const defaultStd = d.defaultStandard !== undefined && d.defaultStandard !== '' ? d.defaultStandard : 0
+        const partnerStd = d.partnerStandard || 300
+        const noStandard = !d.allowNoStandard
+        // 'partner' default: 初始使用股东餐标
+        const initStd = defaultStd === 'partner' ? partnerStd : (Number(defaultStd) || 0)
+        // 当 allowNoStandard 为 false 时，不自动预选默认餐标，强制用户手动选择
+        const finalStd = noStandard ? 0 : initStd
+        this.setData({
+          standardOptions: standards,
+          partnerStandard: partnerStd,
+          defaultStandard: defaultStd,
+          allowNoStandard: d.allowNoStandard || false,
+          standard: finalStd,
+          standardPicked: !!finalStd
+        })
+      }
+    } catch (err) {
+      console.warn('加载设置失败:', err)
+      // 使用默认值
+      this.setData({
+        standardOptions: [500, 600, 800],
+        partnerStandard: 300,
+        defaultStandard: 500,
+        allowNoStandard: false,
+        standard: 0,
+        standardPicked: false
+      })
+    }
+    // 无论设置加载成功与否，都尝试加载老板列表
+    this.loadBossList()
+  },
+
+  async loadBossList() {
+    try {
+      const res = await db.queryAll(COLLECTIONS.STAFF, { role: 'boss', status: 'active' })
+      if (res.data && res.data.length > 0) {
+        this.setData({ bossList: res.data })
+      }
+    } catch (err) {
+      console.warn('加载老板名单失败:', err)
     }
   },
 
@@ -61,18 +122,29 @@ Page({
         setTimeout(function() { wx.navigateBack() }, 1500)
         return
       }
+      const isPartner = res.isPartner || false
+      let selectedBossIndex = -1
+      if (isPartner && this.data.bossList.length === 0) {
+        await this.loadBossList()
+      }
+      if (isPartner && this.data.bossList.length > 0) {
+        selectedBossIndex = this.data.bossList.findIndex(function(b) { return b.name === res.customerName })
+      }
+      // 编辑模式：直接用原预约的餐标值，不自动填充默认值
+      const hasStandard = res.standard !== undefined && res.standard !== null && res.standard !== 0
       this.setData({
         date: formatDate(res.date),
         time: res.time || '中午',
         exclusiveType: res.exclusiveType || (res.isExclusive ? 'full' : 'none'),
         room: res.room || 'big',
-        standard: res.standard || 500,
-        isPartner: res.isPartner || false,
-        standardPicked: true,
+        standard: hasStandard ? res.standard : 0,
+        isPartner: isPartner,
+        standardPicked: hasStandard || isPartner,
         customerName: res.customerName || '',
         phone: res.phone || '',
         guestCount: res.guestCount ? String(res.guestCount) : '',
-        remark: res.remark || ''
+        remark: res.remark || '',
+        selectedBossIndex: selectedBossIndex
       })
       wx.hideLoading()
     } catch (err) {
@@ -82,7 +154,13 @@ Page({
   },
 
   onDateChange(e) {
-    this.setData({ date: e.detail.value })
+    const selected = e.detail.value
+    const today = formatDate(new Date())
+    if (selected < today) {
+      wx.showToast({ title: '不能选择过去的日期', icon: 'none' })
+      return
+    }
+    this.setData({ date: selected })
     this.clearError('date')
   },
 
@@ -109,7 +187,11 @@ Page({
     wx.vibrateShort({ type: 'light' })
     const value = Number(e.currentTarget.dataset.value)
     if (this.data.standard === value && this.data.standardPicked) {
-      // Toggle off — allow deselection for flexibility with partner/shareholder option
+      // Only allow deselection if allowNoStandard is enabled
+      if (!this.data.allowNoStandard) {
+        wx.showToast({ title: '设置要求必须选择餐标', icon: 'none' })
+        return
+      }
       this.setData({ standard: 0, standardPicked: false })
     } else {
       this.setData({ standard: value, standardPicked: true })
@@ -120,14 +202,55 @@ Page({
   togglePartner(e) {
     wx.vibrateShort({ type: 'light' })
     const newVal = !this.data.isPartner
-    const updates = { isPartner: newVal }
-    if (newVal && !this.data.standardPicked) {
-      updates.standard = 300
-    } else if (!newVal && this.data.standard === 300) {
-      updates.standard = 500
+    const updates = { isPartner: newVal, selectedBossIndex: -1 }
+    if (newVal) {
+      // 选股东：自动使用股东餐标
+      updates.standard = this.data.partnerStandard
+      updates.standardPicked = true
+    } else {
+      // 取消股东：如果要求必选餐标，重置为0让用户手动选
+      if (!this.data.allowNoStandard) {
+        updates.standard = 0
+        updates.standardPicked = false
+      } else {
+        var defaultStd = this.data.defaultStandard
+        if (defaultStd === 'partner') defaultStd = this.data.partnerStandard
+        updates.standard = defaultStd || 0
+        updates.standardPicked = !!updates.standard
+      }
+    }
+    if (newVal && this.data.bossList.length > 0) {
+      // 默认选择第一个老板
+      const firstBoss = this.data.bossList[0]
+      updates.customerName = firstBoss.name
+      updates.selectedBossIndex = 0
+      this.clearError('customerName')
     }
     this.setData(updates)
     this.clearError('standard')
+  },
+
+  onBossPickerTap() {
+    if (this.data.bossList.length > 0) {
+      this.setData({ showBossPicker: true })
+    }
+  },
+
+  onBossSelect(e) {
+    const index = parseInt(e.currentTarget.dataset.index, 10)
+    const boss = this.data.bossList[index]
+    if (boss) {
+      this.setData({
+        customerName: boss.name,
+        selectedBossIndex: index,
+        showBossPicker: false
+      })
+      this.clearError('customerName')
+    }
+  },
+
+  onBossPickerClose() {
+    this.setData({ showBossPicker: false })
   },
 
   onCustomerNameInput(e) {
@@ -162,6 +285,10 @@ Page({
     const dateResult = validateRequired(data.date, '日期')
     if (!dateResult.valid) errors.date = dateResult.message
 
+    if (!errors.date && data.date < formatDate(new Date())) {
+      errors.date = '不能选择过去的日期'
+    }
+
     const nameResult = validateRequired(data.customerName, '客户姓名')
     if (!nameResult.valid) errors.customerName = nameResult.message
 
@@ -180,12 +307,27 @@ Page({
       errors.room = '请选择包厢'
     }
 
+    if (!data.allowNoStandard && !data.standardPicked) {
+      errors.standard = '请选择餐标'
+    }
+
     this.setData({ errors })
     return Object.keys(errors).length === 0
   },
 
   async onSubmit() {
     if (this.data.submitting) return
+
+    // Direct check: if allowNoStandard is off and no standard selected, block with modal
+    if (!this.data.allowNoStandard && !this.data.standardPicked) {
+      wx.showModal({
+        title: '餐标未选择',
+        content: '当前设置要求预约时必须选择餐标，请在「餐标」区域点击选择一项',
+        showCancel: false
+      })
+      return
+    }
+
     if (!this.validate()) {
       wx.showToast({ title: '请检查表单', icon: 'none' })
       return

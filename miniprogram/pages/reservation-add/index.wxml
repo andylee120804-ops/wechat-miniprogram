@@ -15,7 +15,7 @@
       <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">日期与时间</view>
 
       <theme-form-item theme="{{theme}}" label="日期" required="{{true}}" error="{{errors.date || ''}}">
-        <picker mode="date" value="{{date}}" bindchange="onDateChange">
+        <picker mode="date" value="{{date}}" start="{{todayDate}}" bindchange="onDateChange">
           <view class="picker-value" style="color: {{date ? (theme.textPrimary || '#F5F0E8') : (theme.textMuted || 'rgba(245,240,232,0.40)')}};">
             {{date || '请选择日期'}}
           </view>
@@ -80,7 +80,7 @@
 
     <!-- Section 4: Standard -->
     <theme-card theme="{{theme}}">
-      <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">餐标</view>
+      <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">餐标<text wx:if="{{!allowNoStandard}}" style="color: #FF6B6B; margin-left: 4rpx;">*</text></view>
 
       <view class="pill-selector standard-selector">
         <view class="pill {{isPartner ? 'pill-active' : ''}}"
@@ -97,23 +97,51 @@
           ¥{{item}}/人
         </view>
       </view>
+      <text wx:if="{{!standard && !isPartner && allowNoStandard}}" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-top: 12rpx;">未选择餐标</text>
+      <view wx:if="{{errors.standard}}" style="background: rgba(255,107,107,0.15); border: 2rpx solid #FF6B6B; border-radius: 12rpx; padding: 16rpx 20rpx; margin-top: 16rpx;">
+        <text style="color: #FF6B6B; font-size: 26rpx; font-weight: 500;">{{errors.standard}}</text>
+      </view>
     </theme-card>
 
     <!-- Section 4: Customer Info -->
     <theme-card theme="{{theme}}">
       <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">客户信息</view>
 
-      <theme-form-item theme="{{theme}}" label="客户姓名" required="{{true}}" error="{{errors.customerName || ''}}">
+      <!-- 客户姓名: 股东模式下选择老板，非股东手动输入 -->
+      <theme-form-item theme="{{theme}}" label="客户姓名" required="{{!isPartner}}" error="{{errors.customerName || ''}}">
+        <view class="form-input-wrap">
+          <block wx:if="{{isPartner && bossList.length > 0}}">
+            <view class="form-input view-mode" bindtap="onBossPickerTap" style="color: {{theme.textPrimary || '#F5F0E8'}};">
+              {{bossList[selectedBossIndex > -1 ? selectedBossIndex : 0].name || '请选择股东'}}
+            </view>
+          </block>
+          <block wx:else>
+            <input
+              class="form-input"
+              value="{{customerName}}"
+              bindinput="onCustomerNameInput"
+              placeholder="请输入客户姓名"
+              placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}}; font-size: 28rpx;"
+              style="color: {{theme.textPrimary || '#F5F0E8'}};"
+            />
+          </block>
+        </view>
+      </theme-form-item>
+
+      <!-- 人数（现在在手机号前面） -->
+      <theme-form-item theme="{{theme}}" label="人数" required="{{true}}" error="{{errors.guestCount || ''}}">
         <input
           class="form-input"
-          value="{{customerName}}"
-          bindinput="onCustomerNameInput"
-          placeholder="请输入客户姓名"
+          type="number"
+          value="{{guestCount}}"
+          bindinput="onGuestCountInput"
+          placeholder="请输入用餐人数"
           placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};"
           style="color: {{theme.textPrimary || '#F5F0E8'}};"
         />
       </theme-form-item>
 
+      <!-- 手机号（现在在人数后面） -->
       <theme-form-item theme="{{theme}}" label="手机号" required="{{false}}" error="{{errors.phone || ''}}">
         <input
           class="form-input"
@@ -122,18 +150,6 @@
           value="{{phone}}"
           bindinput="onPhoneInput"
           placeholder="请输入手机号"
-          placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};"
-          style="color: {{theme.textPrimary || '#F5F0E8'}};"
-        />
-      </theme-form-item>
-
-      <theme-form-item theme="{{theme}}" label="人数" required="{{true}}" error="{{errors.guestCount || ''}}">
-        <input
-          class="form-input"
-          type="number"
-          value="{{guestCount}}"
-          bindinput="onGuestCountInput"
-          placeholder="请输入用餐人数"
           placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};"
           style="color: {{theme.textPrimary || '#F5F0E8'}};"
         />
@@ -165,6 +181,28 @@
     </view>
     <view class="safe-bottom-bar"></view>
   </view>
+
+  <!-- Boss Picker Modal -->
+  <theme-modal
+    theme="{{theme}}"
+    visible="{{showBossPicker}}"
+    title="选择股东"
+    showFooter="{{false}}"
+    bind:close="onBossPickerClose"
+  >
+    <view class="boss-picker-list">
+      <view
+        wx:for="{{bossList}}"
+        wx:key="index"
+        class="boss-picker-item"
+        data-index="{{index}}"
+        bindtap="onBossSelect"
+        style="color: {{theme.textPrimary || '#F5F0E8'}}; border-bottom: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.06)'}};"
+      >
+        <text class="boss-picker-name">{{item.name}}</text>
+      </view>
+    </view>
+  </theme-modal>
 
   <!-- Delete Confirmation Modal -->
   <theme-modal
