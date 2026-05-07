@@ -45,7 +45,7 @@
     </theme-card>
 
     <!-- Permissions -->
-    <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;" wx:if="{{role !== 'boss'}}">
+    <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;" wx:if="{{role !== 'boss' && role !== 'admin'}}">
       <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 20rpx;">权限配置</text>
       <view class="perm-module" wx:for="{{moduleOptions}}" wx:key="key" style="background: {{theme.elevated || '#252540'}}; border-radius: 16rpx; padding: 20rpx; margin-bottom: 16rpx;">
         <view class="perm-module-header">

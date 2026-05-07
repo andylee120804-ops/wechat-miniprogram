@@ -77,8 +77,33 @@ App({
   getThemeColors() { return THEMES[this.globalData.theme] || THEMES['ink-gold'] },
   getThemePageData() { return getThemePageData(this.globalData.theme) },
 
+  // Pages accessible without login
+  _publicPages: ['/pages/login/index', '/pages/reservation-share/index'],
+
   onShow() {
     this.refreshSession()
+    this._guardAuth()
+  },
+
+  _authRedirecting: false,
+  _guardAuth() {
+    const pages = getCurrentPages()
+    if (!pages.length || this._authRedirecting) return
+    const route = '/' + pages[pages.length - 1].route
+
+    if (this.globalData.isLogin) {
+      if (route === '/pages/login/index') {
+        wx.switchTab({ url: '/pages/index/index' })
+      }
+      return
+    }
+
+    if (this._publicPages.includes(route)) return
+    this._authRedirecting = true
+    wx.reLaunch({
+      url: '/pages/login/index',
+      complete: () => { this._authRedirecting = false }
+    })
   },
 
   _lastRefreshTime: 0,
@@ -137,10 +162,15 @@ App({
   },
 
   hasPermission(module, action) {
+    const userInfo = this.globalData.userInfo
+    if (userInfo && userInfo.role === 'admin') return true
+    // Boss can access everything except admin-only modules
+    if (userInfo && userInfo.role === 'boss') {
+      const adminOnlyModules = ['staff', 'venueSettings', 'minAmount']
+      return !adminOnlyModules.includes(module)
+    }
     const perms = this.globalData.permissions
     if (perms.length === 0) return false
-    const userInfo = this.globalData.userInfo
-    if (userInfo && userInfo.role === 'boss') return true
     const perm = perms.find(p => p.module === module)
     if (!perm) return false
     return perm.actions.includes(action) || perm.actions.includes('*')

@@ -60,7 +60,7 @@ exports.main = async (event, context) => {
 function getRoleName(role) {
   const roleNames = {
     boss: '老板',
-    admin: '行政主管',
+    admin: '管理员',
     purchase: '采购主管',
     chef: '厨师',
     waiter: '服务员'

@@ -13,8 +13,6 @@ Page({
     loading: true,
     announcements: [],
     canAddAnnouncement: false,
-    canEditAnnouncement: false,
-    canDeleteAnnouncement: false,
     showCreateModal: false,
     createTitle: '',
     createContent: '',
@@ -28,9 +26,7 @@ Page({
   onShow() {
     const theme = app.getThemePageData()
     const canAddAnnouncement = hasPermission('announcement', ACTIONS.ADD)
-    const canEditAnnouncement = hasPermission('announcement', ACTIONS.EDIT)
-    const canDeleteAnnouncement = hasPermission('announcement', ACTIONS.DELETE)
-    this.setData({ theme, canAddAnnouncement, canEditAnnouncement, canDeleteAnnouncement, statusBarHeight: app.globalData.statusBarHeight || 44 })
+    this.setData({ theme, canAddAnnouncement, statusBarHeight: app.globalData.statusBarHeight || 44 })
     this.loadData()
   },
 
@@ -44,6 +40,10 @@ Page({
       const today = formatDate(new Date())
       const res = await db.queryAll(COLLECTIONS.ANNOUNCEMENT, { active: true }, 'createdAt', 'desc')
       const userInfo = app.globalData.userInfo
+      const staffRes = await db.queryAll(COLLECTIONS.STAFF, { status: 'active' })
+      const staffList = staffRes.data || []
+
+      // Resolve creator names: try local staffList first, then cloud function with announcementId
       const announcements = (res.data || []).filter(ann => {
         if (!ann.startDate && !ann.endDate) {
           return formatDate(ann.createdAt) === today
@@ -55,11 +55,18 @@ Page({
         const startDate = ann.startDate || formatDate(ann.createdAt)
         const endDate = ann.endDate && ann.endDate !== startDate ? ann.endDate : ''
         const readBy = ann.readBy || []
+        const isCreator = userInfo && (ann.createdBy === userInfo._id || ann.createdBy === userInfo._openid)
+        const isAdmin = userInfo && userInfo.role === 'admin'
+        const creatorFromStaff = staffList.find(s => s._id === ann.createdBy)
+        const creatorName = (creatorFromStaff && creatorFromStaff.name) || ann.createdByName || '未知'
         return {
           ...ann,
+          createdByName: creatorName,
           displayDateRange: endDate ? startDate + '-' + endDate : startDate,
           isItemUnread: userInfo && !readBy.includes(userInfo._id),
-          readCount: readBy.length
+          readCount: readBy.length,
+          isCreator,
+          canEditItem: !!(isCreator || isAdmin)
         }
       })
       this.setData({ loading: false, announcements })
@@ -145,14 +152,13 @@ Page({
         name: 'sendMessage',
         data: {
           action: 'createAnnouncement',
+          callerWechatId: (app.globalData.userInfo || {}).wechatId || '',
           title: createTitle.trim(),
           content: createContent.trim(),
           priority: createPriority,
           needsConfirm: createNeedsConfirm,
           startDate: createStartDate,
-          endDate: createEndDate,
-          createdBy: userInfo._id,
-          createdByName: userInfo.name
+          endDate: createEndDate
         }
       })
       log('ANNOUNCEMENT_CREATE', { title: createTitle })
@@ -178,7 +184,7 @@ Page({
       success: async (res) => {
         if (res.confirm) {
           try {
-            await wx.cloud.callFunction({ name: 'sendMessage', data: { action: 'deleteAnnouncement', announcementId: id } })
+            await wx.cloud.callFunction({ name: 'sendMessage', data: { action: 'deleteAnnouncement', callerWechatId: (app.globalData.userInfo || {}).wechatId || '', announcementId: id } })
             log('ANNOUNCEMENT_DELETE', {}, id)
             wx.showToast({ title: '已删除', icon: 'success' })
             this.loadData()

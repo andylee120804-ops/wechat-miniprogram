@@ -1,7 +1,7 @@
 const app = getApp()
 const { log } = require('../../../utils/logger')
 const { handleCloudError } = require('../../../utils/error-handler')
-const { hasPermission, ACTIONS } = require('../../../utils/permission')
+const { ACTIONS } = require('../../../utils/permission')
 const { COLLECTIONS } = require('../../../utils/db')
 const db = require('../../../utils/db')
 
@@ -31,7 +31,7 @@ Page({
     },
     roleOptions: [
       { value: 'boss', label: '老板' },
-      { value: 'admin', label: '行政主管' },
+      { value: 'admin', label: '管理员' },
       { value: 'purchase', label: '采购主管' },
       { value: 'chef', label: '厨师' },
       { value: 'waiter', label: '服务员' }
@@ -51,14 +51,15 @@ Page({
 
   onLoad(options) {
     const isEdit = !!(options && options.id)
-    const canEdit = isEdit ? hasPermission('staff', ACTIONS.EDIT) : hasPermission('staff', ACTIONS.ADD)
-    if (!canEdit) {
+    const userInfo = app.globalData.userInfo || {}
+    // 只有 admin 可以操作员工管理
+    if (userInfo.role !== 'admin') {
       wx.showToast({ title: '无权限', icon: 'none' })
       setTimeout(function() { wx.navigateBack() }, 1500)
       return
     }
     const theme = app.getThemePageData()
-    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, isEdit, canEdit, id: options.id || '' })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, isEdit, canEdit: true, id: options.id || '' })
     if (isEdit) {
       this.loadExisting()
     }
@@ -235,7 +236,8 @@ Page({
 
   async onConfirmDelete() {
     this.setData({ showDeleteModal: false })
-    if (!hasPermission('staff', ACTIONS.DELETE)) {
+    const userInfo = app.globalData.userInfo || {}
+    if (userInfo.role !== 'admin') {
       wx.showToast({ title: '无权限删除', icon: 'none' })
       return
     }

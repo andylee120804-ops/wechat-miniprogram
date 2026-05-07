@@ -31,6 +31,11 @@ Page({
   },
 
   onShow() {
+    if (!hasPermission('staff', ACTIONS.VIEW)) {
+      wx.showToast({ title: '无权限', icon: 'none' })
+      setTimeout(function() { wx.navigateBack() }, 1500)
+      return
+    }
     this.loadData()
   },
 
@@ -53,7 +58,7 @@ Page({
         ...s,
         roleName: getRoleName(s.role),
         nameInitial: (s.name || '?').charAt(0),
-        permissionModules: s.role === 'boss' ? ['全部权限'] : getPermissionModules(permMap[s._id] || [])
+        permissionModules: (s.role === 'admin' || s.role === 'boss') ? ['全部权限'] : getPermissionModules(permMap[s._id] || [])
       }))
 
       this.setData({ loading: false, staffList, _loaded: true })

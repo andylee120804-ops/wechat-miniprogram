@@ -18,16 +18,18 @@ Page({
       theme,
       statusBarHeight: app.globalData.statusBarHeight || 44
     })
-    this.checkPermission()
+    if (!this.checkPermission()) return
     this.loadSettings()
   },
 
   checkPermission() {
     const userInfo = app.globalData.userInfo || {}
-    if (userInfo.role !== 'boss') {
-      wx.showToast({ title: '仅老板可访问', icon: 'none' })
+    if (userInfo.role !== 'admin') {
+      wx.showToast({ title: '仅管理员可访问', icon: 'none' })
       setTimeout(() => wx.navigateBack(), 1500)
+      return false
     }
+    return true
   },
 
   async loadSettings() {

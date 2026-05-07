@@ -65,7 +65,7 @@ Page({
         customerName: r.customerName || '',
         phone: r.phone || '',
         date: formatDate(r.date) || '',
-        time: r.time || '',
+        time: r.time ? r.time + ' ' + (r.time === '中午' ? '12:00' : '18:30') : '',
         roomName: roomName,
         guestCount: r.guestCount || '',
         remark: r.remark || '',
@@ -158,7 +158,7 @@ Page({
     if (pages.length > 1) {
       wx.navigateBack({ delta: 1 })
     } else {
-      wx.reLaunch({ url: '/pages/index/index' })
+      wx.exitMiniProgram()
     }
   }
 })

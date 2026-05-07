@@ -219,13 +219,6 @@ Page({
         updates.standardPicked = !!updates.standard
       }
     }
-    if (newVal && this.data.bossList.length > 0) {
-      // 默认选择第一个老板
-      const firstBoss = this.data.bossList[0]
-      updates.customerName = firstBoss.name
-      updates.selectedBossIndex = 0
-      this.clearError('customerName')
-    }
     this.setData(updates)
     this.clearError('standard')
   },

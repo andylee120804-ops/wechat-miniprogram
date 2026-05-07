@@ -147,7 +147,7 @@ function formatAmount(amount) {
 function getRoleName(role) {
   const roleMap = {
     boss: '老板',
-    admin: '行政主管',
+    admin: '管理员',
     purchase: '采购主管',
     chef: '厨师',
     waiter: '服务员'

@@ -11,9 +11,13 @@ const ACTIONS = {
   DELETE: 'delete'
 }
 
+// Modules that only admin can access; boss is excluded
+const ADMIN_ONLY_MODULES = ['staff', 'venueSettings', 'minAmount']
+
 /**
  * Check if the current user has permission for a module/action.
- * Boss role always returns true.
+ * Admin has all permissions. Boss can view and manage business modules
+ * but cannot access admin-only modules (staff, venueSettings, minAmount).
  * @param {string} module - The module name (e.g. 'income', 'purchase', 'expense', 'attendance', 'announcement')
  * @param {string} action - The action name (e.g. 'view', 'add', 'edit', 'delete')
  * @returns {boolean} Whether the user has permission
@@ -26,8 +30,13 @@ function hasPermission(module, action) {
     const userInfo = app.globalData.userInfo
     if (!userInfo) return false
 
-    // Boss has all permissions
-    if (userInfo.role === 'boss') return true
+    // Admin has all permissions
+    if (userInfo.role === 'admin') return true
+
+    // Boss can access everything except admin-only modules
+    if (userInfo.role === 'boss') {
+      return !ADMIN_ONLY_MODULES.includes(module)
+    }
 
     const perms = app.globalData.permissions || []
     if (perms.length === 0) return false

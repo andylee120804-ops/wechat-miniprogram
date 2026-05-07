@@ -382,44 +382,42 @@ Page({
     return new Promise(function(resolve) {
       wx.getSetting({
         success: function(res) {
-          const authSetting = res.authSetting
-          if (!authSetting['scope.userLocation']) {
-            wx.authorize({
-              scope: 'scope.userLocation',
-              success: function() {
-                getLocationOnce(resolve)
-              },
-              fail: function() {
-                wx.showModal({
-                  title: '位置权限',
-                  content: '打卡将记录位置信息，请在设置中开启位置权限',
-                  confirmText: '手动打卡',
-                  cancelText: '取消',
-                  success: function(modalRes) {
-                    if (modalRes.confirm) {
-                      resolve({ location: '', locationText: '手动打卡（位置未授权）' })
-                    } else {
-                      resolve({ location: '', locationText: '已取消' })
+          if (res.authSetting['scope.userLocation'] === false) {
+            wx.showModal({
+              title: '位置权限',
+              content: '打卡将记录位置信息，请在设置中开启位置权限',
+              confirmText: '去设置',
+              cancelText: '手动打卡',
+              success: function(modalRes) {
+                if (modalRes.confirm) {
+                  wx.openSetting({
+                    success: function(openRes) {
+                      if (openRes.authSetting['scope.userLocation']) {
+                        chooseLocationOnce(resolve)
+                      } else {
+                        resolve({ location: '', locationText: '手动打卡（位置未授权）' })
+                      }
                     }
-                  }
-                })
+                  })
+                } else {
+                  resolve({ location: '', locationText: '手动打卡（位置未授权）' })
+                }
               }
             })
           } else {
-            getLocationOnce(resolve)
+            chooseLocationOnce(resolve)
           }
         },
         fail: function() {
-          getLocationOnce(resolve)
+          chooseLocationOnce(resolve)
         }
       })
 
-      function getLocationOnce(resolve) {
-        wx.getLocation({
-          type: 'gcj02',
+      function chooseLocationOnce(resolve) {
+        wx.chooseLocation({
           success: function(res) {
             const location = res.latitude + ',' + res.longitude
-            const locationText = res.latitude.toFixed(4) + '°, ' + res.longitude.toFixed(4) + '°'
+            const locationText = (res.name || res.address) || (res.latitude.toFixed(2) + '°, ' + res.longitude.toFixed(2) + '°')
             resolve({ location: location, locationText: locationText })
           },
           fail: function() {

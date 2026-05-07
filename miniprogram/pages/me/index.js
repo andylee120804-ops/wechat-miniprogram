@@ -37,7 +37,7 @@ Page({
     const featureGroup = []
     const settingsGroup = []
 
-    // Management group
+    // Staff management — hasPermission now correctly blocks boss
     if (hasPermission('staff', ACTIONS.VIEW)) {
       managementGroup.push({ key: 'staff', icon: '👥', text: '员工管理' })
     }
@@ -46,22 +46,25 @@ Page({
     }
     managementGroup.push({ key: 'clockin', icon: '🕐', text: '打卡' })
     managementGroup.push({ key: 'announcements', icon: '📢', text: '公告通知' })
+    // Logs use staff VIEW permission — boss cannot access
     if (hasPermission('staff', ACTIONS.VIEW)) {
       managementGroup.push({ key: 'logs', icon: '📋', text: '操作日志' })
     }
 
-    // Feature group (boss only) - renamed to 汇报
-    const userInfo = app.globalData.userInfo
-    if (userInfo && userInfo.role === 'boss') {
+    // Feature group — boss and admin both get business features
+    if (hasPermission('dashboard', ACTIONS.VIEW)) {
       featureGroup.push({ key: 'dashboard', icon: '📊', text: '经营报表' })
       featureGroup.push({ key: 'customer', icon: '👤', text: '客户管理' })
       featureGroup.push({ key: 'insights', icon: '🔍', text: '经营洞察' })
-      managementGroup.push({ key: 'minAmount', icon: '💰', text: '最低消费设置' })
+    }
+    if (hasPermission('expense', ACTIONS.VIEW)) {
       managementGroup.push({ key: 'fixedExpense', icon: '🏠', text: '固定成本' })
     }
-
-    // Settings group
-    if (userInfo && (userInfo.role === 'boss' || userInfo.role === 'admin')) {
+    // Admin-only settings
+    if (hasPermission('minAmount', ACTIONS.VIEW)) {
+      managementGroup.push({ key: 'minAmount', icon: '💰', text: '最低消费设置' })
+    }
+    if (hasPermission('venueSettings', ACTIONS.VIEW)) {
       settingsGroup.push({ key: 'venueSettings', icon: '🏠', text: '食堂设置' })
     }
     settingsGroup.push({ key: 'about', icon: 'ℹ️', text: '关于' })

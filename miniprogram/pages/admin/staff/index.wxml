@@ -31,9 +31,9 @@
       </view>
 
       <view class="perm-tags" style="margin-top: 16rpx; display: flex; flex-wrap: wrap; gap: 8rpx;">
-        <view wx:if="{{item.role === 'boss'}}" style="background: {{theme.accentBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.accentColor || '#C9A96E'}}; padding: 6rpx 16rpx; border-radius: 999rpx; font-size: 22rpx;">全部权限</view>
-        <view wx:if="{{item.role !== 'boss' && item.permissionModules.length > 0}}" wx:for="{{item.permissionModules}}" wx:for-item="mod" wx:key="*this" style="background: {{theme.elevated || '#252540'}}; color: {{theme.textSecondary || '#9A9AB0'}}; padding: 6rpx 16rpx; border-radius: 999rpx; font-size: 22rpx;">{{mod}}</view>
-        <text wx:if="{{item.role !== 'boss' && item.permissionModules.length === 0}}" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">未配置权限</text>
+        <view wx:if="{{item.role === 'admin'}}" style="background: {{theme.accentBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.accentColor || '#C9A96E'}}; padding: 6rpx 16rpx; border-radius: 999rpx; font-size: 22rpx;">全部权限</view>
+        <view wx:if="{{item.role !== 'admin' && item.permissionModules.length > 0}}" wx:for="{{item.permissionModules}}" wx:for-item="mod" wx:key="*this" style="background: {{theme.elevated || '#252540'}}; color: {{theme.textSecondary || '#9A9AB0'}}; padding: 6rpx 16rpx; border-radius: 999rpx; font-size: 22rpx;">{{mod}}</view>
+        <text wx:if="{{item.role !== 'admin' && item.permissionModules.length === 0}}" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">未配置权限</text>
       </view>
     </view>
 

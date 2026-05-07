@@ -3,7 +3,6 @@ const { formatDateTime, formatDate } = require('../../utils/helpers')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
-const { hasPermission, ACTIONS } = require('../../utils/permission')
 
 Page({
   data: {
@@ -29,8 +28,7 @@ Page({
 
   onLoad(options) {
     const theme = app.getThemePageData()
-    const canEdit = hasPermission('announcement', ACTIONS.EDIT)
-    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, canEdit })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
     const id = options.id && typeof options.id === 'string' ? options.id.trim() : ''
     if (id) {
       this.setData({ announcementId: id })
@@ -58,15 +56,21 @@ Page({
       }
       const announcement = res.data
       const userInfo = app.globalData.userInfo
+      const isCreator = userInfo && (announcement.createdBy === userInfo._id || announcement.createdBy === userInfo._openid)
       const readBy = announcement.readBy || []
-      const isRead = readBy.includes(userInfo._id)
-      const needsConfirm = !!(announcement.needsConfirm === true && !isRead)
+      const userId = userInfo._id
+      const userOpenid = userInfo._openid || ''
+      const isRead = readBy.includes(userId) || (userOpenid && readBy.includes(userOpenid))
+      const isAdmin = userInfo && userInfo.role === 'admin'
+      const needsConfirm = !!(announcement.needsConfirm === true && !isRead && !isCreator && !isAdmin)
       const readCount = readBy.length
+      const canEdit = !!(isCreator || isAdmin)
 
       const dateStr = formatDate(new Date())
       const allRes = await db.queryAll(COLLECTIONS.ANNOUNCEMENT, { active: true }, 'createdAt', 'desc')
       const allAnnouncements = allRes.data || []
       const dayList = allAnnouncements.filter(a => {
+        if (a._id === id) return false
         if (formatDate(a.createdAt) !== dateStr) return false
         if (!a.startDate && !a.endDate) {
           return formatDate(a.createdAt) === dateStr
@@ -78,9 +82,31 @@ Page({
 
       let readStaff = []
       let unreadStaff = []
+      const staffRes = await db.queryAll(COLLECTIONS.STAFF, { status: 'active' })
+      const staffList = staffRes.data || []
+
+      // Resolve creator name via cloud function (createdBy may be OPENID, not readable on client)
+      const creatorId = announcement.createdBy || ''
+      const creatorFromStaff = staffList.find(s => s._id === creatorId)
+      let creatorName = (creatorFromStaff && creatorFromStaff.name) || ''
+      if (!creatorName && creatorId) {
+        try {
+          const crRes = await wx.cloud.callFunction({
+            name: 'sendMessage',
+            data: { action: 'resolveCreator', createdBy: creatorId, announcementId: id }
+          })
+          console.log('DEBUG resolveCreator result:', JSON.stringify(crRes.result))
+          if (crRes.result && crRes.result.success) {
+            creatorName = crRes.result.name
+          }
+        } catch (e) {
+          console.error('DEBUG resolveCreator error:', e)
+        }
+      }
+      creatorName = creatorName || announcement.createdByName || '未知'
+      console.log('DEBUG final creatorName:', creatorName)
+
       if (announcement.needsConfirm) {
-        const staffRes = await db.queryAll(COLLECTIONS.STAFF, { status: 'active' })
-        const staffList = staffRes.data || []
         const readByIds = announcement.readBy || []
         staffList.forEach(s => {
           if (readByIds.includes(s._id)) {
@@ -93,12 +119,13 @@ Page({
 
       this.setData({
         loading: false,
-        announcement,
+        announcement: { ...announcement, createdByName: creatorName },
         formattedTime: formatDateTime(announcement.createdAt),
         formattedDate: formatDate(announcement.createdAt),
         displayDateText: this._calcDisplayDate(announcement),
         needsConfirm,
         readCount,
+        canEdit,
         dayAnnouncements: dayList,
         readStaff,
         unreadStaff
@@ -186,6 +213,7 @@ Page({
         name: 'sendMessage',
         data: {
           action: 'updateAnnouncement',
+          callerWechatId: (app.globalData.userInfo || {}).wechatId || '',
           announcementId: announcement._id,
           title: editTitle.trim(),
           content: editContent.trim(),
@@ -209,14 +237,16 @@ Page({
     const userInfo = app.globalData.userInfo
     this.setData({ confirming: true })
     try {
-      await wx.cloud.callFunction({
+      const markRes = await wx.cloud.callFunction({
         name: 'sendMessage',
         data: {
           action: 'markRead',
+          callerWechatId: (app.globalData.userInfo || {}).wechatId || '',
           announcementId: announcement._id,
           staffId: userInfo._id
         }
       })
+      console.log('DEBUG markRead result:', JSON.stringify(markRes.result))
       wx.showToast({ title: '已确认', icon: 'success' })
       this.setData({ needsConfirm: false })
       this.loadData(announcement._id)
@@ -242,6 +272,7 @@ Page({
             name: 'sendMessage',
             data: {
               action: 'deleteAnnouncement',
+              callerWechatId: (app.globalData.userInfo || {}).wechatId || '',
               announcementId: announcement._id
             }
           })
@@ -269,6 +300,7 @@ Page({
             name: 'sendMessage',
             data: {
               action: 'deleteAnnouncement',
+              callerWechatId: (app.globalData.userInfo || {}).wechatId || '',
               announcementId: announcement._id
             }
           })

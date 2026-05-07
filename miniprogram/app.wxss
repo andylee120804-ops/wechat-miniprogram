@@ -9,9 +9,7 @@ page {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Global page transition */
-page { animation: pageFadeIn 0.3s ease-out; }
-@keyframes pageFadeIn { from { opacity: 0; transform: translateY(20rpx); } to { opacity: 1; transform: translateY(0); } }
+/* Global page transition - 暂移除避免影响原生picker组件 */
 
 /* Stagger animation classes for list items */
 .stagger-item { opacity: 0; transform: translateY(30rpx); animation: staggerIn 0.4s ease-out forwards; }

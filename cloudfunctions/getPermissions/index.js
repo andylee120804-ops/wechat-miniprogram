@@ -26,7 +26,7 @@ exports.main = async (event, context) => {
     }
 
     const staffResult = await db.collection('staff').doc(staffId).get()
-    if (staffResult.data.role === 'boss') {
+    if (staffResult.data.role === 'boss' || staffResult.data.role === 'admin') {
       return {
         success: true,
         data: [{ module: '*', actions: ['*'] }]

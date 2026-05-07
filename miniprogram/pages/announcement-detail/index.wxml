@@ -30,7 +30,7 @@
     <view style="padding: 0 32rpx 32rpx;">
       <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 44rpx; font-weight: 700; display: block; margin-bottom: 16rpx; line-height: 1.4;">{{announcement.title}}</text>
       <view style="display: flex; align-items: center; gap: 16rpx; margin-bottom: 16rpx;">
-        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">{{announcement.createdByName}}</text>
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">发布者：{{announcement.createdByName || '未知'}}</text>
         <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">·</text>
         <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">{{formattedTime}}</text>
         <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">·</text>

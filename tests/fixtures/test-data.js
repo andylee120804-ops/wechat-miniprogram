@@ -1,11 +1,12 @@
 // Real wechatId that exists in the staff collection
 // These must be pre-created in the cloud database `staff` collection
-// Verified mappings: a=boss, e=chef (厨师)
+// Mappings: boss=admin, f=boss, g=boss, c=purchase, d=chef
 const TEST_ACCOUNTS = {
-  boss: { wechatId: 'a', expectedRole: 'boss' },
-  admin: { wechatId: 'b', expectedRole: 'admin' },
+  admin: { wechatId: 'boss', expectedRole: 'admin' },
+  boss: { wechatId: 'f', expectedRole: 'boss' },
+  boss2: { wechatId: 'g', expectedRole: 'boss' },
   purchase: { wechatId: 'c', expectedRole: 'purchase' },
-  chef: { wechatId: 'e', expectedRole: 'chef' },
+  chef: { wechatId: 'd', expectedRole: 'chef' },
 }
 
 const PAGES = {
@@ -22,12 +23,17 @@ const PAGES = {
   dashboard: 'pages/admin/dashboard/index',
   announcements: 'pages/announcements/index',
   announcementDetail: 'pages/announcement-detail/index',
+  venueSettings: 'pages/admin/venue-settings/index',
+  reservationDetail: 'pages/reservation-detail/index',
 }
 
 // Expected permissions per role for key modules
-// Boss gets wildcard '*', others depend on cloud database `permissions` collection
+// Admin has wildcard access to ALL modules (including staff/venueSettings/minAmount).
+// Boss can access all business modules but is BLOCKED from admin-only modules.
+// Other roles depend on cloud database `permissions` collection.
 const ROLE_PERMISSIONS = {
-  boss: {
+  admin: {
+    // Admin has ALL permissions (wildcard)
     income: { view: true, add: true, edit: true, delete: true },
     purchase: { view: true, add: true, edit: true, delete: true },
     reservation: { view: true, add: true, edit: true, delete: true },
@@ -36,24 +42,31 @@ const ROLE_PERMISSIONS = {
     staff: { view: true, add: true, edit: true, delete: true },
     expense: { view: true, add: true, edit: true, delete: true },
     attendance: { view: true },
+    venueSettings: { view: true, edit: true },
+    minAmount: { view: true, edit: true },
   },
-  // admin typically has most permissions except some dashboard features
-  admin: {
+  boss: {
     income: { view: true, add: true, edit: true, delete: true },
     purchase: { view: true, add: true, edit: true, delete: true },
     reservation: { view: true, add: true, edit: true, delete: true },
     announcement: { view: true, add: true, edit: true, delete: true },
+    dashboard: { view: true },
+    expense: { view: true, add: true, edit: true, delete: true },
+    attendance: { view: true },
+    // Admin-only modules — boss is BLOCKED
+    staff: { view: false, add: false, edit: false, delete: false },
+    venueSettings: { view: false, edit: false },
+    minAmount: { view: false, edit: false },
   },
-  // purchase role: can manage purchases, view reservations, but limited income access
   purchase: {
     purchase: { view: true, add: true, edit: true, delete: true },
     income: { view: false, add: false },
+    reservation: { view: true, add: true, edit: true, delete: false },
   },
-  // chef/waiter: typically view-only or no access to financial modules
-  waiter: {
+  chef: {
+    announcement: { view: true, add: false, edit: false, delete: false },
     income: { view: false, add: false },
     purchase: { view: false, add: false },
-    announcement: { view: true, add: false, edit: false },
   },
 }
 
