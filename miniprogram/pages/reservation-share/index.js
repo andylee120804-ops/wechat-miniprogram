@@ -1,11 +1,13 @@
 const { formatDate, getRoomName, getExclusiveTypeName } = require('../../utils/helpers')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
+const app = getApp()
 
 Page({
   data: {
     loading: true,
     error: false,
+    statusBarHeight: 44,
     shareTitle: '',
     venueName: '',
     venueAddress: '',
@@ -24,6 +26,9 @@ Page({
   },
 
   onLoad(options) {
+    const menuBtn = wx.getMenuButtonBoundingClientRect()
+    const top = menuBtn ? menuBtn.top : (app.globalData.statusBarHeight || 44)
+    this.setData({ statusBarHeight: top })
     if (!options.id) {
       this.setData({ loading: false, error: true })
       return
@@ -48,6 +53,11 @@ Page({
       const et = r.exclusiveType || (r.isExclusive ? 'full' : 'none')
       const roomName = getExclusiveTypeName(et, r.room)
 
+      // 地址优先用 shareConfig 中的自定义地址，无则回退到食堂全局设置（loadVenueSettings 已加载）
+      const shareAddr = sc.shareAddress || this.data.venueAddress || ''
+      const shareLat = sc.shareLatitude || this.data.venueLatitude || ''
+      const shareLng = sc.shareLongitude || this.data.venueLongitude || ''
+
       this.setData({
         loading: false,
         shareTitle: sc.shareTitle || (r.customerName || '预约') + ' · 预定信息',
@@ -58,7 +68,10 @@ Page({
         time: r.time || '',
         roomName: roomName,
         guestCount: r.guestCount || '',
-        remark: r.remark || ''
+        remark: r.remark || '',
+        venueAddress: shareAddr,
+        venueLatitude: shareLat,
+        venueLongitude: shareLng
       })
     } catch (err) {
       this.setData({ loading: false, error: true })

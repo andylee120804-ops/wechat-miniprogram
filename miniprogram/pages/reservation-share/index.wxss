@@ -43,10 +43,16 @@
 
 /* Content wrapper */
 .content {
-  position: relative;
   padding: 0 32rpx 60rpx;
   max-width: 640rpx;
   margin: 0 auto;
+}
+
+/* Top bar */
+.top-bar {
+  display: flex;
+  align-items: center;
+  padding-left: 24rpx;
 }
 
 /* Top decorative band */
@@ -191,9 +197,6 @@
 
 /* Close button */
 .close-btn {
-  position: absolute;
-  top: 24rpx;
-  left: 24rpx;
   width: 52rpx;
   height: 52rpx;
   background: rgba(255,255,255,0.85);
@@ -201,8 +204,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
   box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.08);
+  flex-shrink: 0;
 }
 .close-btn:active {
   background: rgba(255,255,255,0.6);

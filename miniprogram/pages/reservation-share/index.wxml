@@ -17,13 +17,15 @@
 
   <!-- Content -->
   <view wx:if="{{!loading && !error}}" class="content">
+    <!-- Top bar with status bar spacing -->
+    <view class="top-bar" style="padding-top: {{statusBarHeight}}px;">
+      <view class="close-btn" bindtap="onClose">
+        <text class="close-icon">✕</text>
+      </view>
+    </view>
+
     <!-- Top decorative band -->
     <view class="top-band"></view>
-
-    <!-- Close button -->
-    <view class="close-btn" bindtap="onClose">
-      <text class="close-icon">✕</text>
-    </view>
 
     <!-- Card -->
     <view class="card">
