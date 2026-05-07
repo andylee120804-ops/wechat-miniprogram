@@ -43,6 +43,7 @@
 
 /* Content wrapper */
 .content {
+  position: relative;
   padding: 0 32rpx 60rpx;
   max-width: 640rpx;
   margin: 0 auto;
@@ -91,38 +92,15 @@
 
 /* Share title banner */
 .title-banner {
-  padding: 20rpx 40rpx 0;
+  padding: 32rpx 40rpx 28rpx;
 }
 .title-text {
   display: block;
-  font-size: 30rpx;
-  font-weight: 600;
+  font-size: 40rpx;
+  font-weight: 700;
   color: #C9A96E;
   text-align: center;
-  letter-spacing: 2rpx;
-}
-
-/* Guest section */
-.guest-section {
-  padding: 36rpx 40rpx 20rpx;
-}
-.guest-name {
-  display: block;
-  font-size: 36rpx;
-  font-weight: 600;
-  color: #2D2D3A;
-}
-.guest-phone {
-  display: block;
-  font-size: 26rpx;
-  color: #B0A89A;
-  margin-top: 8rpx;
-}
-
-.card-divider {
-  height: 2rpx;
-  background: #F0EBE0;
-  margin: 0 40rpx;
+  letter-spacing: 4rpx;
 }
 
 /* Detail list */
@@ -209,6 +187,46 @@
   font-size: 24rpx;
   color: #C9A96E;
   font-weight: 600;
+}
+
+/* Close button */
+.close-btn {
+  position: absolute;
+  top: 24rpx;
+  left: 24rpx;
+  width: 52rpx;
+  height: 52rpx;
+  background: rgba(255,255,255,0.85);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.08);
+}
+.close-btn:active {
+  background: rgba(255,255,255,0.6);
+}
+.close-icon {
+  font-size: 28rpx;
+  color: #8A8070;
+}
+
+/* Floor map card */
+.map-card {
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  margin-top: 24rpx;
+  overflow: hidden;
+  box-shadow: 0 8rpx 40rpx rgba(0,0,0,0.06), 0 2rpx 8rpx rgba(0,0,0,0.04);
+  transition: opacity 0.2s;
+}
+.map-card:active {
+  opacity: 0.8;
+}
+.map-image {
+  width: 100%;
+  display: block;
 }
 
 /* Footer */

@@ -27,15 +27,87 @@
         <!-- 食堂地址 -->
         <view class="form-item">
           <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 32rpx; display: block; margin-bottom: 12rpx;">食堂地址</text>
-          <view style="display: flex; gap: 16rpx; align-items: flex-start;">
-            <textarea value="{{venueAddress}}" bindinput="onAddressInput" placeholder="请输入食堂地址" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
-              style="flex: 1; background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx; box-sizing: border-box; min-height: 160rpx; height: auto;" />
-            <view bindtap="onPickLocation"
-              style="background: {{theme.accentColor || '#C9A96E'}}; border-radius: 12rpx; padding: 20rpx 24rpx; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 0;">
-              <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 26rpx; font-weight: 600;">📍 选位置</text>
+          <textarea value="{{venueAddress}}" bindinput="onAddressInput" placeholder="请输入食堂地址" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
+            style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx; box-sizing: border-box; width: 100%; min-height: 120rpx;" auto-height="{{true}}" />
+          <view bindtap="onPickLocation"
+            style="background: {{theme.accentColor || '#C9A96E'}}; border-radius: 12rpx; padding: 20rpx 0; display: flex; align-items: center; justify-content: center; margin-top: 16rpx;">
+            <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 26rpx; font-weight: 600;">📍 从地图选取位置</text>
+          </view>
+        </view>
+
+        <!-- 导航图上传 -->
+        <view class="form-item" style="margin-top: 32rpx;">
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 30rpx; display: block; margin-bottom: 16rpx;">导航图</text>
+
+          <!-- 已上传图片 -->
+          <view wx:if="{{venueMapImage}}" class="map-image-preview" style="position: relative; border-radius: 16rpx; overflow: hidden; margin-bottom: 16rpx;">
+            <image src="{{venueMapImage}}" mode="aspectFit" style="width: 100%; height: 320rpx; display: block;" />
+            <view wx:if="{{canEdit}}" bindtap="onRemoveMapImage" style="position: absolute; top: 16rpx; right: 16rpx; width: 56rpx; height: 56rpx; background: rgba(0,0,0,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <text style="color: white; font-size: 28rpx;">✕</text>
             </view>
           </view>
-          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; display: block; margin-top: 8rpx;">点击「选位置」从地图选取，地址自动填充</text>
+
+          <!-- 上传按钮 -->
+          <view wx:if="{{canEdit && !venueMapImage}}" bindtap="onUploadMapImage" style="display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1rpx dashed {{theme.borderColor || 'rgba(255,255,255,0.15)'}}; border-radius: 16rpx; padding: 40rpx;">
+            <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx;">📷 上传导航图</text>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; margin-top: 8rpx;">建议尺寸 1200×800，支持 JPG/PNG</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 餐标设置 -->
+      <view class="p-lg mt-lg" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx;">
+        <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 32rpx; font-weight: 600; display: block; margin-bottom: 24rpx;">餐标设置</text>
+
+        <!-- 餐标选项 - 独立输入框 -->
+        <view class="form-item" style="margin-bottom: 32rpx;">
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 30rpx; display: block; margin-bottom: 16rpx">餐标选项（每人）</text>
+
+          <view wx:for="{{standardList}}" wx:key="index" style="display: flex; align-items: center; gap: 16rpx; margin-bottom: 16rpx;">
+            <view style="background: {{theme.accentColor || '#C9A96E'}}; border-radius: 8rpx; padding: 4rpx 16rpx; flex-shrink: 0;">
+              <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 26rpx; font-weight: 600;">¥</text>
+            </view>
+            <input type="number" value="{{item}}"
+              data-index="{{index}}"
+              bindinput="onStandardItemInput"
+              placeholder="输入金额"
+              placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
+              style="flex: 1; background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 0 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx; height: 88rpx; line-height: 88rpx;" />
+            <view wx:if="{{standardList.length > 1}}" bindtap="onRemoveStandard" data-index="{{index}}"
+              style="width: 64rpx; height: 64rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(248,113,113,0.2); flex-shrink: 0;">
+              <text style="color: #F87171; font-size: 32rpx;">✕</text>
+            </view>
+          </view>
+
+          <view bindtap="onAddStandard"
+            style="display: flex; align-items: center; justify-content: center; gap: 8rpx; border: 1rpx dashed {{theme.borderColor || 'rgba(255,255,255,0.15)'}}; border-radius: 12rpx; padding: 20rpx; margin-top: 8rpx;">
+            <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx;">+ 新增餐标</text>
+          </view>
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; display: block; margin-top: 8rpx;">在新增/编辑预约时可供选择的餐标金额</text>
+        </view>
+
+        <!-- 股东默认餐标 -->
+        <view class="form-item" style="margin-bottom: 32rpx;">
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 30rpx; display: block; margin-bottom: 12rpx">股东默认餐标</text>
+          <input value="{{partnerStandard}}" bindinput="onPartnerStandardInput" placeholder="例如：300" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
+            style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 0 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx; width: 100%; box-sizing: border-box; height: 88rpx; line-height: 88rpx;" />
+        </view>
+
+        <!-- 默认餐标选择 -->
+        <view class="form-item" style="margin-bottom: 32rpx;">
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 30rpx; display: block; margin-bottom: 12rpx">默认餐标</text>
+          <picker mode="selector" range="{{defaultStandardOptions}}" value="{{defaultStandardIndex}}" bindchange="onDefaultStandardChange">
+            <view style="background: {{theme.glassBg || 'rgba(255,255,255,0.05)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 0 24rpx; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 28rpx; height: 88rpx; line-height: 88rpx; display: flex; align-items: center; justify-content: space-between;">
+              <text>{{defaultStandardLabel}}</text>
+              <text style="color: {{theme.textMuted || '#5C5C72'}};">❯</text>
+            </view>
+          </picker>
+        </view>
+
+        <!-- 允许不设餐标 -->
+        <view class="form-item" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8rpx;">
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 30rpx;">允许预约时不选餐标</text>
+          <switch checked="{{allowNoStandard}}" bindchange="onAllowNoStandardChange" color="{{theme.accentColor || '#C9A96E'}}" />
         </view>
       </view>
 

@@ -20,6 +20,11 @@
     <!-- Top decorative band -->
     <view class="top-band"></view>
 
+    <!-- Close button -->
+    <view class="close-btn" bindtap="onClose">
+      <text class="close-icon">✕</text>
+    </view>
+
     <!-- Card -->
     <view class="card">
       <!-- Venue header -->
@@ -29,18 +34,10 @@
         <view class="venue-divider"></view>
       </view>
 
-      <!-- Share title (when shared via app) -->
+      <!-- Share title -->
       <view wx:if="{{shareTitle}}" class="title-banner">
         <text class="title-text">{{shareTitle}}</text>
       </view>
-
-      <!-- Guest info -->
-      <view class="guest-section">
-        <text class="guest-name">{{customerName}}</text>
-        <text wx:if="{{phone}}" class="guest-phone">{{phone}}</text>
-      </view>
-
-      <view class="card-divider"></view>
 
       <!-- Detail rows -->
       <view class="detail-list">
@@ -102,6 +99,11 @@
         <text wx:if="{{venueLatitude && venueLongitude}}" class="address-copy">导航</text>
         <text wx:else class="address-copy">复制</text>
       </view>
+    </view>
+
+    <!-- Floor map card -->
+    <view wx:if="{{venueMapImage}}" class="map-card" bindtap="onMapImageTap">
+      <image src="{{venueMapImage}}" mode="widthFix" class="map-image" />
     </view>
 
     <!-- Footer -->

@@ -3,6 +3,20 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+/**
+ * Find staff record by OPENID, with wechatId fallback.
+ * Returns null if not found.
+ */
+async function findStaffByCaller(OPENID, wechatId) {
+  var staffRes = await db.collection('staff').where({ _openid: OPENID }).get()
+  if (staffRes.data && staffRes.data.length > 0) return staffRes.data[0]
+  if (wechatId) {
+    staffRes = await db.collection('staff').where({ wechatId: wechatId }).get()
+    if (staffRes.data && staffRes.data.length > 0) return staffRes.data[0]
+  }
+  return null
+}
+
 exports.main = async (event, context) => {
   const { action } = event
 
@@ -32,18 +46,20 @@ exports.main = async (event, context) => {
 }
 
 async function createAnnouncement(event) {
-  const { title, content, priority, needsConfirm, startDate, endDate } = event
+  const { title, content, priority, needsConfirm, startDate, endDate, callerWechatId } = event
   const { OPENID } = cloud.getWXContext()
 
   if (!title || !content) {
     return { success: false, message: '标题和内容不能为空' }
   }
 
-  // Derive creator identity from caller, not from event data
-  const callerRes = await db.collection('staff').where({ _openid: OPENID }).get()
-  const caller = callerRes.data && callerRes.data[0]
-  const createdBy = caller ? caller._id : ''
-  const createdByName = caller ? caller.name : ''
+  // Only admin can create announcements
+  const caller = await findStaffByCaller(OPENID, callerWechatId)
+  if (!caller || caller.role !== 'admin') {
+    return { success: false, message: '无权限创建公告' }
+  }
+  const createdBy = caller._id
+  const createdByName = caller.name
 
   const result = await db.collection('announcement').add({
     data: {
@@ -82,7 +98,7 @@ async function getAnnouncements(event) {
 }
 
 async function markRead(event) {
-  const { announcementId, staffId } = event
+  const { announcementId, staffId, callerWechatId } = event
   const { OPENID } = cloud.getWXContext()
 
   if (!announcementId || !staffId) {
@@ -90,8 +106,7 @@ async function markRead(event) {
   }
 
   // Verify caller identity: staffId must belong to the caller
-  const callerRes = await db.collection('staff').where({ _openid: OPENID }).get()
-  const caller = callerRes.data && callerRes.data[0]
+  const caller = await findStaffByCaller(OPENID, callerWechatId)
   if (!caller || caller._id !== staffId) {
     return { success: false, message: '无权限操作' }
   }
@@ -106,10 +121,17 @@ async function markRead(event) {
 }
 
 async function deleteAnnouncement(event) {
-  const { announcementId } = event
+  const { announcementId, callerWechatId } = event
+  const { OPENID } = cloud.getWXContext()
 
   if (!announcementId) {
     return { success: false, message: '缺少公告ID' }
+  }
+
+  // Only admin can delete announcements
+  const caller = await findStaffByCaller(OPENID, callerWechatId)
+  if (!caller || caller.role !== 'admin') {
+    return { success: false, message: '无权限删除公告' }
   }
 
   await db.collection('announcement').doc(announcementId).update({
@@ -120,7 +142,8 @@ async function deleteAnnouncement(event) {
 }
 
 async function updateAnnouncement(event) {
-  const { announcementId, title, content, priority, needsConfirm, startDate, endDate } = event
+  const { announcementId, title, content, priority, needsConfirm, startDate, endDate, callerWechatId } = event
+  const { OPENID } = cloud.getWXContext()
 
   if (!announcementId) {
     return { success: false, message: '缺少公告ID' }
@@ -128,6 +151,12 @@ async function updateAnnouncement(event) {
 
   if (!title || !content) {
     return { success: false, message: '标题和内容不能为空' }
+  }
+
+  // Only admin can update announcements
+  const caller = await findStaffByCaller(OPENID, callerWechatId)
+  if (!caller || caller.role !== 'admin') {
+    return { success: false, message: '无权限修改公告' }
   }
 
   const updateData = {
@@ -150,33 +179,38 @@ async function updateAnnouncement(event) {
 async function getSettings(event) {
   const result = await db.collection('settings').where({ key: 'venue_info' }).get()
   const data = result.data && result.data.length > 0 ? result.data[0] : {}
+
   return {
     success: true,
     data: {
       venueName: data.venueName || '听澜轩',
       venueAddress: data.venueAddress || '',
       venueLatitude: data.venueLatitude || '',
-      venueLongitude: data.venueLongitude || ''
+      venueLongitude: data.venueLongitude || '',
+      mealStandards: data.mealStandards || [500, 600, 800],
+      partnerStandard: data.partnerStandard || 300,
+      defaultStandard: data.defaultStandard !== undefined ? data.defaultStandard : '',
+      allowNoStandard: data.allowNoStandard || false,
+      venueMapImageFileID: data.venueMapImageFileID || ''
     }
   }
 }
 
 async function updateSettings(event) {
   const { OPENID } = cloud.getWXContext()
-  const { venueName, venueAddress, venueLatitude, venueLongitude } = event
+  const { venueName, venueAddress, venueLatitude, venueLongitude, mealStandards, partnerStandard, defaultStandard, allowNoStandard, venueMapImageFileID } = event
 
   if (!venueName || !venueAddress) {
     return { success: false, message: '会所名称和地址不能为空' }
   }
 
-  // 校验请求者角色
-  const staffRes = await db.collection('staff').where({ _openid: OPENID }).get()
-  const staff = staffRes.data && staffRes.data[0]
-  if (!staff || (staff.role !== 'boss' && staff.role !== 'admin')) {
+  // 校验请求者角色 — 只有 admin 可以修改食堂设置
+  const staff = await findStaffByCaller(OPENID, event.callerWechatId)
+  if (!staff || staff.role !== 'admin') {
     return { success: false, message: '无权限执行此操作' }
   }
 
-  const updateData = { venueName, venueAddress, venueLatitude: venueLatitude || '', venueLongitude: venueLongitude || '', updatedAt: db.serverDate() }
+  const updateData = { venueName, venueAddress, venueLatitude: venueLatitude || '', venueLongitude: venueLongitude || '', mealStandards: mealStandards || [500, 600, 800], partnerStandard: partnerStandard || 300, defaultStandard: defaultStandard !== undefined ? defaultStandard : '', allowNoStandard: !!allowNoStandard, venueMapImageFileID: venueMapImageFileID || '', updatedAt: db.serverDate() }
 
   const existing = await db.collection('settings').where({ key: 'venue_info' }).get()
   if (existing.data && existing.data.length > 0) {

@@ -7,10 +7,12 @@ Page({
     loading: true,
     error: false,
     shareTitle: '',
-    venueName: '听澜轩',
+    venueName: '',
     venueAddress: '',
     venueLatitude: '',
     venueLongitude: '',
+    venueMapImage: '',
+    venueMapImageFileID: '',
     customerName: '',
     phone: '',
     date: '',
@@ -70,23 +72,41 @@ Page({
         data: { action: 'getSettings' }
       })
       if (res.result && res.result.success && res.result.data) {
+        const d = res.result.data
         this.setData({
-          venueName: res.result.data.venueName || '听澜轩',
-          venueAddress: res.result.data.venueAddress || '',
-          venueLatitude: res.result.data.venueLatitude || '',
-          venueLongitude: res.result.data.venueLongitude || ''
+          venueName: d.venueName || '',
+          venueAddress: d.venueAddress || '',
+          venueLatitude: d.venueLatitude || '',
+          venueLongitude: d.venueLongitude || '',
+          venueMapImage: '',
+          venueMapImageFileID: d.venueMapImageFileID || ''
         })
+        if (d.venueMapImageFileID) {
+          this._downloadMapImage(d.venueMapImageFileID)
+        }
       }
     } catch (err) {
       console.warn('加载场地设置失败:', err)
     }
   },
 
+  _downloadMapImage(fileID) {
+    if (!fileID) return
+    wx.cloud.downloadFile({
+      fileID: fileID,
+      success: (res) => {
+        this.setData({ venueMapImage: res.tempFilePath })
+      },
+      fail: (err) => {
+        console.error('下载导航图失败:', err)
+      }
+    })
+  },
+
   onAddressTap() {
     const { venueAddress, venueLatitude, venueLongitude } = this.data
     if (!venueAddress) return
 
-    // If coordinates available, open map navigation
     if (venueLatitude && venueLongitude) {
       wx.openLocation({
         latitude: parseFloat(venueLatitude),
@@ -94,12 +114,10 @@ Page({
         name: this.data.venueName,
         address: venueAddress,
         fail: () => {
-          // Fallback: copy to clipboard
           this.copyAddress(venueAddress)
         }
       })
     } else {
-      // No coordinates - copy to clipboard
       this.copyAddress(venueAddress)
     }
   },
@@ -111,5 +129,23 @@ Page({
         wx.showToast({ title: '地址已复制，可粘贴到地图导航', icon: 'none', duration: 2500 })
       }
     })
+  },
+
+  onMapImageTap() {
+    const url = this.data.venueMapImage
+    if (!url) return
+    wx.previewImage({
+      urls: [url],
+      current: url
+    })
+  },
+
+  onClose() {
+    const pages = getCurrentPages()
+    if (pages.length > 1) {
+      wx.navigateBack({ delta: 1 })
+    } else {
+      wx.reLaunch({ url: '/pages/index/index' })
+    }
   }
 })
