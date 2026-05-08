@@ -418,7 +418,7 @@ Page({
       // Build conditions
       const conditions = [
         { date: _.gte(dayStart).and(_.lte(dayEnd)) },
-        { status: _.neq('cancelled') }
+        { status: 'confirmed' }
       ]
 
       // When editing, exclude self

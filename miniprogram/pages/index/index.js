@@ -79,11 +79,11 @@ Page({
       const [todayRes, tomorrowRes, todayIncomeRes, todayExpenseRes, todayPurchaseRes, fixedExpenseItemsRes] = await Promise.all([
         dbInst.collection(COLLECTIONS.RESERVATION).where({
           date: _.gte(todayStart).and(_.lte(todayEnd)),
-          status: _.neq('cancelled')
+          status: 'confirmed'
         }).orderBy('time', 'asc').get(),
         dbInst.collection(COLLECTIONS.RESERVATION).where({
           date: _.gte(tomorrowStart).and(_.lte(tomorrowEnd)),
-          status: _.neq('cancelled')
+          status: 'confirmed'
         }).orderBy('time', 'asc').get(),
         // Income/expense dates stored as "YYYY-MM-DD" strings — use exact string match
         dbInst.collection(COLLECTIONS.INCOME).where({
@@ -97,7 +97,7 @@ Page({
           date: today
         }).get(),
         // Fixed expense items (new format: monthlyAmount items; old format: date-based)
-        db.queryAll(COLLECTIONS.FIXED_EXPENSE, {})
+        db.queryAll(COLLECTIONS.FIXED_EXPENSE, { active: true })
       ])
 
       // Query announcement separately (non-blocking) - don't let it block the page

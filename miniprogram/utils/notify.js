@@ -100,7 +100,7 @@ async function checkUpcomingReservations() {
       .where({
         date: todayStr,
         time: db.command.gte(nowStr).and(db.command.lte(twoHoursStr)),
-        status: db.command.in(['reserved', 'confirmed'])
+        status: 'confirmed'
       })
       .orderBy('time', 'asc')
       .limit(20)

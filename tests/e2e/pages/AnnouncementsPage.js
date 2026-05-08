@@ -13,12 +13,45 @@ class AnnouncementsPage extends BasePage {
     return this.getData('canAddAnnouncement')
   }
 
-  async canEditAnnouncement() {
-    return this.getData('canEditAnnouncement')
+  async isCreateModalVisible() {
+    return this.getData('showCreateModal')
   }
 
-  async canDeleteAnnouncement() {
-    return this.getData('canDeleteAnnouncement')
+  async openCreateModal() {
+    await this.callMethod('onAddAnnouncement')
+    await new Promise(r => setTimeout(r, 500))
+  }
+
+  async closeCreateModal() {
+    await this.callMethod('onCloseModal')
+    await new Promise(r => setTimeout(r, 300))
+  }
+
+  async fillCreateForm(title, content, options = {}) {
+    await this.setData({
+      createTitle: title,
+      createContent: content,
+      createPriority: options.priority || 'normal',
+      createNeedsConfirm: !!options.needsConfirm,
+      createStartDate: options.startDate || '',
+      createEndDate: options.endDate || ''
+    })
+  }
+
+  async submitCreate() {
+    await this.callMethod('onSaveAnnouncement')
+    await new Promise(r => setTimeout(r, 2000))
+  }
+
+  async getCreateFormData() {
+    return {
+      createTitle: await this.getData('createTitle'),
+      createContent: await this.getData('createContent'),
+      createPriority: await this.getData('createPriority'),
+      createNeedsConfirm: await this.getData('createNeedsConfirm'),
+      createStartDate: await this.getData('createStartDate'),
+      createEndDate: await this.getData('createEndDate')
+    }
   }
 }
 

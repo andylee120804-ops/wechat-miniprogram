@@ -27,7 +27,7 @@ App({
       this.globalData.statusBarHeight = 44
     }
     this.loadTheme()
-    this.checkLogin()
+    this._loginPromise = this.checkLogin()
     this.loadVenueName()
   },
 
@@ -80,7 +80,13 @@ App({
   // Pages accessible without login
   _publicPages: ['/pages/login/index', '/pages/reservation-share/index'],
 
-  onShow() {
+  async onShow() {
+    // Wait for initial login check (auto-login) before guarding auth,
+    // prevents flashing the login page while auto-login is in progress
+    if (this._loginPromise) {
+      await this._loginPromise
+      this._loginPromise = null
+    }
     this.refreshSession()
     this._guardAuth()
   },
@@ -141,28 +147,58 @@ App({
 
   async checkLogin() {
     const userInfo = wx.getStorageSync('userInfo')
-    if (!userInfo) return
+    if (userInfo) {
+      // 先乐观恢复，再异步校验 OPENID 是否匹配
+      this.globalData.userInfo = userInfo
+      this.globalData.isLogin = true
 
-    // 先乐观恢复，再异步校验 OPENID 是否匹配
-    this.globalData.userInfo = userInfo
-    this.globalData.isLogin = true
+      try {
+        const res = await wx.cloud.callFunction({
+          name: 'login',
+          data: { action: 'verifySession', staffId: userInfo._id }
+        })
+        if (res.result && res.result.success) {
+          this.globalData.userInfo = res.result.data
+          wx.setStorageSync('userInfo', res.result.data)
+        } else {
+          this.logout()
+          // verifySession failed, try autoLogin
+          await this._tryAutoLogin()
+        }
+      } catch (err) {
+        console.warn('[checkLogin] 会话校验失败，保持当前状态:', err)
+      }
+      return
+    }
 
+    // No stored session, try auto-login via OPENID binding
+    await this._tryAutoLogin()
+  },
+
+  async _tryAutoLogin() {
     try {
       const res = await wx.cloud.callFunction({
         name: 'login',
-        data: { action: 'verifySession', staffId: userInfo._id }
+        data: { action: 'autoLogin' }
       })
       if (res.result && res.result.success) {
-        // 校验通过，更新最新信息
-        this.globalData.userInfo = res.result.data
-        wx.setStorageSync('userInfo', res.result.data)
-      } else {
-        // OPENID 不匹配，清除登录态
-        this.logout()
+        this.setUserInfo(res.result.data)
+        // Load permissions after auto-login
+        const permRes = await wx.cloud.callFunction({
+          name: 'getPermissions',
+          data: { staffId: res.result.data._id }
+        })
+        if (permRes.result && permRes.result.success && permRes.result.data) {
+          this.globalData.permissions = permRes.result.data
+        }
+        // Redirect to main immediately after auto-login succeeds,
+        // instead of waiting for onShow's _guardAuth call.
+        // Defer to next microtask so isLogin=true is set first (guardAuth
+        // sees the updated isLogin after logout→setUserInfo chain settles).
+        Promise.resolve().then(() => this._guardAuth())
       }
     } catch (err) {
-      // 云函数调用失败（网络等），不清除登录态，保持乐观恢复
-      console.warn('[checkLogin] 会话校验失败，保持当前状态:', err)
+      console.warn('[autoLogin] 自动登录失败:', err)
     }
   },
 

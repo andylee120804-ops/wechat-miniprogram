@@ -16,10 +16,7 @@ function getCliPath() {
   if (process.platform === 'win32') {
     return 'C:/Program Files (x86)/Tencent/微信web开发者工具/cli.bat'
   }
-  if (process.platform === 'darwin') {
-    return '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
-  }
-  return '/opt/wechatwebtools/cli'
+  return '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
 }
 
 function isPortOpen(port) {
@@ -42,9 +39,7 @@ async function waitForPort(port, timeout = 30000) {
 
 function startAutoSession() {
   const cliPath = getCliPath()
-
   if (process.platform === 'win32') {
-    // Use detached, shell mode for .bat on Windows
     const proc = spawn('cmd.exe', [
       '/c', `"${cliPath}" auto --project "${PROJECT_PATH}" --auto-port ${AUTO_PORT} --trust-project`,
     ], {
@@ -67,12 +62,16 @@ function startAutoSession() {
 async function launchApp() {
   if (miniProgram) return miniProgram
 
-  // If port already open from a prior auto session, connect directly
+  // Try connecting if port already open
   if (await isPortOpen(AUTO_PORT)) {
-    miniProgram = await automator.connect({
-      wsEndpoint: `ws://127.0.0.1:${AUTO_PORT}`,
-    })
-    return miniProgram
+    try {
+      miniProgram = await automator.connect({
+        wsEndpoint: `ws://127.0.0.1:${AUTO_PORT}`,
+      })
+      return miniProgram
+    } catch (e) {
+      // Connection failed, try starting fresh session
+    }
   }
 
   // Start auto session
@@ -86,7 +85,6 @@ async function launchApp() {
     )
   }
 
-  // Small delay to let WS server fully initialize
   await new Promise(r => setTimeout(r, 1000))
 
   miniProgram = await automator.connect({

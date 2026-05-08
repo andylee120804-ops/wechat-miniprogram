@@ -104,7 +104,7 @@ Page({
       const [reservationRes, purchaseRes] = await Promise.all([
         db.queryAll(COLLECTIONS.RESERVATION, {
           date: _.gte(monthStart),
-          status: _.neq('cancelled')
+          status: 'confirmed'
         }),
         db.queryAll(COLLECTIONS.PURCHASE, {
           date: _.gte(monthStart)

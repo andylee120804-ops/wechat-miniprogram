@@ -1,12 +1,12 @@
 // Real wechatId that exists in the staff collection
-// These must be pre-created in the cloud database `staff` collection
-// Mappings: boss=admin, f=boss, g=boss, c=purchase, d=chef
+// Only these 3 accounts currently exist:
+//   wechatId 'boss' → role: admin
+//   wechatId 'f'    → role: boss
+//   wechatId 'g'    → role: boss
 const TEST_ACCOUNTS = {
   admin: { wechatId: 'boss', expectedRole: 'admin' },
   boss: { wechatId: 'f', expectedRole: 'boss' },
   boss2: { wechatId: 'g', expectedRole: 'boss' },
-  purchase: { wechatId: 'c', expectedRole: 'purchase' },
-  chef: { wechatId: 'd', expectedRole: 'chef' },
 }
 
 const PAGES = {

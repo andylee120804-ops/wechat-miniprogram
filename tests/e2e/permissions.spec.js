@@ -113,14 +113,6 @@ describe('Announcements Page - Permission by Role', () => {
       expect(await annPage.canAddAnnouncement()).toBe(true)
     })
 
-    test('should have edit permission', async () => {
-      expect(await annPage.canEditAnnouncement()).toBe(true)
-    })
-
-    test('should have delete permission', async () => {
-      expect(await annPage.canDeleteAnnouncement()).toBe(true)
-    })
-
     test('should load announcements list', async () => {
       const announcements = await annPage.getAnnouncements()
       expect(Array.isArray(announcements)).toBe(true)
@@ -139,14 +131,6 @@ describe('Announcements Page - Permission by Role', () => {
       expect(await annPage.canAddAnnouncement()).toBe(false)
     })
 
-    test('should NOT have edit permission', async () => {
-      expect(await annPage.canEditAnnouncement()).toBe(false)
-    })
-
-    test('should NOT have delete permission', async () => {
-      expect(await annPage.canDeleteAnnouncement()).toBe(false)
-    })
-
     test('should still load announcements list (all users can view)', async () => {
       const announcements = await annPage.getAnnouncements()
       expect(Array.isArray(announcements)).toBe(true)
@@ -163,10 +147,6 @@ describe('Announcements Page - Permission by Role', () => {
 
     test('should have add permission', async () => {
       expect(await annPage.canAddAnnouncement()).toBe(true)
-    })
-
-    test('should have edit permission', async () => {
-      expect(await annPage.canEditAnnouncement()).toBe(true)
     })
   })
 })

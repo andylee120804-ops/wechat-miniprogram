@@ -42,7 +42,7 @@ Page({
       const [resRes, incRes] = await Promise.all([
         db.queryAll(COLLECTIONS.RESERVATION, {
           customerName: this.data.customerName,
-          status: db.getDb().command.neq('cancelled')
+          status: 'confirmed'
         }, 'date', 'desc'),
         db.queryAll(COLLECTIONS.INCOME, {
           source: this.data.customerName

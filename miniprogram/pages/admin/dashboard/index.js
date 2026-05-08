@@ -280,10 +280,10 @@ Page({
     })
 
     // Fixed expenses: new format (monthlyAmount items) + old format (date-based records)
-    const fixedExpensePromise = db.queryAll(COLLECTIONS.FIXED_EXPENSE, {})
+    const fixedExpensePromise = db.queryAll(COLLECTIONS.FIXED_EXPENSE, { active: true })
 
     const salaryPromise = db.queryAll(COLLECTIONS.STAFF, {
-      status: db.getDb().command.neq('inactive')
+      status: 'active'
     })
 
     Promise.all([

@@ -42,7 +42,7 @@ Page({
   async loadData() {
     this.setData({ loading: true })
     try {
-      const res = await db.queryAll(COLLECTIONS.FIXED_EXPENSE, {}, 'createdAt', 'desc')
+      const res = await db.queryAll(COLLECTIONS.FIXED_EXPENSE, { active: true }, 'createdAt', 'desc')
 
       const items = (res.data || []).map(item => {
         const monthlyAmount = Number(item.monthlyAmount || item.amount || 0)
@@ -170,6 +170,7 @@ Page({
         })
     } else {
       data.createdAt = dbInst.serverDate()
+      data.active = true
       db.addDoc(COLLECTIONS.FIXED_EXPENSE, data)
         .then(() => {
           wx.hideLoading()
@@ -197,7 +198,7 @@ Page({
           return
         }
         wx.showLoading({ title: '删除中...' })
-        db.deleteDoc(COLLECTIONS.FIXED_EXPENSE, this.data.editId)
+        db.updateDoc(COLLECTIONS.FIXED_EXPENSE, this.data.editId, { active: false })
           .then(() => {
             wx.hideLoading()
             log(LOG_TYPES.EXPENSE_DELETE, '删除固定成本: ' + this.data.name)

@@ -195,30 +195,32 @@ Page({
       }
 
       if (this.data.isEdit) {
-        await db.updateDoc(COLLECTIONS.STAFF, this.data.id, staffData)
+        const res = await wx.cloud.callFunction({
+          name: 'updateStaff',
+          data: {
+            staffId: this.data.id,
+            staffData,
+            permissions,
+            callerRole: userInfo.role
+          }
+        })
+        if (res.result && res.result.success === false) {
+          wx.showToast({ title: res.result.message || '更新失败', icon: 'none' })
+          this.setData({ submitting: false })
+          return
+        }
       } else {
         const res = await db.addDoc(COLLECTIONS.STAFF, staffData)
         this.setData({ id: res._id })
-      }
 
-      // Save permissions
-      const permArray = Object.entries(permissions)
-        .filter(([key, vals]) => Object.values(vals).some(v => v))
-        .map(([module, actions]) => ({ module, actions: Object.entries(actions).filter(([, v]) => v).map(([a]) => a) }))
-
-      const existingPerm = await db.queryAll(COLLECTIONS.PERMISSIONS, { staffId: this.data.id })
-      if (existingPerm.data && existingPerm.data.length > 0) {
-        await db.updateDoc(COLLECTIONS.PERMISSIONS, existingPerm.data[0]._id, {
-          permissions: permArray, updatedBy: userInfo._id, updatedAt: new Date()
-        })
-      } else {
+        // Save permissions for new staff
+        const permArray = Object.entries(permissions)
+          .filter(([key, vals]) => Object.values(vals).some(v => v))
+          .map(([module, actions]) => ({ module, actions: Object.entries(actions).filter(([, v]) => v).map(([a]) => a) }))
         await db.addDoc(COLLECTIONS.PERMISSIONS, {
-          staffId: this.data.id, permissions: permArray, updatedBy: userInfo._id, updatedAt: new Date()
+          staffId: res._id, permissions: permArray, updatedBy: userInfo._id, updatedAt: new Date()
         })
       }
-
-      // Update permissionsUpdatedAt to force re-login
-      await db.updateDoc(COLLECTIONS.STAFF, this.data.id, { permissionsUpdatedAt: new Date() })
 
       log(this.data.isEdit ? 'STAFF_UPDATE' : 'STAFF_CREATE', { name: staffData.name, role: staffData.role })
       wx.showToast({ title: '保存成功', icon: 'success' })

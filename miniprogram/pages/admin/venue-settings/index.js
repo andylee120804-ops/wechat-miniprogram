@@ -318,12 +318,10 @@ Page({
 
   onPickLocation() {
     const that = this
-    // Step 1: use getFuzzyLocation to get rough position, then open map picker
     wx.getSetting({
       success(settingRes) {
         const fuzzyAuth = settingRes.authSetting['scope.userFuzzyLocation']
-        const locationAuth = settingRes.authSetting['scope.userLocation']
-        if (fuzzyAuth === false && locationAuth === false) {
+        if (fuzzyAuth === false) {
           wx.showModal({
             title: '需要位置权限',
             content: '您之前拒绝了位置权限，请在设置中手动开启',
@@ -332,7 +330,7 @@ Page({
               if (modalRes.confirm) {
                 wx.openSetting({
                   success(openRes) {
-                    if (openRes.authSetting['scope.userFuzzyLocation'] || openRes.authSetting['scope.userLocation']) {
+                    if (openRes.authSetting['scope.userFuzzyLocation']) {
                       that._getFuzzyThenChoose()
                     }
                   }

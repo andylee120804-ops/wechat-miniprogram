@@ -44,7 +44,7 @@
       <view class="timeline-item" wx:for="{{visitHistory}}" wx:key="_id" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; padding: 24rpx; margin-bottom: 16rpx;">
         <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rpx;">
           <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; font-weight: 600;">{{item.formattedDate}}</text>
-          <theme-badge theme="{{theme}}" status="{{item.status}}" type="status" text="{{item.status === 'reserved' ? '已预约' : item.status === 'confirmed' ? '已确认' : item.status === 'completed' ? '已完成' : '已取消'}}" size="sm" />
+          <theme-badge theme="{{theme}}" status="{{item.status}}" type="status" text="{{item.status === 'confirmed' ? '已确认' : '已取消'}}" size="sm" />
         </view>
         <view style="display: flex; align-items: center; gap: 24rpx;">
           <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">{{item.roomName || item.room}} · {{item.time}} · {{item.guestCount}}人</text>

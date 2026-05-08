@@ -53,7 +53,7 @@ Page({
         statusText: getReservationStatusText(res.status),
         dateDisplay: formatDate(res.date),
         roomNameDisplay: getExclusiveTypeName(et, res.room),
-        createdAtDisplay: res._createTime ? formatDateTime(res._createTime) : (res.createTime ? formatDateTime(res.createTime) : ''),
+        createdAtDisplay: res.createdAt ? formatDateTime(res.createdAt) : (res._createTime ? formatDateTime(res._createTime) : ''),
         exclusiveType: et
       }
 

@@ -49,7 +49,7 @@ Page({
       const [resRes, incRes, purRes] = await Promise.all([
         dbInst.collection(COLLECTIONS.RESERVATION).where({
           customerName: kw,
-          status: dbInst.command.neq('cancelled')
+          status: 'confirmed'
         }).limit(10).get(),
         dbInst.collection(COLLECTIONS.INCOME).where({
           source: kw

@@ -74,26 +74,30 @@
 /* Venue header */
 .venue-header {
   background: linear-gradient(135deg, #2D2D3A 0%, #1A1A2E 100%);
-  padding: 48rpx 40rpx 36rpx;
+  padding: 24rpx 40rpx;
   text-align: center;
 }
-.venue-icon {
-  font-size: 48rpx;
-  margin-bottom: 16rpx;
+.venue-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+}
+.venue-heart {
+  font-size: 24rpx;
 }
 .venue-name {
-  display: block;
-  font-size: 38rpx;
+  font-size: 32rpx;
   font-weight: 700;
   color: #F5F0E8;
-  letter-spacing: 6rpx;
+  letter-spacing: 4rpx;
 }
-.venue-divider {
-  width: 48rpx;
-  height: 4rpx;
-  background: #C9A96E;
-  border-radius: 2rpx;
-  margin: 20rpx auto 0;
+.venue-subtitle {
+  display: block;
+  font-size: 22rpx;
+  color: rgba(245,240,232,0.5);
+  letter-spacing: 2rpx;
+  margin-top: 8rpx;
 }
 
 /* Share title banner */

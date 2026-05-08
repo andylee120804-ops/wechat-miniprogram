@@ -34,7 +34,7 @@ Page({
     this.setData({ loading: true })
     try {
       const res = await db.queryAll(COLLECTIONS.RESERVATION, {
-        status: db.getDb().command.neq('cancelled')
+        status: 'confirmed'
       })
 
       // Aggregate by customerName

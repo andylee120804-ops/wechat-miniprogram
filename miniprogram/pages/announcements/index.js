@@ -56,7 +56,7 @@ Page({
         const endDate = ann.endDate && ann.endDate !== startDate ? ann.endDate : ''
         const readBy = ann.readBy || []
         const isCreator = userInfo && (ann.createdBy === userInfo._id || ann.createdBy === userInfo._openid)
-        const isAdmin = userInfo && userInfo.role === 'admin'
+        const canEditItem = !!(isCreator || hasPermission('announcement', ACTIONS.EDIT))
         const creatorFromStaff = staffList.find(s => s._id === ann.createdBy)
         const creatorName = (creatorFromStaff && creatorFromStaff.name) || ann.createdByName || '未知'
         return {
@@ -66,7 +66,7 @@ Page({
           isItemUnread: userInfo && !readBy.includes(userInfo._id),
           readCount: readBy.length,
           isCreator,
-          canEditItem: !!(isCreator || isAdmin)
+          canEditItem
         }
       })
       this.setData({ loading: false, announcements })

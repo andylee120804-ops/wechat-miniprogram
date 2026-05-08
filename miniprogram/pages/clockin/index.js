@@ -382,7 +382,7 @@ Page({
     return new Promise(function(resolve) {
       wx.getSetting({
         success: function(res) {
-          if (res.authSetting['scope.userLocation'] === false) {
+          if (res.authSetting['scope.userFuzzyLocation'] === false) {
             wx.showModal({
               title: '位置权限',
               content: '打卡将记录位置信息，请在设置中开启位置权限',
@@ -392,7 +392,7 @@ Page({
                 if (modalRes.confirm) {
                   wx.openSetting({
                     success: function(openRes) {
-                      if (openRes.authSetting['scope.userLocation']) {
+                      if (openRes.authSetting['scope.userFuzzyLocation']) {
                         chooseLocationOnce(resolve)
                       } else {
                         resolve({ location: '', locationText: '手动打卡（位置未授权）' })

@@ -8,6 +8,10 @@ exports.main = async (event, context) => {
     return verifySession(event, context)
   }
 
+  if (action === 'autoLogin') {
+    return autoLogin(event, context)
+  }
+
   const { wechatId } = event
 
   if (!wechatId) {
@@ -15,6 +19,7 @@ exports.main = async (event, context) => {
   }
 
   const db = cloud.database()
+  const { OPENID } = cloud.getWXContext()
 
   try {
     const result = await db.collection('staff')
@@ -30,37 +35,38 @@ exports.main = async (event, context) => {
 
     const user = result.data[0]
 
-    if (user.permissionsUpdatedAt) {
-      return {
-        success: true,
-        data: {
-          _id: user._id,
-          name: user.name,
-          role: user.role,
-          roleName: getRoleName(user.role),
-          wechatId: user.wechatId,
-          phone: user.phone || '',
-          permissionsUpdatedAt: user.permissionsUpdatedAt
-        },
-        forceReLogin: true
+    // Bind/update OPENID so the most recent device to login gets auto-login
+    await db.collection('staff').doc(user._id).update({
+      data: {
+        boundOpenid: OPENID,
+        boundAt: db.serverDate()
       }
-    }
+    })
 
     return {
       success: true,
-      data: {
-        _id: user._id,
-        name: user.name,
-        role: user.role,
-        roleName: getRoleName(user.role),
-        wechatId: user.wechatId,
-        phone: user.phone || ''
-      }
+      data: buildUserData(user),
+      forceReLogin: !!user.permissionsUpdatedAt
     }
   } catch (err) {
     console.error('登录失败:', err)
     return { success: false, message: '登录失败，请重试' }
   }
+}
+
+function buildUserData(user) {
+  const data = {
+    _id: user._id,
+    name: user.name,
+    role: user.role,
+    roleName: getRoleName(user.role),
+    wechatId: user.wechatId,
+    phone: user.phone || ''
+  }
+  if (user.permissionsUpdatedAt) {
+    data.permissionsUpdatedAt = user.permissionsUpdatedAt
+  }
+  return data
 }
 
 function getRoleName(role) {
@@ -72,6 +78,41 @@ function getRoleName(role) {
     waiter: '服务员'
   }
   return roleNames[role] || role
+}
+
+async function autoLogin(event, context) {
+  const { OPENID } = cloud.getWXContext()
+  const db = cloud.database()
+
+  try {
+    const result = await db.collection('staff')
+      .where({
+        boundOpenid: OPENID,
+        status: 'active'
+      })
+      .get()
+
+    if (!result.data.length) {
+      return { success: false, message: '当前微信未绑定员工账号' }
+    }
+
+    // Sort by boundAt descending — most recently bound staff member wins
+    result.data.sort((a, b) => {
+      const aTime = a.boundAt ? new Date(a.boundAt).getTime() : 0
+      const bTime = b.boundAt ? new Date(b.boundAt).getTime() : 0
+      return bTime - aTime
+    })
+
+    const user = result.data[0]
+    return {
+      success: true,
+      data: buildUserData(user),
+      autoLogin: true
+    }
+  } catch (err) {
+    console.error('自动登录失败:', err)
+    return { success: false, message: '自动登录失败' }
+  }
 }
 
 async function verifySession(event, context) {
@@ -86,12 +127,19 @@ async function verifySession(event, context) {
 
   try {
     const staffRes = await db.collection('staff')
-      .where({ _openid: OPENID, status: 'active' })
+      .where({ boundOpenid: OPENID, status: 'active' })
       .get()
 
     if (staffRes.data.length === 0) {
       return { success: false, message: '当前微信未绑定员工' }
     }
+
+    // Sort by boundAt descending — most recently bound staff member matches
+    staffRes.data.sort((a, b) => {
+      const aTime = a.boundAt ? new Date(a.boundAt).getTime() : 0
+      const bTime = b.boundAt ? new Date(b.boundAt).getTime() : 0
+      return bTime - aTime
+    })
 
     const currentStaff = staffRes.data[0]
     if (currentStaff._id !== staffId) {
@@ -100,13 +148,7 @@ async function verifySession(event, context) {
 
     return {
       success: true,
-      data: {
-        _id: currentStaff._id,
-        name: currentStaff.name,
-        role: currentStaff.role,
-        wechatId: currentStaff.wechatId,
-        phone: currentStaff.phone || ''
-      }
+      data: buildUserData(currentStaff)
     }
   } catch (err) {
     console.error('会话验证失败:', err)

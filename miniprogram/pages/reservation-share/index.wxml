@@ -31,9 +31,12 @@
     <view class="card">
       <!-- Venue header -->
       <view class="venue-header">
-        <view class="venue-icon">❤️</view>
-        <text class="venue-name">{{venueName}}</text>
-        <view class="venue-divider"></view>
+        <view class="venue-name-row">
+          <text class="venue-heart">❤️</text>
+          <text class="venue-name">{{venueName}}</text>
+          <text class="venue-heart">❤️</text>
+        </view>
+        <text class="venue-subtitle">等风，也等你！</text>
       </view>
 
       <!-- Share title -->
@@ -111,7 +114,7 @@
     <!-- Footer -->
     <view class="footer">
       <view class="footer-divider"></view>
-      <text class="footer-text">本信息由 {{venueName}} 提供</text>
+      <text class="footer-text"> 由 {{venueName}} 提供</text>
     </view>
   </view>
 </view>

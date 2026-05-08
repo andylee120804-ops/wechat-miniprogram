@@ -105,7 +105,7 @@ Page({
 
       const results = await db.queryAll(COLLECTIONS.RESERVATION, {
         date: _.gte(thirtyDaysAgo).and(_.lte(now)),
-        status: _.in(['reserved', 'confirmed'])
+        status: 'confirmed'
       })
 
       const allReservations = results.data || []

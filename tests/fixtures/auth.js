@@ -31,15 +31,37 @@ async function loginAs(miniProgram, wechatId, options = {}) {
   // Step 3: Set wechatId and tap login on the fresh page
   await page.setData({ wechatId: wechatId })
   await new Promise(r => setTimeout(r, 200))
-  await page.callMethod('onLogin')
+  try {
+    await page.callMethod('onLogin')
+  } catch (e) {
+    // onLogin may navigate (switchTab) on success, which destroys the
+    // login page — callMethod rejects with "page destroyed". That's OK.
+  }
 
-  // Step 4: Wait for login to complete (loading becomes false)
+  // Step 4: Wait for login to complete — check app globalData (handles
+  // page-destroyed after switchTab). Fall back to page.loading check.
   const start = Date.now()
-  let loading = true
-  while (loading && Date.now() - start < maxWait) {
-    const data = await page.data()
-    loading = data.loading
-    if (!loading) break
+  let loggedIn = false
+  while (Date.now() - start < maxWait) {
+    // Primary: check app-level state (works even after page navigation)
+    try {
+      loggedIn = await miniProgram.evaluate(function () {
+        var app = getApp()
+        return app.globalData.isLogin && app.globalData.userInfo !== null
+      })
+      if (loggedIn) break
+    } catch (e) {
+      // evaluate failed, keep waiting
+    }
+
+    // Fallback: check page loading
+    try {
+      const data = await page.data()
+      if (!data.loading) break
+    } catch (e) {
+      // Page destroyed (login succeeded & navigated away)
+      break
+    }
     await new Promise(r => setTimeout(r, 500))
   }
 

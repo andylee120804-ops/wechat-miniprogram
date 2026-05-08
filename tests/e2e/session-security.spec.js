@@ -68,19 +68,19 @@ describe('Session Security - Auth Bypass Prevention', () => {
 
   // ---------------------------------------------------------------
   // Test 2: Injecting a non-existent staffId into Storage
-  //         triggers verifySession and clears the fake session
+  //         triggers verifySession → clears fake → autoLogin restores
   // ---------------------------------------------------------------
-  test('tampered Storage userInfo should be cleared after verifySession', async () => {
+  test('tampered Storage is cleared by verifySession, autoLogin restores real session', async () => {
     // Ensure logged out first
     await logout(miniProgram)
 
     // Inject a fake userInfo with a non-existent staffId
     // This simulates: old session data from user A left in Storage,
     // but user B (different OPENID) opens the app.
-    // Since no staff record matches both the OPENID and the fake _id,
-    // verifySession should detect the mismatch and clear the session.
+    // verifySession detects the mismatch and clears the fake session.
+    // Then autoLogin (by OPENID) restores a legitimate session.
     const fakeUserInfo = {
-      _id: 'FAKE_STAFF_ID_NOT_IN_DB_99999', // ID that won't match any real staff
+      _id: 'FAKE_STAFF_ID_NOT_IN_DB_99999',
       name: '伪造用户',
       role: 'boss',
       wechatId: 'fake_wechat_id',
@@ -88,7 +88,6 @@ describe('Session Security - Auth Bypass Prevention', () => {
     }
     await miniProgram.evaluate(function (fakeInfo) {
       wx.setStorageSync('userInfo', fakeInfo)
-      // Also set isLogin optimistically to simulate checkLogin's first step
       var app = getApp()
       app.globalData.userInfo = fakeInfo
       app.globalData.isLogin = true
@@ -101,26 +100,36 @@ describe('Session Security - Auth Bypass Prevention', () => {
     expect(storedBefore).toBeTruthy()
     expect(storedBefore._id).toBe('FAKE_STAFF_ID_NOT_IN_DB_99999')
 
-    // Trigger checkLogin manually (simulates app restart reading Storage)
-    // reLaunch does NOT re-trigger onLaunch, so we call checkLogin directly
+    // Trigger checkLogin manually (simulates app restart)
     await miniProgram.evaluate(function () {
       var app = getApp()
       app.checkLogin()
     })
-    await new Promise(r => setTimeout(r, 8000)) // Wait for async verifySession to complete
+    await new Promise(r => setTimeout(r, 8000))
 
-    // Check if session was cleared (verifySession detected mismatch)
+    // After verifySession + autoLogin:
+    // isLogin should be true (autoLogin restores a real session)
     const isLoginAfter = await miniProgram.evaluate(function () {
       var app = getApp()
       return app.globalData.isLogin
     })
-    expect(isLoginAfter).toBe(false)
+    expect(isLoginAfter).toBe(true)
 
-    // Storage should be cleaned up
+    // userInfo should be a REAL staff member, not the fake one
+    const userInfoAfter = await miniProgram.evaluate(function () {
+      var app = getApp()
+      return app.globalData.userInfo
+    })
+    expect(userInfoAfter).toBeTruthy()
+    expect(userInfoAfter._id).not.toBe('FAKE_STAFF_ID_NOT_IN_DB_99999')
+    expect(userInfoAfter.name).not.toBe('伪造用户')
+
+    // Storage should have the real userInfo too
     const storedAfter = await miniProgram.evaluate(function () {
       return wx.getStorageSync('userInfo')
     })
-    expect(storedAfter).toBeFalsy()
+    expect(storedAfter).toBeTruthy()
+    expect(storedAfter._id).not.toBe('FAKE_STAFF_ID_NOT_IN_DB_99999')
   })
 
   // ---------------------------------------------------------------
@@ -161,8 +170,8 @@ describe('Session Security - Auth Bypass Prevention', () => {
   // ---------------------------------------------------------------
   // Test 4: Switching users clears previous identity completely
   // ---------------------------------------------------------------
-  test('switching from boss to purchase clears boss identity', async () => {
-    // Login as boss
+  test('switching from boss to boss2 clears previous identity', async () => {
+    // Login as boss (wechatId: f)
     await loginAs(miniProgram, TEST_ACCOUNTS.boss.wechatId)
 
     let userInfo = await miniProgram.evaluate(function () {
@@ -171,8 +180,8 @@ describe('Session Security - Auth Bypass Prevention', () => {
     })
     expect(userInfo.role).toBe('boss')
 
-    // Login as purchase (different user)
-    await loginAs(miniProgram, TEST_ACCOUNTS.purchase.wechatId)
+    // Login as boss2 (wechatId: g, different user)
+    await loginAs(miniProgram, TEST_ACCOUNTS.boss2.wechatId)
 
     userInfo = await miniProgram.evaluate(function () {
       var app = getApp()
@@ -186,7 +195,7 @@ describe('Session Security - Auth Bypass Prevention', () => {
     const storedInfo = await miniProgram.evaluate(function () {
       return wx.getStorageSync('userInfo')
     })
-    expect(storedInfo.wechatId).toBe(TEST_ACCOUNTS.purchase.wechatId)
+    expect(storedInfo.wechatId).toBe(TEST_ACCOUNTS.boss2.wechatId)
   })
 
   // ---------------------------------------------------------------
