@@ -139,11 +139,30 @@ App({
     }
   },
 
-  checkLogin() {
+  async checkLogin() {
     const userInfo = wx.getStorageSync('userInfo')
-    if (userInfo) {
-      this.globalData.userInfo = userInfo
-      this.globalData.isLogin = true
+    if (!userInfo) return
+
+    // 先乐观恢复，再异步校验 OPENID 是否匹配
+    this.globalData.userInfo = userInfo
+    this.globalData.isLogin = true
+
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'login',
+        data: { action: 'verifySession', staffId: userInfo._id }
+      })
+      if (res.result && res.result.success) {
+        // 校验通过，更新最新信息
+        this.globalData.userInfo = res.result.data
+        wx.setStorageSync('userInfo', res.result.data)
+      } else {
+        // OPENID 不匹配，清除登录态
+        this.logout()
+      }
+    } catch (err) {
+      // 云函数调用失败（网络等），不清除登录态，保持乐观恢复
+      console.warn('[checkLogin] 会话校验失败，保持当前状态:', err)
     }
   },
 

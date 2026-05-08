@@ -2,6 +2,12 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 exports.main = async (event, context) => {
+  const { action } = event
+
+  if (action === 'verifySession') {
+    return verifySession(event, context)
+  }
+
   const { wechatId } = event
 
   if (!wechatId) {
@@ -66,4 +72,44 @@ function getRoleName(role) {
     waiter: '服务员'
   }
   return roleNames[role] || role
+}
+
+async function verifySession(event, context) {
+  const { staffId } = event
+  const { OPENID } = cloud.getWXContext()
+
+  if (!staffId) {
+    return { success: false, message: '缺少身份信息' }
+  }
+
+  const db = cloud.database()
+
+  try {
+    const staffRes = await db.collection('staff')
+      .where({ _openid: OPENID, status: 'active' })
+      .get()
+
+    if (staffRes.data.length === 0) {
+      return { success: false, message: '当前微信未绑定员工' }
+    }
+
+    const currentStaff = staffRes.data[0]
+    if (currentStaff._id !== staffId) {
+      return { success: false, message: '身份不匹配' }
+    }
+
+    return {
+      success: true,
+      data: {
+        _id: currentStaff._id,
+        name: currentStaff.name,
+        role: currentStaff.role,
+        wechatId: currentStaff.wechatId,
+        phone: currentStaff.phone || ''
+      }
+    }
+  } catch (err) {
+    console.error('会话验证失败:', err)
+    return { success: false, message: '会话验证失败' }
+  }
 }
