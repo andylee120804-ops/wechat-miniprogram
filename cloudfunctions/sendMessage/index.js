@@ -274,10 +274,12 @@ async function getSettings(event) {
   const result = await db.collection('settings').where({ key: 'venue_info' }).get()
   const data = result.data && result.data.length > 0 ? result.data[0] : {}
 
+  console.log('[getSettings] raw data from DB:', JSON.stringify(data))
+
   return {
     success: true,
     data: {
-      venueName: data.venueName || '听澜轩',
+      venueName: data.venueName || '小食堂',
       venueAddress: data.venueAddress || '',
       venueLatitude: data.venueLatitude || '',
       venueLongitude: data.venueLongitude || '',

@@ -29,7 +29,7 @@ Page({
       { value: 'big', label: '大包厢' },
       { value: 'small', label: '小包厢' }
     ],
-    standardOptions: [],
+    standardOptions: [500, 600, 800],
     partnerStandard: 300,
     defaultStandard: 500,
     allowNoStandard: false,
@@ -63,23 +63,31 @@ Page({
         name: 'sendMessage',
         data: { action: 'getSettings' }
       })
+      console.log('[reservation-add] getSettings result:', JSON.stringify(res.result))
       if (res.result && res.result.success && res.result.data) {
         const d = res.result.data
         const standards = d.mealStandards || [500, 600, 800]
         const defaultStd = d.defaultStandard !== undefined && d.defaultStandard !== '' ? d.defaultStandard : 0
         const partnerStd = d.partnerStandard || 300
-        const noStandard = !d.allowNoStandard
-        // 'partner' default: 初始使用股东餐标
-        const initStd = defaultStd === 'partner' ? partnerStd : (Number(defaultStd) || 0)
-        // 当 allowNoStandard 为 false 时，不自动预选默认餐标，强制用户手动选择
-        const finalStd = noStandard ? 0 : initStd
+
+        // 明确默认值类型
+        const isPartnerDefault = defaultStd === 'partner'
+        // 有数值默认值（如 600）且在选项里才预填，否则为 0
+        const numDefault = Number(defaultStd) || 0
+        const validDefault = numDefault > 0 && standards.includes(numDefault) ? numDefault : 0
+
+        // 明确告诉 UI 是否自动选中
+        const shouldAutoSelect = defaultStd !== '' && defaultStd !== undefined && defaultStd !== 0
+
         this.setData({
           standardOptions: standards,
           partnerStandard: partnerStd,
           defaultStandard: defaultStd,
           allowNoStandard: d.allowNoStandard || false,
-          standard: finalStd,
-          standardPicked: !!finalStd
+          standard: shouldAutoSelect ? (isPartnerDefault ? partnerStd : validDefault) : 0,
+          standardPicked: shouldAutoSelect,
+          isPartner: isPartnerDefault,
+          selectedBossIndex: -1
         })
       }
     } catch (err) {
@@ -187,6 +195,12 @@ Page({
     wx.vibrateShort({ type: 'light' })
     const value = Number(e.currentTarget.dataset.value)
     if (this.data.standard === value && this.data.standardPicked) {
+      // 股东已选中时，餐标由股东满足，取消数字选项允许
+      if (this.data.isPartner) {
+        this.setData({ standard: 0, standardPicked: false })
+        this.clearError('standard')
+        return
+      }
       // Only allow deselection if allowNoStandard is enabled
       if (!this.data.allowNoStandard) {
         wx.showToast({ title: '设置要求必须选择餐标', icon: 'none' })
