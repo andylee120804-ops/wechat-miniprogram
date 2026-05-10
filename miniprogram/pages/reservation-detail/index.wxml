@@ -80,6 +80,12 @@
     <!-- Share Modal -->
     <theme-modal theme="{{theme}}" visible="{{showShareModal}}" title="分享给客人" showFooter="{{false}}" bind:close="onCloseShareModal">
       <scroll-view scroll-y style="max-height: 80vh; padding: 16rpx 0;">
+        <!-- Template selector -->
+        <view style="display:flex; align-items:center; margin-bottom:16rpx;">
+          <text style="color:{{selectedTemplate==='business'?'#C9A96E':'#5C5C72'}};font-size:26rpx;font-weight:{{selectedTemplate==='business'?'600':'400'}};" data-id="business" bindtap="onTemplateSelect">商务风格</text>
+          <text style="color:#5C5C72;font-size:26rpx;margin:0 16rpx;">|</text>
+          <text style="color:{{selectedTemplate==='friend'?'#C9A96E':'#5C5C72'}};font-size:26rpx;font-weight:{{selectedTemplate==='friend'?'600':'400'}};" data-id="friend" bindtap="onTemplateSelect">友情风格</text>
+        </view>
         <!-- Share title -->
         <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 30rpx; display: block; margin-bottom: 16rpx;">分享标题</text>
         <textarea value="{{shareTitle}}" bindinput="onShareTitleInput" placeholder="输入分享标题" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}"
