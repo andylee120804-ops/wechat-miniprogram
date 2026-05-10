@@ -185,10 +185,8 @@ Page({
   },
 
   _buildShareConfig() {
-    const { shareTitle, shareAddress, shareRemark, shareLatitude, shareLongitude, selectedTemplate, reservation } = this.data
-    // remark 优先用 shareRemark（用户在弹窗中编辑的），无则保留 reservation.remark（原始）
-    const remark = shareRemark || (reservation ? reservation.remark : '') || ''
-    return { shareTitle, shareAddress, shareRemark: remark, shareLatitude, shareLongitude, template: selectedTemplate }
+    const { shareTitle, shareAddress, shareRemark, shareLatitude, shareLongitude, selectedTemplate } = this.data
+    return { shareTitle, shareAddress, shareRemark, shareLatitude, shareLongitude, template: selectedTemplate }
   },
 
   async onConfirmShare() {
@@ -203,15 +201,21 @@ Page({
     }
   },
 
-  onShareAndSave() {
-    this.setData({ showShareModal: false })
+  async onShareAndSave() {
     const shareConfig = this._buildShareConfig()
-    // 同步更新本地数据，确保再次打开分享时能看到刚才保存的内容
-    const reservation = { ...this.data.reservation, shareConfig }
-    this.setData({ reservation })
-    db.updateDoc(COLLECTIONS.RESERVATION, this.data.id, { shareConfig }).catch(err => {
-      console.warn('保存分享配置失败:', err)
-    })
+    // 先保存到云端，完成后再触发微信分享
+    try {
+      wx.showLoading({ title: '保存中' })
+      await db.updateDoc(COLLECTIONS.RESERVATION, this.data.id, { shareConfig })
+      wx.hideLoading()
+      // 保存完成后再更新本地并触发分享
+      const reservation = { ...this.data.reservation, shareConfig }
+      this.setData({ showShareModal: false, reservation })
+      wx.showToast({ title: '分享详情已保存', icon: 'success' })
+    } catch (err) {
+      wx.hideLoading()
+      handleCloudError(err, '保存分享详情')
+    }
   },
 
   onShareAppMessage() {

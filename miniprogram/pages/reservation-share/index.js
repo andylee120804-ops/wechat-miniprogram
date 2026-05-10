@@ -77,12 +77,11 @@ Page({
       const template = validTemplates.includes(sc.template) ? sc.template : 'business'
       const templateData = this.data.templateConfig[template]
 
+      const EMOJI_FALLBACKS = ['📅', '🕐', '🚪', '👥', '📝', '💌']
       // 备注显示优先级：shareConfig.remark > r.remark（兼容旧数据）
       const displayRemark = sc.remark || r.remark || ''
       // 温馨提示使用 shareConfig.shareRemark
       const displayShareRemark = sc.shareRemark || ''
-
-      const EMOJI_FALLBACKS = ['📅', '🕐', '🚪', '👥', '📝', '💌']
       const detailItems = [
         { icon: templateData.fieldEmojis[0] || EMOJI_FALLBACKS[0], label: '日期', value: formatDate(r.date) },
         { icon: templateData.fieldEmojis[1] || EMOJI_FALLBACKS[1], label: '时段', value: r.time || '' },
