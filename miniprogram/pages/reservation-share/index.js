@@ -73,17 +73,19 @@ Page({
       const shareLng = sc.shareLongitude || this.data.venueLongitude || ''
 
       // Parse template from shareConfig and build detailItems with dynamic emojis
-      const template = sc.template || 'business'
+      const validTemplates = ['business', 'friend']
+      const template = validTemplates.includes(sc.template) ? sc.template : 'business'
       const templateData = this.data.templateConfig[template]
 
+      const EMOJI_FALLBACKS = ['📅', '🕐', '🚪', '👥', '📝', '💌']
       const detailItems = [
-        { icon: templateData.fieldEmojis[0], label: '日期', value: formatDate(r.date) },
-        { icon: templateData.fieldEmojis[1], label: '时段', value: r.time || '' },
-        { icon: templateData.fieldEmojis[2], label: '包厢', value: roomName },
-        { icon: templateData.fieldEmojis[3], label: '人数', value: (r.guestCount || '') + '人' }
+        { icon: templateData.fieldEmojis[0] || EMOJI_FALLBACKS[0], label: '日期', value: formatDate(r.date) },
+        { icon: templateData.fieldEmojis[1] || EMOJI_FALLBACKS[1], label: '时段', value: r.time || '' },
+        { icon: templateData.fieldEmojis[2] || EMOJI_FALLBACKS[2], label: '包厢', value: roomName },
+        { icon: templateData.fieldEmojis[3] || EMOJI_FALLBACKS[3], label: '人数', value: (r.guestCount || '') + '人' }
       ]
-      if (r.remark) detailItems.push({ icon: templateData.fieldEmojis[4], label: '备注', value: r.remark })
-      if (sc.shareRemark) detailItems.push({ icon: templateData.fieldEmojis[5], label: '温馨提示', value: sc.shareRemark })
+      if (r.remark) detailItems.push({ icon: templateData.fieldEmojis[4] || EMOJI_FALLBACKS[4], label: '备注', value: r.remark })
+      if (sc.shareRemark) detailItems.push({ icon: templateData.fieldEmojis[5] || EMOJI_FALLBACKS[5], label: '温馨提示', value: sc.shareRemark })
 
       this.setData({
         loading: false,
