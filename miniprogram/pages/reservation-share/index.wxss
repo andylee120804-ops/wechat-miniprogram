@@ -253,3 +253,81 @@
   font-size: 24rpx;
   color: #CCC5B5;
 }
+
+/* ===== 商务风格 business ===== */
+.business .page {
+  background: linear-gradient(180deg, #F5F6F8 0%, #EBECF0 100%);
+}
+.business .venue-header {
+  background: linear-gradient(135deg, #1C2433 0%, #2a3244 100%);
+}
+.business .top-band {
+  background: linear-gradient(90deg, transparent, #C9A96E, transparent);
+}
+.business .close-btn {
+  background: #1C2433;
+  box-shadow: 0 2rpx 8rpx rgba(28,36,51,0.3);
+}
+.business .close-icon {
+  color: #C9A96E;
+}
+.business .title-text {
+  color: #C9A96E;
+}
+.business .detail-item {
+  border-bottom-color: #E0E2E6;
+}
+.business .label-text {
+  color: #888;
+}
+.business .address-action {
+  background: #1C2433;
+}
+.business .address-copy {
+  color: #C9A96E;
+}
+.business .footer-divider {
+  background: linear-gradient(90deg, transparent, rgba(201,169,110,0.3), transparent);
+}
+.business .footer-text {
+  color: #CCC5B5;
+}
+
+/* ===== 友情风格 friend ===== */
+.friend .page {
+  background: linear-gradient(180deg, #F0F8FF 0%, #E3F0FA 100%);
+}
+.friend .venue-header {
+  background: linear-gradient(135deg, #4A90D9 0%, #5BA0E8 100%);
+}
+.friend .top-band {
+  background: linear-gradient(90deg, transparent, #4A90D9, transparent);
+}
+.friend .close-btn {
+  background: #E8F4FD;
+  box-shadow: 0 2rpx 8rpx rgba(59,130,200,0.15);
+}
+.friend .close-icon {
+  color: #4A90D9;
+}
+.friend .title-text {
+  color: #4A90D9;
+}
+.friend .detail-item {
+  border-bottom-color: #D0E4F5;
+}
+.friend .label-text {
+  color: #7BAFD4;
+}
+.friend .address-action {
+  background: #E8F4FD;
+}
+.friend .address-copy {
+  color: #4A90D9;
+}
+.friend .footer-divider {
+  background: linear-gradient(90deg, transparent, rgba(74,144,217,0.3), transparent);
+}
+.friend .footer-text {
+  color: #B0CCF0;
+}
