@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>预约分享模板预览</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #1a1a2e;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  h1 {
+    text-align: center;
+    color: #fff;
+    font-size: 22px;
+    margin-bottom: 40px;
+    font-weight: 400;
+    letter-spacing: 2px;
+  }
+  .templates {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .card {
+    width: 320px;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.3);
+    background: #fff;
+  }
+
+  /* ===== 商务风格 ===== */
+  .business .page {
+    background: linear-gradient(180deg, #F5F6F8 0%, #EBECF0 100%);
+    min-height: 580px;
+    padding: 0 0 40px;
+  }
+  .business .top-bar {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px 0;
+    justify-content: flex-start;
+  }
+  .business .close-btn {
+    width: 36px; height: 36px;
+    background: #1C2433;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(28,36,51,0.3);
+  }
+  .business .close-icon { font-size: 16px; color: #C9A96E; font-weight: 700; }
+  .business .top-band {
+    height: 4px;
+    background: linear-gradient(90deg, transparent, #C9A96E, transparent);
+    margin: 16px 0 24px;
+    opacity: 0.4;
+  }
+  .business .card-inner {
+    background: #fff;
+    border-radius: 20px;
+    margin: 0 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    border: 1px solid #E8EAEE;
+  }
+  .business .venue-header {
+    background: linear-gradient(135deg, #1C2433 0%, #2a3244 100%);
+    padding: 20px 24px;
+    text-align: center;
+    border-bottom: 2px solid #C9A96E;
+  }
+  .business .venue-name-row {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .business .venue-name {
+    font-size: 20px; font-weight: 700;
+    color: #F5F0E8; letter-spacing: 3px;
+  }
+  .business .venue-subtitle {
+    font-size: 13px; color: rgba(245,240,232,0.4);
+    margin-top: 6px; letter-spacing: 1px;
+  }
+  .business .title-banner { padding: 20px 24px 16px; }
+  .business .title-text {
+    display: block; text-align: center;
+    font-size: 24px; font-weight: 700;
+    color: #C9A96E; letter-spacing: 2px;
+    border-bottom: 1px solid #E8EAEE;
+    padding-bottom: 16px;
+  }
+  .business .detail-list { padding: 8px 24px 24px; }
+  .business .detail-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #E0E2E6;
+  }
+  .business .detail-item:last-child { border-bottom: none; }
+  .business .detail-label { display: flex; align-items: center; gap: 8px; }
+  .business .label-icon { font-size: 18px; }
+  .business .label-text { font-size: 16px; color: #888; }
+  .business .detail-value { font-size: 16px; color: #2D2D3A; font-weight: 500; }
+  .business .detail-item .detail-label::before { content: ''; }
+  .business .address-card {
+    background: #fff; border-radius: 20px;
+    margin: 16px 16px 0;
+    padding: 20px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    border: 1px solid #E8EAEE;
+  }
+  .business .address-pin { font-size: 26px; }
+  .business .address-label { font-size: 13px; color: #999; margin-bottom: 4px; }
+  .business .address-text { font-size: 15px; color: #2D2D3A; }
+  .business .address-action {
+    background: #1C2433; border-radius: 8px;
+    padding: 8px 16px; flex-shrink: 0;
+  }
+  .business .address-copy { font-size: 14px; color: #C9A96E; font-weight: 600; letter-spacing: 1px; }
+
+  /* ===== 友情风格（清新蓝） ===== */
+  .friend .page {
+    background: linear-gradient(180deg, #F0F8FF 0%, #E3F0FA 100%);
+    min-height: 580px;
+    padding: 0 0 40px;
+  }
+  .friend .top-bar {
+    display: flex; align-items: center; padding: 12px 16px 0; justify-content: flex-start;
+  }
+  .friend .close-btn {
+    width: 36px; height: 36px;
+    background: #E8F4FD;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(59,130,200,0.15);
+  }
+  .friend .close-icon { font-size: 16px; color: #4A90D9; font-weight: 700; }
+  .friend .top-band {
+    height: 4px;
+    background: linear-gradient(90deg, transparent, #4A90D9, transparent);
+    margin: 16px 0 24px;
+    opacity: 0.4;
+    border-radius: 2px;
+  }
+  .friend .card-inner {
+    background: #fff;
+    border-radius: 20px;
+    margin: 0 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(59,130,200,0.08);
+  }
+  .friend .venue-header {
+    background: linear-gradient(135deg, #4A90D9 0%, #5BA0E8 100%);
+    padding: 20px 24px;
+    text-align: center;
+  }
+  .friend .venue-name-row {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .friend .venue-name {
+    font-size: 20px; font-weight: 700;
+    color: #F0F7FF; letter-spacing: 3px;
+  }
+  .friend .venue-subtitle {
+    font-size: 13px; color: rgba(240,247,255,0.6);
+    margin-top: 6px; letter-spacing: 1px;
+  }
+  .friend .title-banner { padding: 20px 24px 16px; }
+  .friend .title-text {
+    display: block; text-align: center;
+    font-size: 24px; font-weight: 700;
+    color: #4A90D9; letter-spacing: 2px;
+  }
+  .friend .detail-list { padding: 8px 24px 24px; }
+  .friend .detail-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #D0E4F5;
+  }
+  .friend .detail-item:last-child { border-bottom: none; }
+  .friend .detail-label { display: flex; align-items: center; gap: 8px; }
+  .friend .label-icon { font-size: 18px; }
+  .friend .label-text { font-size: 16px; color: #7BAFD4; }
+  .friend .detail-value { font-size: 16px; color: #2A4A6A; font-weight: 500; }
+  .friend .address-card {
+    background: #fff; border-radius: 20px;
+    margin: 16px 16px 0;
+    padding: 20px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 4px 20px rgba(59,130,200,0.08);
+  }
+  .friend .address-pin { font-size: 26px; }
+  .friend .address-label { font-size: 13px; color: #7BAFD4; margin-bottom: 4px; }
+  .friend .address-text { font-size: 15px; color: #2A4A6A; }
+  .friend .address-action {
+    background: #E8F4FD; border-radius: 20px;
+    padding: 8px 16px; flex-shrink: 0;
+  }
+  .friend .address-copy { font-size: 14px; color: #4A90D9; font-weight: 600; }
+
+  /* Labels */
+  .label {
+    text-align: center;
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 1px;
+  }
+  .label span {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+  }
+  .business-label { background: #1C2433; color: #C9A96E; }
+  .friend-label { background: #4A90D9; color: #F0F7FF; }
+
+  .label-row { display: flex; justify-content: center; margin-bottom: 12px; gap: 8px; }
+  .tag {
+    font-size: 11px; padding: 3px 10px; border-radius: 20px;
+    opacity: 0.7;
+  }
+  .business .tag { background: #E8ECF0; color: #888; }
+  .friend .tag { background: #E8F4FD; color: #4A90D9; }
+
+  /* Emojis row */
+  .emojis-row {
+    display: flex; justify-content: center; gap: 16px;
+    margin-top: 8px;
+  }
+  .emoji-label { font-size: 20px; }
+</style>
+</head>
+<body>
+
+<h1>预约分享模板 · 两种风格预览</h1>
+
+<div class="templates">
+
+  <!-- 商务风格 -->
+  <div>
+    <div class="label-row">
+      <span class="tag business-tag">商务风格 · 高端正式</span>
+    </div>
+    <div class="card business">
+      <div class="page">
+        <div class="top-bar">
+          <div class="close-btn"><span class="close-icon">✕</span></div>
+        </div>
+        <div class="top-band"></div>
+        <div class="card-inner">
+          <div class="venue-header">
+            <div class="venue-name-row">
+              <span class="emoji-label">🏛️</span>
+              <span class="venue-name">我们的小食堂</span>
+            </div>
+            <div class="venue-subtitle">等风，也等你！</div>
+          </div>
+          <div class="title-banner">
+            <div class="title-text">张三 · 预定信息</div>
+          </div>
+          <div class="detail-list">
+            <div class="detail-item">
+              <div class="detail-label">
+                <span class="label-icon">📋</span>
+                <span class="label-text">日期</span>
+              </div>
+              <span class="detail-value">5月15日 周四</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">
+                <span class="label-icon">⌚</span>
+                <span class="label-text">时段</span>
+              </div>
+              <span class="detail-value">晚间 18:00</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">
+                <span class="label-icon">🏠</span>
+                <span class="label-text">包厢</span>
+              </div>
+              <span class="detail-value">VIP包厢</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">
+                <span class="label-icon">👔</span>
+                <span class="label-text">人数</span>
+              </div>
+              <span class="detail-value">8人</span>
+            </div>
+          </div>
+          <div class="address-card">
+            <span class="address-pin">📍</span>
+            <div>
+              <div class="address-label">食堂地址</div>
+              <div class="address-text">北京市朝阳区建国路88号</div>
+            </div>
+            <div class="address-action"><span class="address-copy">导航</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 友情风格 -->
+  <div>
+    <div class="label-row">
+      <span class="tag friend-tag">友情风格 · 温馨亲切</span>
+    </div>
+    <div class="card friend">
+      <div class="page">
+        <div class="top-bar">
+          <div class="close-btn"><span class="close-icon">✕</span></div>
+        </div>
+        <div class="top-band"></div>
+        <div class="card-inner">
+          <div class="venue-header">
+            <div class="venue-name-row">
+              <span class="emoji-label">🍻</span>
+              <span class="venue-name">我们的小食堂</span>
+              <span class="emoji-label">🤗</span>
+            </div>
+            <div class="venue-subtitle">等风，也等你！</div>
+          </div>
+          <div class="title-banner">
+            <div class="title-text">张三 · 预定信息</div>
+          </div>
+          <div class="detail-list">
+            <div class="detail-item">
+              <div class="detail-label">
+                <span class="label-icon">📆</span>
+                <span class="label-text">日期</span>
+              </div>
+              <span class="detail-value">5月15日 周四</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">
+                <span class="label-icon">🌙</span>
+                <span class="label-text">时段</span>
+              </div>
+              <span class="detail-value">晚间 18:00</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">
+                <span class="label-icon">🏠</span>
+                <span class="label-text">包厢</span>
+              </div>
+              <span class="detail-value">VIP包厢</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">
+                <span class="label-icon">🥂</span>
+                <span class="label-text">人数</span>
+              </div>
+              <span class="detail-value">8人</span>
+            </div>
+          </div>
+          <div class="address-card">
+            <span class="address-pin">📍</span>
+            <div>
+              <div class="address-label">食堂地址</div>
+              <div class="address-text">北京市朝阳区建国路88号</div>
+            </div>
+            <div class="address-action"><span class="address-copy">导航</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 友情风格 -->
+  <div>
+    <div class="label-row">
+      <span class="tag friend-tag">友情风格 · 简洁明朗</span>
+    </div>
+    <div class="card friend">
+      <div class="page">
+        <div class="top-bar">
+          <div class="close-btn"><span class="close-icon">✕</span></div>
+        </div>
+        <div class="top-band"></div>
+        <div class="card-inner">
+          <div class="venue-header">
+            <div class="venue-name-row">
+              <span class="emoji-label">🍻</span>
+              <span class="venue-name">我们的小食堂</span>
+            </div>
+            <div class="venue-subtitle">等风，也等你！</div>
+          </div>
+          <div class="title-banner">
+            <div class="title-text">张三 · 预定信息</div>
+          </div>
+          <div class="detail-list">
+            <div class="detail-item">
+              <div class="detail-label">
+                <span class="label-icon">📆</span>
+                <span class="label-text">日期</span>
+              </div>
+              <span class="detail-value">5月15日 周四</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">
+                <span class="label-icon">🌙</span>
+                <span class="label-text">时段</span>
+              </div>
+              <span class="detail-value">晚间 18:00</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">
+                <span class="label-icon">🏠</span>
+                <span class="label-text">包厢</span>
+              </div>
+              <span class="detail-value">VIP包厢</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">
+                <span class="label-icon">🥂</span>
+                <span class="label-text">人数</span>
+              </div>
+              <span class="detail-value">8人</span>
+            </div>
+          </div>
+          <div class="address-card">
+            <span class="address-pin">📍</span>
+            <div>
+              <div class="address-label">食堂地址</div>
+              <div class="address-text">北京市朝阳区建国路88号</div>
+            </div>
+            <div class="address-action"><span class="address-copy">导航</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
