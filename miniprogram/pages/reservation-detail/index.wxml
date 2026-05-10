@@ -110,9 +110,10 @@
             <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">人数</text>
             <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx; font-weight: 500;">{{reservation.guestCount || ''}}人</text>
           </view>
-          <view wx:if="{{reservation.remark}}" style="display: flex; justify-content: space-between; padding: 12rpx 0;">
+          <!-- 备注：优先显示 shareRemark（用户编辑的），无则显示 reservation.remark（原始） -->
+          <view wx:if="{{shareRemark || reservation.remark}}" style="display: flex; justify-content: space-between; padding: 12rpx 0;">
             <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">备注</text>
-            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx; max-width: 55%; text-align: right;">{{reservation.remark}}</text>
+            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx; max-width: 55%; text-align: right;">{{shareRemark || reservation.remark}}</text>
           </view>
 
           <!-- Share remark (editable, shown to guest) -->

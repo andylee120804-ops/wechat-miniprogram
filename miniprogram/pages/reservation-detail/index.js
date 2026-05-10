@@ -185,8 +185,10 @@ Page({
   },
 
   _buildShareConfig() {
-    const { shareTitle, shareAddress, shareRemark, shareLatitude, shareLongitude, selectedTemplate } = this.data
-    return { shareTitle, shareAddress, shareRemark, shareLatitude, shareLongitude, template: selectedTemplate }
+    const { shareTitle, shareAddress, shareRemark, shareLatitude, shareLongitude, selectedTemplate, reservation } = this.data
+    // remark 优先用 shareRemark（用户在弹窗中编辑的），无则保留 reservation.remark（原始）
+    const remark = shareRemark || (reservation ? reservation.remark : '') || ''
+    return { shareTitle, shareAddress, shareRemark: remark, shareLatitude, shareLongitude, template: selectedTemplate }
   },
 
   async onConfirmShare() {
