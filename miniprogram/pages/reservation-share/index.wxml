@@ -1,4 +1,4 @@
-<view class="page">
+<view class="page {{templateClass}}">
   <!-- Loading -->
   <view wx:if="{{loading}}" class="state-wrap">
     <view class="loading-dots">
@@ -32,9 +32,9 @@
       <!-- Venue header -->
       <view class="venue-header">
         <view class="venue-name-row">
-          <text class="venue-heart">❤️</text>
+          <text class="venue-heart" wx:for="{{headerEmojis}}" wx:key="*this">{{item}}</text>
           <text class="venue-name">{{venueName}}</text>
-          <text class="venue-heart">❤️</text>
+          <text class="venue-heart" wx:for="{{headerEmojis}}" wx:key="*this">{{item}}</text>
         </view>
         <text class="venue-subtitle">等风，也等你！</text>
       </view>
@@ -46,47 +46,12 @@
 
       <!-- Detail rows -->
       <view class="detail-list">
-        <view class="detail-item">
+        <view class="detail-item" wx:for="{{detailItems}}" wx:key="label">
           <view class="detail-label">
-            <text class="label-icon">📅</text>
-            <text class="label-text">日期</text>
+            <text class="label-icon">{{item.icon}}</text>
+            <text class="label-text">{{item.label}}</text>
           </view>
-          <text class="detail-value">{{date}}</text>
-        </view>
-        <view class="detail-item">
-          <view class="detail-label">
-            <text class="label-icon">🕐</text>
-            <text class="label-text">时段</text>
-          </view>
-          <text class="detail-value">{{time}}</text>
-        </view>
-        <view class="detail-item">
-          <view class="detail-label">
-            <text class="label-icon">🚪</text>
-            <text class="label-text">包厢</text>
-          </view>
-          <text class="detail-value">{{roomName}}</text>
-        </view>
-        <view class="detail-item">
-          <view class="detail-label">
-            <text class="label-icon">👥</text>
-            <text class="label-text">人数</text>
-          </view>
-          <text class="detail-value">{{guestCount}}人</text>
-        </view>
-        <view wx:if="{{remark}}" class="detail-item">
-          <view class="detail-label">
-            <text class="label-icon">📝</text>
-            <text class="label-text">备注</text>
-          </view>
-          <text class="detail-value detail-value-remark">{{remark}}</text>
-        </view>
-        <view wx:if="{{shareRemark}}" class="detail-item">
-          <view class="detail-label">
-            <text class="label-icon">💌</text>
-            <text class="label-text">温馨提示</text>
-          </view>
-          <text class="detail-value detail-value-remark">{{shareRemark}}</text>
+          <text class="detail-value {{item.label === '备注' || item.label === '温馨提示' ? 'detail-value-remark' : ''}}">{{item.value}}</text>
         </view>
       </view>
     </view>

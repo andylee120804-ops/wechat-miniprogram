@@ -22,7 +22,20 @@ Page({
     roomName: '',
     guestCount: '',
     remark: '',
-    shareRemark: ''
+    shareRemark: '',
+    templateClass: '',
+    headerEmojis: [],
+    detailItems: [],
+    templateConfig: {
+      business: {
+        headerEmojis: ['🏛️'],
+        fieldEmojis: ['📋', '⌚', '🏠', '👔', '📝', '💌']
+      },
+      friend: {
+        headerEmojis: ['🍻', '🤗'],
+        fieldEmojis: ['📆', '🌙', '🏠', '🥂', '📝', '💌']
+      }
+    }
   },
 
   onLoad(options) {
@@ -38,6 +51,7 @@ Page({
 
   async loadData(id) {
     try {
+      this.setData({ loading: true })
       const [reservationRes] = await Promise.all([
         db.getDoc(COLLECTIONS.RESERVATION, id),
         this.loadVenueSettings()
@@ -58,6 +72,19 @@ Page({
       const shareLat = sc.shareLatitude || this.data.venueLatitude || ''
       const shareLng = sc.shareLongitude || this.data.venueLongitude || ''
 
+      // Parse template from shareConfig and build detailItems with dynamic emojis
+      const template = sc.template || 'business'
+      const templateData = this.data.templateConfig[template]
+
+      const detailItems = [
+        { icon: templateData.fieldEmojis[0], label: '日期', value: formatDate(r.date) },
+        { icon: templateData.fieldEmojis[1], label: '时段', value: r.time || '' },
+        { icon: templateData.fieldEmojis[2], label: '包厢', value: roomName },
+        { icon: templateData.fieldEmojis[3], label: '人数', value: (r.guestCount || '') + '人' }
+      ]
+      if (r.remark) detailItems.push({ icon: templateData.fieldEmojis[4], label: '备注', value: r.remark })
+      if (sc.shareRemark) detailItems.push({ icon: templateData.fieldEmojis[5], label: '温馨提示', value: sc.shareRemark })
+
       this.setData({
         loading: false,
         shareTitle: sc.shareTitle || (r.customerName || '预约') + ' · 预定信息',
@@ -71,7 +98,10 @@ Page({
         remark: r.remark || '',
         venueAddress: shareAddr,
         venueLatitude: shareLat,
-        venueLongitude: shareLng
+        venueLongitude: shareLng,
+        templateClass: template,
+        headerEmojis: templateData.headerEmojis,
+        detailItems: detailItems
       })
     } catch (err) {
       this.setData({ loading: false, error: true })
