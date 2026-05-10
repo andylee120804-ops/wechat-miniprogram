@@ -72,82 +72,30 @@
     display: block;
   }
 
-  /* Template selector */
+  /* Template selector - text style */
   .template-selector {
     margin-bottom: 16px;
-  }
-  .template-options {
     display: flex;
-    gap: 12px;
-  }
-  .template-card {
-    flex: 1;
-    border-radius: 12px;
-    padding: 12px;
-    border: 2rpx solid transparent;
-    transition: all 0.2s;
-    cursor: pointer;
-  }
-  .template-card.selected {
-    border-color: #C9A96E;
-    box-shadow: 0 4px 16px rgba(201,169,110,0.2);
-  }
-  .template-card.business {
-    background: linear-gradient(180deg, #F5F6F8 0%, #EBECF0 100%);
-  }
-  .template-card.friend {
-    background: linear-gradient(180deg, #F0F8FF 0%, #E3F0FA 100%);
-  }
-  .template-preview {
-    height: 60px;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    gap: 0;
   }
-  .template-card.business .template-preview {
-    background: linear-gradient(135deg, #1C2433 0%, #2a3244 100%);
+  .template-option {
+    font-size: 13px;
+    color: #5C5C72;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.15s;
   }
-  .template-card.friend .template-preview {
-    background: linear-gradient(135deg, #4A90D9 0%, #5BA0E8 100%);
-  }
-  .template-emoji {
-    font-size: 16px;
-    margin-bottom: 4px;
-  }
-  .template-card.business .template-emoji { color: #C9A96E; }
-  .template-card.friend .template-emoji { color: #fff; }
-  .template-name {
-    font-size: 12px;
+  .template-option.selected {
+    color: #C9A96E;
+    background: rgba(201,169,110,0.12);
     font-weight: 600;
   }
-  .template-card.business .template-name { color: #1C2433; }
-  .template-card.friend .template-name { color: #4A90D9; }
-  .template-desc {
-    font-size: 10px;
-    color: #888;
-    margin-top: 2px;
+  .template-sep {
+    color: #333;
+    font-size: 13px;
   }
-  .template-card.friend .template-desc { color: #7BAFD4; }
-
-  /* Checkmark for selected */
-  .template-check {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    width: 16px;
-    height: 16px;
-    background: #C9A96E;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    color: #1A1A2E;
-  }
-  .template-card { position: relative; }
 
   /* Divider */
   .divider {
@@ -285,28 +233,11 @@
   </view>
 
   <view class="modal-body">
-    <!-- Template selector -->
+    <!-- Template selector - text style, default: business -->
     <view class="template-selector">
-      <text class="section-label">选择风格</text>
-      <view class="template-options">
-        <!-- Business selected -->
-        <view class="template-card business selected">
-          <view class="template-check">✓</view>
-          <view class="template-preview">
-            <text class="template-emoji">🏛️</text>
-            <text class="template-name">商务风格</text>
-          </view>
-          <text class="template-desc">高端正式</text>
-        </view>
-        <!-- Friend -->
-        <view class="template-card friend">
-          <view class="template-preview">
-            <text class="template-emoji">🍻</text>
-            <text class="template-name">友情风格</text>
-          </view>
-          <text class="template-desc">温馨亲切</text>
-        </view>
-      </view>
+      <text class="template-option selected">商务风格</text>
+      <text class="template-sep"> | </text>
+      <text class="template-option">友情风格</text>
     </view>
 
     <view class="divider"></view>

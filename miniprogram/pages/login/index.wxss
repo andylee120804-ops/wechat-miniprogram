@@ -109,6 +109,43 @@
   animation: shakeX 0.4s ease;
 }
 
+/* Auto-login overlay */
+.auto-login-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.auto-login-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.auto-login-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border: 4rpx solid rgba(201, 169, 110, 0.3);
+  border-top-color: #C9A96E;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.auto-login-text {
+  font-size: 28rpx;
+  color: #F0F0F5;
+  letter-spacing: 2rpx;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 @keyframes shakeX {
   0%, 100% { transform: translateX(0); }
   20% { transform: translateX(-16rpx); }

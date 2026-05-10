@@ -5,6 +5,14 @@
     <view class="bg-circle circle-2" style="background: {{theme.accentColor || '#C9A96E'}}; opacity: 0.03;"></view>
   </view>
 
+  <!-- Auto-login loading overlay -->
+  <view class="auto-login-overlay" wx:if="{{autoLoginLoading}}">
+    <view class="auto-login-content">
+      <view class="auto-login-icon"></view>
+      <text class="auto-login-text">登录中...</text>
+    </view>
+  </view>
+
   <!-- Brand section -->
   <view class="login-brand safe-top" style="padding-top: {{statusBarHeight}}px;">
     <text class="brand-name" style="color: {{theme.textPrimary || '#F5F0E8'}};">❤️ {{venueName || '我们的小食堂'}} ❤️</text>

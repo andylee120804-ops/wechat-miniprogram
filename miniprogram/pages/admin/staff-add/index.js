@@ -222,6 +222,10 @@ Page({
         })
       }
 
+      // 如果更新的是当前登录用户，同步更新 globalData
+      if (this.data.isEdit && userInfo._id === this.data.id) {
+        app.globalData.userInfo.name = staffData.name
+      }
       log(this.data.isEdit ? 'STAFF_UPDATE' : 'STAFF_CREATE', { name: staffData.name, role: staffData.role })
       wx.showToast({ title: '保存成功', icon: 'success' })
       setTimeout(() => wx.navigateBack(), 1500)

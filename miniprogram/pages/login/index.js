@@ -7,13 +7,35 @@ Page({
     wechatId: '',
     phone: '',
     loading: false,
-    shakeAnimation: false
+    shakeAnimation: false,
+    autoLoginLoading: true
   },
 
   onShow() {
     const theme = app.getThemePageData()
     this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, venueName: app.globalData.venueName })
     if (!app.globalData.venueName) this.loadVenueName()
+    // Monitor initial login check; once done, hide spinner and proceed normally
+    this._waitForInitialLogin()
+  },
+
+  async _waitForInitialLogin() {
+    if (app._initialLoginChecked) {
+      this._finishAutoLoginFlow()
+      return
+    }
+    const start = Date.now()
+    while (!app._initialLoginChecked && Date.now() - start < 5000) {
+      await new Promise(r => setTimeout(r, 100))
+    }
+    this._finishAutoLoginFlow()
+  },
+
+  _finishAutoLoginFlow() {
+    this.setData({ autoLoginLoading: false })
+    if (app.globalData.isLogin) {
+      wx.switchTab({ url: '/pages/index/index' })
+    }
   },
 
   async loadVenueName() {

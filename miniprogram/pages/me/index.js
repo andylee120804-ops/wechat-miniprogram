@@ -96,7 +96,7 @@ Page({
     if (key === 'about') {
       wx.showModal({
         title: '关于',
-        content: (app.globalData.venueName || '听澜轩') + '智慧管理系统 v1.0.0',
+        content: (app.globalData.venueName || '四兄弟的小地方') + '2026四月开始了',
         showCancel: false
       })
       return

@@ -1,12 +1,15 @@
 // Real wechatId that exists in the staff collection
-// Only these 3 accounts currently exist:
-//   wechatId 'boss' → role: admin
-//   wechatId 'f'    → role: boss
-//   wechatId 'g'    → role: boss
+// Actual accounts in database:
+//   wechatId 'boss'  → role: admin
+//   wechatId 'david' → role: boss
+//   wechatId 'fanmk' → role: boss
+//   wechatId 'Andy'  → role: admin
+//   wechatId 'sun'   → role: purchase
+//   wechatId 'Caoc'  → role: boss
 const TEST_ACCOUNTS = {
   admin: { wechatId: 'boss', expectedRole: 'admin' },
-  boss: { wechatId: 'f', expectedRole: 'boss' },
-  boss2: { wechatId: 'g', expectedRole: 'boss' },
+  boss: { wechatId: 'david', expectedRole: 'boss' },
+  boss2: { wechatId: 'fanmk', expectedRole: 'boss' },
 }
 
 const PAGES = {

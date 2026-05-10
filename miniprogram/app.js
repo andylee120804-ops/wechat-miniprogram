@@ -27,8 +27,17 @@ App({
       this.globalData.statusBarHeight = 44
     }
     this.loadTheme()
+    // Don't set isLogin=true until initial check completes.
+    // Login page watches this flag to show loading state.
+    this._initialLoginChecked = false
     this._loginPromise = this.checkLogin()
     this.loadVenueName()
+  },
+
+  // Mark initial check done — called from checkLogin once it settles
+  _setInitialLoginChecked() {
+    this._initialLoginChecked = true
+    // Now guard can run normally; if on a non-public page, it will redirect if not logged in
   },
 
   async loadVenueName() {
@@ -168,11 +177,13 @@ App({
       } catch (err) {
         console.warn('[checkLogin] 会话校验失败，保持当前状态:', err)
       }
+      this._setInitialLoginChecked()
       return
     }
 
     // No stored session, try auto-login via OPENID binding
     await this._tryAutoLogin()
+    this._setInitialLoginChecked()
   },
 
   async _tryAutoLogin() {
@@ -209,11 +220,21 @@ App({
   },
 
   logout() {
+    const userInfo = this.globalData.userInfo
     this.globalData.userInfo = null
     this.globalData.permissions = []
     this.globalData.isLogin = false
     wx.removeStorageSync('userInfo')
     wx.removeStorageSync('permissionsUpdatedAt')
+    // 清除云端 OPENID 绑定，防止自动登录
+    if (userInfo && userInfo._id) {
+      wx.cloud.callFunction({
+        name: 'login',
+        data: { action: 'logout', staffId: userInfo._id }
+      }).catch(err => {
+        console.warn('[logout] 清除云端绑定失败:', err)
+      })
+    }
   },
 
   hasPermission(module, action) {

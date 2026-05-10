@@ -12,6 +12,10 @@ exports.main = async (event, context) => {
     return autoLogin(event, context)
   }
 
+  if (action === 'logout') {
+    return logoutAction(event, context)
+  }
+
   const { wechatId } = event
 
   if (!wechatId) {
@@ -153,5 +157,27 @@ async function verifySession(event, context) {
   } catch (err) {
     console.error('会话验证失败:', err)
     return { success: false, message: '会话验证失败' }
+  }
+}
+
+async function logoutAction(event, context) {
+  const { staffId } = event
+  const { OPENID } = cloud.getWXContext()
+  const db = cloud.database()
+
+  if (!staffId) {
+    return { success: false, message: '缺少身份信息' }
+  }
+
+  try {
+    await db.collection('staff').doc(staffId).update({
+      data: {
+        boundOpenid: null
+      }
+    })
+    return { success: true }
+  } catch (err) {
+    console.error('退出登录失败:', err)
+    return { success: false, message: '退出登录失败' }
   }
 }
