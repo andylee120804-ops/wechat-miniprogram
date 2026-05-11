@@ -62,7 +62,7 @@ Page({
     }
     // Admin-only settings
     if (hasPermission('minAmount', ACTIONS.VIEW)) {
-      managementGroup.push({ key: 'minAmount', icon: '💰', text: '最低消费设置' })
+      managementGroup.push({ key: 'minAmount', icon: '💰', text: '收费设置' })
     }
     if (hasPermission('venueSettings', ACTIONS.VIEW)) {
       settingsGroup.push({ key: 'venueSettings', icon: '🏠', text: '食堂设置' })

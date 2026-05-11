@@ -416,10 +416,6 @@ Page({
     const parsedStandards = this.data.standardList
       .map(function(s) { return parseInt(s, 10) })
       .filter(function(n) { return !isNaN(n) && n > 0 })
-    if (parsedStandards.length === 0) {
-      wx.showToast({ title: '请至少设置一个餐标选项', icon: 'none' })
-      return
-    }
 
     // 解析默认餐标
     const defaultStdVal = this.data.defaultStandardValue

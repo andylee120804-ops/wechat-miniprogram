@@ -5,7 +5,7 @@
       <view class="nav-back" bindtap="onBack">
         <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
       </view>
-      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}}">最低消费设置</text>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}}">收费设置</text>
       <view class="nav-action"></view>
     </view>
   </view>
