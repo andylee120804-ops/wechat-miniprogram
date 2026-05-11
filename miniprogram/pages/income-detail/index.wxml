@@ -36,6 +36,18 @@
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">房间</text>
           <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx;">{{income.roomName}}</text>
         </view>
+        <view class="detail-row" wx:if="{{income.calcMode === 'dishPrice'}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">计算方式</text>
+          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx;">菜价+服务费</text>
+        </view>
+        <view class="detail-row" wx:if="{{income.calcMode === 'dishPrice' && income.dishPrice > 0}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">预定菜价</text>
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx;">¥{{income.dishPrice}}</text>
+        </view>
+        <view class="detail-row" wx:if="{{income.calcMode === 'dishPrice' && income.serviceCharge > 0}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">服务费</text>
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx;">¥{{income.serviceCharge}}</text>
+        </view>
         <view class="detail-row" wx:if="{{income.collectedByName}}">
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">收款人</text>
           <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">{{income.collectedByName}}</text>
