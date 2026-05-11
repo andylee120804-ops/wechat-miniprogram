@@ -81,8 +81,7 @@ Page({
       this.setData({ isEdit: true, id: options.id })
       await this.loadExisting()
     }
-    this.loadServiceChargeSettings()
-    this.loadRecentReservations()
+    await Promise.all([this.loadServiceChargeSettings(), this.loadRecentReservations()])
   },
 
   async loadExisting() {
