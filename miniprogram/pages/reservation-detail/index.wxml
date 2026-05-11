@@ -48,6 +48,10 @@
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">人均餐标</text>
           <text class="detail-value" style="color: {{theme.accentColor || '#C9A96E'}}; font-weight: 600;">¥{{reservation.standard}}</text>
         </view>
+        <view class="detail-row" wx:if="{{reservation.dishPrice > 0}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">预定菜价</text>
+          <text class="detail-value" style="color: {{theme.accentColor || '#C9A96E'}}; font-weight: 600;">¥{{reservation.dishPrice}}</text>
+        </view>
         <view class="detail-row" wx:if="{{reservation.phone}}">
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">联系电话</text>
           <text class="detail-value" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{reservation.phone}}</text>
