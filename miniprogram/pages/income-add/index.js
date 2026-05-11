@@ -23,6 +23,11 @@ Page({
     pickerIndex: -1,
     pickerItems: [],
     remark: '',
+    serviceChargeEnabled: false,
+    serviceChargeEnabledDate: '',
+    serviceChargeNoon: 0,
+    serviceChargeNight: 0,
+    showNoDishPriceModal: false,
     submitting: false,
     typeOptions: [
       { value: 'dining', label: '餐饮' },
@@ -44,6 +49,23 @@ Page({
     return null
   },
 
+  async loadServiceChargeSettings() {
+    try {
+      const res = await db.queryAll(COLLECTIONS.SETTINGS, {})
+      const settings = res.data || []
+      const data = {}
+      settings.forEach(function(s) {
+        if (s.key === 'serviceChargeEnabled') data.serviceChargeEnabled = !!s.value
+        if (s.key === 'serviceChargeEnabledDate') data.serviceChargeEnabledDate = String(s.value || '')
+        if (s.key === 'serviceChargeNoon') data.serviceChargeNoon = Number(s.value) || 0
+        if (s.key === 'serviceChargeNight') data.serviceChargeNight = Number(s.value) || 0
+      })
+      this.setData(data)
+    } catch (err) {
+      console.warn('[IncomeAdd] 加载服务费设置失败:', err)
+    }
+  },
+
   async onLoad(options) {
     const isEdit = !!(options && options.id)
     const canEdit = isEdit ? hasPermission('income', ACTIONS.EDIT) : hasPermission('income', ACTIONS.ADD)
@@ -59,6 +81,7 @@ Page({
       this.setData({ isEdit: true, id: options.id })
       await this.loadExisting()
     }
+    this.loadServiceChargeSettings()
     this.loadRecentReservations()
   },
 
@@ -165,15 +188,42 @@ Page({
     const res = this.data.recentReservations[index]
     if (!res) return
 
-    // Calculate with partner discount
-    let unitPrice = res.standard || 0
-    if (res.isPartner) {
-      unitPrice = unitPrice * 0.8
-    }
-    let estimatedAmount = Math.round(unitPrice * (res.guestCount || 0))
+    // Check whether to use new mode
+    const resDateStr = formatDate(res.date)
+    const useNewMode = this.data.serviceChargeEnabled
+      && this.data.serviceChargeEnabledDate
+      && resDateStr >= this.data.serviceChargeEnabledDate
 
-    // Check minimum amount and auto-adjust
-    this.calculateFinalAmount(res, estimatedAmount, index)
+    if (useNewMode) {
+      // New mode: dishPrice + serviceCharge
+      if (res.dishPrice > 0) {
+        const charge = (res.time === '中午') ? this.data.serviceChargeNoon : this.data.serviceChargeNight
+        const amount = res.dishPrice + charge
+        this.setData({
+          reservationId: res._id,
+          selectedReservation: res,
+          pickerIndex: index,
+          amount: String(amount)
+        })
+      } else {
+        // No dish price, prompt manual input
+        this.setData({
+          reservationId: res._id,
+          selectedReservation: res,
+          pickerIndex: index,
+          amount: '',
+          showNoDishPriceModal: true
+        })
+      }
+    } else {
+      // Old mode: standard × guestCount × discount
+      let unitPrice = res.standard || 0
+      if (res.isPartner) {
+        unitPrice = unitPrice * 0.8
+      }
+      let estimatedAmount = Math.round(unitPrice * (res.guestCount || 0))
+      this.calculateFinalAmount(res, estimatedAmount, index)
+    }
   },
 
   async calculateFinalAmount(res, estimatedAmount, index) {
@@ -215,6 +265,10 @@ Page({
     this.setData({ remark: e.detail.value })
   },
 
+  onCloseNoDishPriceModal() {
+    this.setData({ showNoDishPriceModal: false })
+  },
+
   getMinAmountKey(reservation) {
     const et = reservation.exclusiveType || (reservation.isExclusive ? 'full' : 'none')
     const roomKey = et !== 'none' ? et : 'room'
@@ -238,11 +292,20 @@ Page({
     }
 
     // 关联预约时检查金额是否满足最低消费，不足则自动调整
+    // 新模式（菜价+服务费）跳过最低消费检查
     if (!noReservation && reservationId && this.data.selectedReservation) {
-      const minAmount = await this.getMinAmountForReservation(this.data.selectedReservation)
-      if (minAmount && parseFloat(amount) < minAmount) {
-        this.setData({ amount: String(minAmount) })
-        wx.showToast({ title: '已按最低消费 ¥' + minAmount + ' 计算', icon: 'none' })
+      const selRes = this.data.selectedReservation
+      const resDateStr = formatDate(selRes.date)
+      const useNewMode = this.data.serviceChargeEnabled
+        && this.data.serviceChargeEnabledDate
+        && resDateStr >= this.data.serviceChargeEnabledDate
+
+      if (!useNewMode) {
+        const minAmount = await this.getMinAmountForReservation(selRes)
+        if (minAmount && parseFloat(amount) < minAmount) {
+          this.setData({ amount: String(minAmount) })
+          wx.showToast({ title: '已按最低消费 ¥' + minAmount + ' 计算', icon: 'none' })
+        }
       }
     }
 
@@ -263,9 +326,23 @@ Page({
 
       // Sync fields from linked reservation so income-detail can display them
       if (!noReservation && reservationId && this.data.selectedReservation) {
-        data.guestCount = this.data.selectedReservation.guestCount
-        data.standard = this.data.selectedReservation.standard
-        data.roomName = this.data.selectedReservation.roomName
+        const selRes = this.data.selectedReservation
+        data.guestCount = selRes.guestCount
+        data.standard = selRes.standard
+        data.roomName = selRes.roomName
+
+        // Check whether new mode applies
+        const resDateStr = formatDate(selRes.date)
+        const useNewMode = this.data.serviceChargeEnabled
+          && this.data.serviceChargeEnabledDate
+          && resDateStr >= this.data.serviceChargeEnabledDate
+
+        if (useNewMode) {
+          data.calcMode = 'dishPrice'
+          data.dishPrice = selRes.dishPrice || 0
+          const charge = (selRes.time === '中午') ? this.data.serviceChargeNoon : this.data.serviceChargeNight
+          data.serviceCharge = charge
+        }
       }
 
       if (!this.data.isEdit) {

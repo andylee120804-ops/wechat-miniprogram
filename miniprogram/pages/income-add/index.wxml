@@ -75,4 +75,17 @@
       <view class="bar-btn bar-btn-primary" bindtap="onSubmit" style="position: relative; left: -3rpx; top: -13rpx">{{isEdit ? '保存修改' : '记录收入'}}</view>
     </view>
   </view>
+
+  <!-- No Dish Price Modal -->
+  <theme-modal
+    theme="{{theme}}"
+    visible="{{showNoDishPriceModal}}"
+    title="菜价未填写"
+    showFooter="{{false}}"
+    bind:close="onCloseNoDishPriceModal"
+  >
+    <view style="padding: 16rpx 0;">
+      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">该预约未填写预定菜价，请手动输入收入金额。</text>
+    </view>
+  </theme-modal>
 </view>
