@@ -315,7 +315,7 @@ Page({
 
       const data = {
         type,
-        amount: parseFloat(amount),
+        amount: parseFloat(this.data.amount),
         date: date,
         source: this.data.selectedReservation ? this.data.selectedReservation.customerName : (noReservation ? '无预约' : ''),
         reservationId: noReservation ? '' : reservationId,
