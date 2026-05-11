@@ -391,7 +391,7 @@ Page({
         // Log changes with before/after details
         if (oldData) {
           const changes = {}
-          const trackedFields = { standard: '餐标', roomName: '包厢', time: '时段', customerName: '客户', phone: '电话', guestCount: '人数', date: '日期', exclusiveType: '包场类型', remark: '备注', isPartner: '股东' }
+          const trackedFields = { standard: '餐标', roomName: '包厢', time: '时段', customerName: '客户', phone: '电话', guestCount: '人数', date: '日期', exclusiveType: '包场类型', remark: '备注', isPartner: '股东', dishPrice: '菜价' }
           Object.keys(trackedFields).forEach(function(f) {
             const oldVal = oldData[f]
             const newVal = docData[f]
