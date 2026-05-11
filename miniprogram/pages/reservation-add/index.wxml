@@ -103,6 +103,23 @@
       </view>
     </theme-card>
 
+    <!-- Section: Dish Price -->
+    <theme-card theme="{{theme}}">
+      <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">预定菜价</view>
+      <theme-form-item theme="{{theme}}" label="整桌菜价" required="{{false}}">
+        <input
+          class="form-input"
+          type="digit"
+          value="{{dishPrice}}"
+          bindinput="onDishPriceInput"
+          placeholder="请输入菜价总额（选填）"
+          placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}}; font-size: 28rpx;"
+          style="color: {{theme.textPrimary || '#F5F0E8'}};"
+        />
+      </theme-form-item>
+      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-top: 8rpx;">不填则表示未确定菜价</text>
+    </theme-card>
+
     <!-- Section 4: Customer Info -->
     <theme-card theme="{{theme}}">
       <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">客户信息</view>

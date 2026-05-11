@@ -23,6 +23,7 @@ Page({
     phone: '',
     guestCount: '',
     remark: '',
+    dishPrice: '',
     submitting: false,
     timeOptions: ['中午', '晚上'],
     roomOptions: [
@@ -152,6 +153,7 @@ Page({
         phone: res.phone || '',
         guestCount: res.guestCount ? String(res.guestCount) : '',
         remark: res.remark || '',
+        dishPrice: res.dishPrice ? String(res.dishPrice) : '',
         selectedBossIndex: selectedBossIndex
       })
       wx.hideLoading()
@@ -279,6 +281,10 @@ Page({
     this.setData({ remark: e.detail.value })
   },
 
+  onDishPriceInput(e) {
+    this.setData({ dishPrice: e.detail.value })
+  },
+
   clearError(field) {
     if (this.data.errors[field]) {
       this.setData({ errors: { ...this.data.errors, [field]: '' } })
@@ -374,6 +380,7 @@ Page({
         phone: this.data.phone.trim(),
         guestCount: Number(this.data.guestCount),
         remark: this.data.remark.trim(),
+        dishPrice: Number(this.data.dishPrice) || 0,
         hasIncome: false
       }
 
