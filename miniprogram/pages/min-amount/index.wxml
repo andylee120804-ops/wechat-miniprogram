@@ -67,10 +67,45 @@
       </theme-card>
     </view>
 
+    <!-- Service Charge Mode -->
+    <view class="section-wrapper" style="padding: 24rpx 32rpx 0;">
+      <theme-card theme="{{theme}}" padding="32rpx">
+        <view class="card-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 28rpx;">
+          <view style="display: flex; align-items: center;">
+            <view style="width: 8rpx; height: 32rpx; background: {{theme.accentColor || '#C9A96E'}}; border-radius: 4rpx; margin-right: 16rpx;"></view>
+            <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600;">服务费模式</text>
+          </view>
+          <switch checked="{{serviceChargeEnabled}}" bindchange="onServiceChargeSwitch" color="{{theme.accentColor || '#C9A96E'}}" />
+        </view>
+
+        <view wx:if="{{serviceChargeEnabled && serviceChargeEnabledDate}}" style="padding: 12rpx 20rpx; background: rgba(201,169,110,0.08); border-radius: 10rpx; margin-bottom: 20rpx;">
+          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 24rpx;">生效日期：{{serviceChargeEnabledDate}} 起的预约使用新计算方式</text>
+        </view>
+
+        <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; {{!serviceChargeEnabled ? 'opacity: 0.4;' : ''}}">
+          <view style="flex: 1;">
+            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">中午服务费</text>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">中午时段追加</text>
+          </view>
+          <input type="number" value="{{serviceChargeNoon}}" bindinput="onServiceChargeNoonInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" disabled="{{!serviceChargeEnabled}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
+        </view>
+
+        <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx; {{!serviceChargeEnabled ? 'opacity: 0.4;' : ''}}">
+          <view style="flex: 1;">
+            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">晚上服务费</text>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">晚上时段追加</text>
+          </view>
+          <input type="number" value="{{serviceChargeNight}}" bindinput="onServiceChargeNightInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" disabled="{{!serviceChargeEnabled}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
+        </view>
+      </theme-card>
+    </view>
+
     <!-- Helper text -->
     <view style="padding: 24rpx 32rpx;">
       <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; line-height: 1.5;">
-        设置各时段最低消费金额，收入录入时将自动校验。输入 0 表示不限制。
+        最低消费：收入录入时自动校验，输入 0 表示不限制。服务费模式：启用后，生效日期起的预约按「菜价+服务费」计算收入。
       </text>
     </view>
   </view>
