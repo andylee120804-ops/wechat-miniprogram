@@ -295,9 +295,7 @@ Page({
       if (dishPrice > 0) {
         const app = getApp()
         const userInfo = app.globalData.userInfo || {}
-        const dateStr = typeof docData.date === 'object' && docData.date instanceof Date
-          ? docData.date.getFullYear() + '-' + String(docData.date.getMonth() + 1).padStart(2, '0') + '-' + String(docData.date.getDate()).padStart(2, '0')
-          : docData.date
+        const dateStr = formatDate(docData.date)
         const remark = (docData.customerName || '') + ' - ' + (docData.roomName || '')
         const purchaseData = {
           amount: dishPrice,
