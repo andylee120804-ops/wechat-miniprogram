@@ -134,6 +134,7 @@ Page({
     try {
       wx.showLoading({ title: '处理中' })
       await db.updateDoc(COLLECTIONS.RESERVATION, this.data.id, { status: 'cancelled' })
+      await this.deleteBanquetPurchase(this.data.id)
       log(LOG_TYPES.RESERVATION_UPDATE, '取消预约: ' + (this.data.reservation.customerName || ''))
       wx.hideLoading()
       wx.showToast({ title: '已取消', icon: 'success' })
@@ -222,5 +223,18 @@ Page({
       shareData.imageUrl = this.data.shareCoverImageUrl
     }
     return shareData
+  },
+
+  async deleteBanquetPurchase(reservationId) {
+    try {
+      const existing = await db.queryAll(COLLECTIONS.PURCHASE, {
+        sourceReservationId: reservationId
+      })
+      if (existing.data && existing.data.length > 0) {
+        await db.deleteDoc(COLLECTIONS.PURCHASE, existing.data[0]._id)
+      }
+    } catch (err) {
+      console.warn('[banquet-sync] 删除宴会菜价失败:', err)
+    }
   }
 })
