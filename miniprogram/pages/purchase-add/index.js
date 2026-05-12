@@ -30,6 +30,7 @@ Page({
       { value: 'seasoning', label: '调味品' },
       { value: 'supplies', label: '日用品' },
       { value: 'equipment', label: '设备' },
+      { value: 'banquet', label: '宴会菜价' },
       { value: 'other', label: '其他' }
     ]
   },

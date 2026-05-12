@@ -52,6 +52,7 @@ Component({
           '调料': '#6B7280', 'seasoning': '#6B7280',
           '用品': '#14B8A6', 'supplies': '#14B8A6',
           '设备': '#F97316', 'equipment': '#F97316',
+          '宴': '#D4A843', 'banquet': '#D4A843',
           '其他': '#9CA3AF', 'other': '#9CA3AF'
         }
         const key = status || text

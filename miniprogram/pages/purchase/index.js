@@ -15,6 +15,7 @@ const ALL_CATEGORIES = [
   { id: 'seasoning', name: '调味品', count: 0 },
   { id: 'supplies', name: '日用品', count: 0 },
   { id: 'equipment', name: '设备', count: 0 },
+  { id: 'banquet', name: '宴会菜价', count: 0 },
   { id: 'other', name: '其他', count: 0 }
 ]
 
