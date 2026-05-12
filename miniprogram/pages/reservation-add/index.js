@@ -376,14 +376,20 @@ Page({
 
   async deleteBanquetPurchase(reservationId) {
     try {
-      const existing = await db.queryAll(COLLECTIONS.PURCHASE, {
+      const purchases = await db.queryAll(COLLECTIONS.PURCHASE, {
         sourceReservationId: reservationId
       })
-      if (existing.data && existing.data.length > 0) {
-        await db.deleteDoc(COLLECTIONS.PURCHASE, existing.data[0]._id)
+      for (const p of (purchases.data || [])) {
+        await db.deleteDoc(COLLECTIONS.PURCHASE, p._id)
+      }
+      const incomes = await db.queryAll(COLLECTIONS.INCOME, {
+        reservationId: reservationId
+      })
+      for (const inc of (incomes.data || [])) {
+        await db.deleteDoc(COLLECTIONS.INCOME, inc._id)
       }
     } catch (err) {
-      console.warn('[banquet-sync] 删除宴会菜价失败:', err)
+      console.warn('[banquet-sync] 删除关联记录失败:', err)
     }
   },
 
