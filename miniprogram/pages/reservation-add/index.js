@@ -285,6 +285,64 @@ Page({
     this.setData({ dishPrice: e.detail.value })
   },
 
+  async syncBanquetPurchase(docData, reservationId) {
+    try {
+      const dishPrice = Number(docData.dishPrice) || 0
+      const existing = await db.queryAll(COLLECTIONS.PURCHASE, {
+        sourceReservationId: reservationId
+      })
+
+      if (dishPrice > 0) {
+        const app = getApp()
+        const userInfo = app.globalData.userInfo || {}
+        const dateStr = typeof docData.date === 'object' && docData.date instanceof Date
+          ? docData.date.getFullYear() + '-' + String(docData.date.getMonth() + 1).padStart(2, '0') + '-' + String(docData.date.getDate()).padStart(2, '0')
+          : docData.date
+        const remark = (docData.customerName || '') + ' - ' + (docData.roomName || '')
+        const purchaseData = {
+          amount: dishPrice,
+          category: 'banquet',
+          date: dateStr,
+          remark: remark,
+          item: '',
+          purchaseBy: userInfo._id || '',
+          purchaseByName: userInfo.name || userInfo.nickName || '',
+          sourceReservationId: reservationId
+        }
+        if (!purchaseData.purchaseBy) {
+          delete purchaseData.purchaseBy
+          delete purchaseData.purchaseByName
+        }
+
+        if (existing.data && existing.data.length > 0) {
+          await db.updateDoc(COLLECTIONS.PURCHASE, existing.data[0]._id, purchaseData)
+        } else {
+          await db.addDoc(COLLECTIONS.PURCHASE, purchaseData)
+        }
+      } else {
+        // dishPrice is 0 or empty — delete any existing linked purchase
+        if (existing.data && existing.data.length > 0) {
+          await db.deleteDoc(COLLECTIONS.PURCHASE, existing.data[0]._id)
+        }
+      }
+    } catch (err) {
+      console.warn('[banquet-sync] 同步宴会菜价失败:', err)
+    }
+  },
+
+  async deleteBanquetPurchase(reservationId) {
+    try {
+      const existing = await db.queryAll(COLLECTIONS.PURCHASE, {
+        sourceReservationId: reservationId
+      })
+      if (existing.data && existing.data.length > 0) {
+        await db.deleteDoc(COLLECTIONS.PURCHASE, existing.data[0]._id)
+      }
+    } catch (err) {
+      console.warn('[banquet-sync] 删除宴会菜价失败:', err)
+    }
+  },
+
   clearError(field) {
     if (this.data.errors[field]) {
       this.setData({ errors: { ...this.data.errors, [field]: '' } })
@@ -388,6 +446,7 @@ Page({
         // Load old data for change tracking
         const oldData = await db.getDoc(COLLECTIONS.RESERVATION, this.data.id)
         await db.updateDoc(COLLECTIONS.RESERVATION, this.data.id, docData)
+        this.syncBanquetPurchase(docData, this.data.id)
         // Log changes with before/after details
         if (oldData) {
           const changes = {}
@@ -409,6 +468,7 @@ Page({
         docData.createdBy = userInfo._id || ''
         docData.createdByName = userInfo.name || userInfo.nickName || ''
         const result = await db.addDoc(COLLECTIONS.RESERVATION, docData)
+        this.syncBanquetPurchase(docData, result._id)
         log(LOG_TYPES.RESERVATION_CREATE, '创建预约: ' + docData.customerName, { id: result._id })
         wx.showToast({ title: '创建成功', icon: 'success' })
       }
@@ -504,6 +564,7 @@ Page({
     this.setData({ showDeleteModal: false })
     try {
       wx.showLoading({ title: '删除中' })
+      await this.deleteBanquetPurchase(this.data.id)
       await db.deleteDoc(COLLECTIONS.RESERVATION, this.data.id)
       log(LOG_TYPES.RESERVATION_DELETE, '删除预约: ' + this.data.customerName, { id: this.data.id })
       wx.hideLoading()
