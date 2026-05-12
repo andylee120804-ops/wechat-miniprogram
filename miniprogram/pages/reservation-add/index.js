@@ -347,6 +347,20 @@ Page({
     }
   },
 
+  async isDishPriceRequired(dateStr) {
+    try {
+      const res = await db.queryAll(COLLECTIONS.SETTINGS, {})
+      const settings = {}
+      ;(res.data || []).forEach(s => { settings[s.key] = s.value })
+      if (!settings.serviceChargeEnabled) return false
+      if (!settings.serviceChargeEnabledDate) return false
+      return dateStr >= settings.serviceChargeEnabledDate
+    } catch (err) {
+      console.warn('[validate] 检查菜价必填失败:', err)
+      return false
+    }
+  },
+
   validate() {
     const errors = {}
     const data = this.data
@@ -380,6 +394,14 @@ Page({
       errors.standard = '请选择餐标'
     }
 
+    // Service fee mode: dishPrice is required
+    if (this._dishPriceRequired) {
+      const dp = Number(data.dishPrice) || 0
+      if (dp <= 0) {
+        errors.dishPrice = '服务费模式下菜价必须填写'
+      }
+    }
+
     this.setData({ errors })
     return Object.keys(errors).length === 0
   },
@@ -396,6 +418,8 @@ Page({
       })
       return
     }
+
+    this._dishPriceRequired = await this.isDishPriceRequired(this.data.date)
 
     if (!this.validate()) {
       wx.showToast({ title: '请检查表单', icon: 'none' })
