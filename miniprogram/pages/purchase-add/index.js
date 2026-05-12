@@ -21,6 +21,11 @@ Page({
     submitting: false,
     showDeleteModal: false,
     errors: {},
+    recentReservations: [],
+    pickerItems: [],
+    pickerIndex: -1,
+    selectedReservation: null,
+    sourceReservationId: '',
     categoryOptions: [
       { value: 'meat', label: '肉类' },
       { value: 'seafood', label: '海鲜' },
@@ -53,6 +58,60 @@ Page({
     if (isEdit) {
       this.loadPurchase(options.id)
     }
+  },
+
+  async loadAvailableReservations() {
+    try {
+      const settingsRes = await db.queryAll(COLLECTIONS.SETTINGS, {})
+      const settings = {}
+      ;(settingsRes.data || []).forEach(s => { settings[s.key] = s.value })
+      const enabledDate = settings.serviceChargeEnabledDate
+      if (!enabledDate) {
+        this.setData({ recentReservations: [], pickerItems: [], pickerIndex: -1 })
+        return
+      }
+      const now = new Date()
+      const todayStr = formatDate(now)
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000)
+      const startDate = enabledDate > formatDate(thirtyDaysAgo)
+        ? new Date(enabledDate + 'T00:00:00') : thirtyDaysAgo
+      const endDate = new Date(todayStr + 'T23:59:59')
+      const _db = db.getDb()
+      const _ = _db.command
+      const resvRes = await db.queryAll(COLLECTIONS.RESERVATION, {
+        date: _.gte(startDate).and(_.lte(endDate)),
+        status: 'confirmed'
+      })
+      const allReservations = resvRes.data || []
+      const available = []
+      for (const r of allReservations) {
+        const linked = await db.queryAll(COLLECTIONS.PURCHASE, {
+          sourceReservationId: r._id, category: 'banquet'
+        })
+        if (!linked.data || linked.data.length === 0) available.push(r)
+      }
+      available.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      const items = available.map(r =>
+        formatDate(r.date) + ' ' + (r.customerName || '') + ' ' + (r.time || '') + ' ' + (r.roomName || '')
+      )
+      this.setData({ recentReservations: available, pickerItems: items, pickerIndex: -1, selectedReservation: null })
+    } catch (err) {
+      console.warn('[purchase-add] 加载可用预约失败:', err)
+    }
+  },
+
+  onReservationPickerChange(e) {
+    const index = e.detail.value
+    const res = this.data.recentReservations[index]
+    if (!res) return
+    const dishPrice = Number(res.dishPrice) || 0
+    this.setData({
+      reservationId: res._id, selectedReservation: res, pickerIndex: index,
+      amount: dishPrice > 0 ? String(dishPrice) : '',
+      date: formatDate(res.date),
+      remark: (res.customerName || '') + ' - ' + (res.roomName || ''),
+      sourceReservationId: res._id
+    })
   },
 
   loadPurchase: function(id) {
@@ -107,6 +166,12 @@ Page({
     if (this.data.errors.category) {
       this.setData({ 'errors.category': '' })
     }
+    if (value === 'banquet') {
+      this.loadAvailableReservations()
+    } else {
+      this.setData({ recentReservations: [], pickerItems: [], pickerIndex: -1,
+        selectedReservation: null, sourceReservationId: '' })
+    }
   },
 
   onRemarkInput: function(e) {
@@ -144,6 +209,7 @@ Page({
       category: this.data.category,
       date: this.data.date,
       remark: this.data.remark.trim(),
+      sourceReservationId: this.data.sourceReservationId || '',
       purchaseBy: userInfo._id || '',
       purchaseByName: userInfo.name || userInfo.nickName || ''
     }
