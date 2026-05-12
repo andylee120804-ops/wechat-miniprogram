@@ -1,8 +1,8 @@
-const LoginPage = require('../e2e/pages/LoginPage')
-
 /**
- * Login as a specific wechatId and wait for the login flow to complete.
- * Clears previous session before logging in to prevent session leakage.
+ * Login as a specific wechatId without using the login page UI.
+ * Since the app auto-logs in from cached credentials on launch,
+ * we just need to set the userInfo directly via the cloud login function.
+ *
  * @param {object} miniProgram - The miniProgram automator instance
  * @param {string} wechatId - The wechatId to login with
  * @param {object} [options] - Optional config
@@ -11,61 +11,44 @@ const LoginPage = require('../e2e/pages/LoginPage')
 async function loginAs(miniProgram, wechatId, options = {}) {
   const maxWait = options.maxWait || 20000
 
-  // Step 1: Clear previous session via evaluate (runs in miniProgram context)
-  // This clears globalData.userInfo, globalData.permissions, and Storage
+  // Step 1: Logout to clear any existing session
   try {
     await miniProgram.evaluate(function () {
       var app = getApp()
       if (app && app.logout) app.logout()
     })
-  } catch (e) {
-    // Ignore if evaluate fails
-  }
+  } catch (e) {}
   await new Promise(r => setTimeout(r, 300))
 
-  // Step 2: Re-launch to login page and get a fresh page reference
-  // reLaunch destroys all pages, so we must get a new reference
-  const page = await miniProgram.reLaunch('/pages/login/index')
-  await new Promise(r => setTimeout(r, 1000))
+  // Step 2: Login via cloud function directly (no login page interaction)
+  await miniProgram.evaluate(function (wid) {
+    wx.cloud.callFunction({
+      name: 'login',
+      data: { action: 'loginByWechatId', wechatId: wid },
+      success: function (res) {
+        if (res.result && res.result.success) {
+          var app = getApp()
+          app.setUserInfo(res.result.data)
+        }
+      }
+    })
+  }, wechatId)
 
-  // Step 3: Set wechatId and tap login on the fresh page
-  await page.setData({ wechatId: wechatId })
-  await new Promise(r => setTimeout(r, 200))
-  try {
-    await page.callMethod('onLogin')
-  } catch (e) {
-    // onLogin may navigate (switchTab) on success, which destroys the
-    // login page — callMethod rejects with "page destroyed". That's OK.
-  }
-
-  // Step 4: Wait for login to complete — check app globalData (handles
-  // page-destroyed after switchTab). Fall back to page.loading check.
+  // Step 3: Wait for login to complete
   const start = Date.now()
   let loggedIn = false
   while (Date.now() - start < maxWait) {
-    // Primary: check app-level state (works even after page navigation)
     try {
       loggedIn = await miniProgram.evaluate(function () {
         var app = getApp()
         return app.globalData.isLogin && app.globalData.userInfo !== null
       })
       if (loggedIn) break
-    } catch (e) {
-      // evaluate failed, keep waiting
-    }
-
-    // Fallback: check page loading
-    try {
-      const data = await page.data()
-      if (!data.loading) break
-    } catch (e) {
-      // Page destroyed (login succeeded & navigated away)
-      break
-    }
+    } catch (e) {}
     await new Promise(r => setTimeout(r, 500))
   }
 
-  // Step 5: Wait for switchTab navigation and globalData to settle
+  // Step 4: Wait for state to settle
   await new Promise(r => setTimeout(r, 2000))
 }
 

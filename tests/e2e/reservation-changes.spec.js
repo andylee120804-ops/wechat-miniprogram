@@ -1,28 +1,11 @@
 const { describe, test, expect, beforeAll, afterAll } = require('@jest/globals')
 const { launchApp, closeApp } = require('../fixtures/setup')
+const { loginAs } = require('../fixtures/auth')
 const { TEST_ACCOUNTS } = require('../fixtures/test-data')
-const LoginPage = require('./pages/LoginPage')
 const VenueSettingsPage = require('./pages/VenueSettingsPage')
 const ReservationAddPage = require('./pages/ReservationAddPage')
 const ReservationDetailPage = require('./pages/ReservationDetailPage')
 const HomePage = require('./pages/HomePage')
-
-async function loginAs(miniProgram, wechatId) {
-  const loginPage = new LoginPage(miniProgram)
-  await loginPage.open()
-  await loginPage.setData({ wechatId })
-  await loginPage.tapLogin()
-
-  const maxWait = 15000
-  const start = Date.now()
-  let loading = true
-  while (loading && Date.now() - start < maxWait) {
-    loading = await loginPage.getData('loading')
-    if (!loading) break
-    await new Promise(r => setTimeout(r, 500))
-  }
-  await new Promise(r => setTimeout(r, 1500))
-}
 
 /** 从首页获取第一个有效预约的 _id */
 async function findFirstReservationId(miniProgram) {
@@ -277,6 +260,95 @@ describe('预约详情 - 分享信息持久化', () => {
     expect(shareTitleReloaded).toBe(testTitle)
 
     await detailPage.onCloseShareModal()
+  }, 90000)
+
+  test('分享模版默认选中商务风格', async () => {
+    const id = await findFirstReservationId(miniProgram)
+    expect(id).toBeDefined()
+
+    await detailPage.openWithId(id)
+    await detailPage.waitForLoad(15000)
+
+    await detailPage.onShareToGuest()
+    await new Promise(r => setTimeout(r, 1000))
+
+    const template = await detailPage.getSelectedTemplate()
+    expect(template).toBe('business')
+  })
+
+  test('可以切换到友情风格', async () => {
+    const id = await findFirstReservationId(miniProgram)
+    expect(id).toBeDefined()
+
+    await detailPage.openWithId(id)
+    await detailPage.waitForLoad(15000)
+
+    await detailPage.onShareToGuest()
+    await new Promise(r => setTimeout(r, 1000))
+
+    await detailPage.selectTemplate('friend')
+    await new Promise(r => setTimeout(r, 300))
+
+    const template = await detailPage.getSelectedTemplate()
+    expect(template).toBe('friend')
+  })
+
+  test('可以切回商务风格', async () => {
+    const id = await findFirstReservationId(miniProgram)
+    expect(id).toBeDefined()
+
+    await detailPage.openWithId(id)
+    await detailPage.waitForLoad(15000)
+
+    await detailPage.onShareToGuest()
+    await new Promise(r => setTimeout(r, 1000))
+
+    await detailPage.selectTemplate('friend')
+    await new Promise(r => setTimeout(r, 200))
+
+    await detailPage.selectTemplate('business')
+    await new Promise(r => setTimeout(r, 200))
+
+    const template = await detailPage.getSelectedTemplate()
+    expect(template).toBe('business')
+  })
+
+  test('保存分享时模版选择持久化', async () => {
+    const id = await findFirstReservationId(miniProgram)
+    expect(id).toBeDefined()
+
+    await detailPage.openWithId(id)
+    await detailPage.waitForLoad(15000)
+
+    await detailPage.onShareToGuest()
+    await new Promise(r => setTimeout(r, 1000))
+
+    await detailPage.selectTemplate('friend')
+    await detailPage.setShareTitle('模版测试标题')
+    await detailPage.setShareRemark('模版测试备注')
+    await new Promise(r => setTimeout(r, 300))
+
+    await detailPage.onConfirmShare()
+    await new Promise(r => setTimeout(r, 1500))
+
+    expect(await detailPage.getShowShareModal()).toBe(false)
+
+    // 重新打开确认模版已保存
+    const reservation = await detailPage.getReservation()
+    expect(reservation).toBeDefined()
+    expect(reservation.shareConfig).toBeDefined()
+    expect(reservation.shareConfig.template).toBe('friend')
+
+    await detailPage.onShareToGuest()
+    await new Promise(r => setTimeout(r, 1000))
+
+    const templateReloaded = await detailPage.getSelectedTemplate()
+    expect(templateReloaded).toBe('friend')
+
+    // 恢复成 business，免得影响其他测试
+    await detailPage.selectTemplate('business')
+    await detailPage.onShareAndSave()
+    await new Promise(r => setTimeout(r, 1500))
   }, 90000)
 
   test('onShareAndSave后本地数据同步更新', async () => {

@@ -1,25 +1,8 @@
 const { describe, test, expect, beforeAll, afterAll } = require('@jest/globals')
 const { launchApp, closeApp } = require('../fixtures/setup')
+const { loginAs } = require('../fixtures/auth')
 const { TEST_ACCOUNTS } = require('../fixtures/test-data')
-const LoginPage = require('./pages/LoginPage')
 const IncomePage = require('./pages/IncomePage')
-
-async function loginAs(miniProgram, wechatId) {
-  const loginPage = new LoginPage(miniProgram)
-  await loginPage.open()
-  await loginPage.setData({ wechatId })
-  await loginPage.tapLogin()
-
-  const maxWait = 15000
-  const start = Date.now()
-  let loading = true
-  while (loading && Date.now() - start < maxWait) {
-    loading = await loginPage.getData('loading')
-    if (!loading) break
-    await new Promise(r => setTimeout(r, 500))
-  }
-  await new Promise(r => setTimeout(r, 1500))
-}
 
 describe('Income Page - Boss Role', () => {
   let miniProgram
