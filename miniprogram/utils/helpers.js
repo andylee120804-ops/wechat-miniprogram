@@ -156,7 +156,7 @@ function getRoleName(role) {
 }
 
 /**
- * Get category display name (9 categories)
+ * Get category display name (10 categories)
  */
 function getCategoryName(category) {
   const categoryMap = {
@@ -168,6 +168,7 @@ function getCategoryName(category) {
     seasoning: '调味品',
     supplies: '日用品',
     equipment: '设备',
+    banquet: '宴会菜价',
     other: '其他'
   }
   return categoryMap[category] || category || '其他'
