@@ -169,7 +169,8 @@ Page({
       // Most popular purchase category
       const categoryNameMap = {
         meat: '肉类', seafood: '海鲜', vegetable: '蔬菜', fruit: '水果',
-        drink: '饮品', seasoning: '调味品', supplies: '日用品', equipment: '设备', other: '其他'
+        drink: '饮品', seasoning: '调味品', supplies: '日用品', equipment: '设备',
+        banquet: '宴会菜价', other: '其他'
       }
       const categoryCount = {}
       ;(purchaseRes.data || []).forEach(function(p) {

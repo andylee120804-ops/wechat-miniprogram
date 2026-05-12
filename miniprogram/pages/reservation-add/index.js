@@ -444,7 +444,7 @@ Page({
         // Load old data for change tracking
         const oldData = await db.getDoc(COLLECTIONS.RESERVATION, this.data.id)
         await db.updateDoc(COLLECTIONS.RESERVATION, this.data.id, docData)
-        this.syncBanquetPurchase(docData, this.data.id)
+        await this.syncBanquetPurchase(docData, this.data.id)
         // Log changes with before/after details
         if (oldData) {
           const changes = {}
@@ -466,7 +466,7 @@ Page({
         docData.createdBy = userInfo._id || ''
         docData.createdByName = userInfo.name || userInfo.nickName || ''
         const result = await db.addDoc(COLLECTIONS.RESERVATION, docData)
-        this.syncBanquetPurchase(docData, result._id)
+        await this.syncBanquetPurchase(docData, result._id)
         log(LOG_TYPES.RESERVATION_CREATE, '创建预约: ' + docData.customerName, { id: result._id })
         wx.showToast({ title: '创建成功', icon: 'success' })
       }
