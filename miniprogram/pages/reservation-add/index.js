@@ -341,6 +341,42 @@ Page({
     }
   },
 
+  showSyncConfirmDialog() {
+    return new Promise((resolve, reject) => {
+      wx.showModal({
+        title: '同步确认',
+        content: '该预约已有采购和收入记录，修改将同步更新，是否继续？',
+        success: (res) => {
+          if (res.confirm) resolve()
+          else reject(new Error('用户取消同步'))
+        }
+      })
+    })
+  },
+
+  isPastDate(dateStr) {
+    const today = new Date()
+    const todayStr = today.getFullYear() + '-' +
+      String(today.getMonth() + 1).padStart(2, '0') + '-' +
+      String(today.getDate()).padStart(2, '0')
+    return dateStr < todayStr
+  },
+
+  async shouldSync(dateStr) {
+    try {
+      const res = await db.queryAll(COLLECTIONS.SETTINGS, {})
+      const settings = {}
+      ;(res.data || []).forEach(s => { settings[s.key] = s.value })
+      if (!settings.serviceChargeEnabled) return false
+      if (!settings.serviceChargeEnabledDate) return false
+      if (dateStr < settings.serviceChargeEnabledDate) return false
+      return true
+    } catch (err) {
+      console.warn('[shouldSync] 检查失败:', err)
+      return false
+    }
+  },
+
   clearError(field) {
     if (this.data.errors[field]) {
       this.setData({ errors: { ...this.data.errors, [field]: '' } })
@@ -468,7 +504,28 @@ Page({
         // Load old data for change tracking
         const oldData = await db.getDoc(COLLECTIONS.RESERVATION, this.data.id)
         await db.updateDoc(COLLECTIONS.RESERVATION, this.data.id, docData)
-        await this.syncBanquetPurchase(docData, this.data.id)
+
+        // Sync banquet purchase and income if conditions met
+        const laterDate = formatDate(docData.date)
+        if (await this.shouldSync(laterDate)) {
+          const oldDishPrice = oldData ? (Number(oldData.dishPrice) || 0) : 0
+          const newDishPrice = Number(docData.dishPrice) || 0
+          const oldCustomerName = oldData ? (oldData.customerName || '') : ''
+          const oldRoomName = oldData ? (oldData.roomName || '') : ''
+          const hasDishPriceChanged = newDishPrice !== oldDishPrice
+          const hasRemarkChanged = docData.customerName !== oldCustomerName || docData.roomName !== oldRoomName
+
+          if (hasDishPriceChanged || hasRemarkChanged) {
+            const dateStr = formatDate(docData.date)
+            if (this.isPastDate(dateStr)) {
+              await this.showSyncConfirmDialog()
+            }
+            await this.syncBanquetPurchase(docData, this.data.id, false)
+            if (hasDishPriceChanged) {
+              await this.syncIncome(docData, this.data.id, false)
+            }
+          }
+        }
         // Log changes with before/after details
         if (oldData) {
           const changes = {}
@@ -490,7 +547,10 @@ Page({
         docData.createdBy = userInfo._id || ''
         docData.createdByName = userInfo.name || userInfo.nickName || ''
         const result = await db.addDoc(COLLECTIONS.RESERVATION, docData)
-        await this.syncBanquetPurchase(docData, result._id)
+        if (await this.shouldSync(formatDate(docData.date))) {
+          await this.syncBanquetPurchase(docData, result._id, true)
+          await this.syncIncome(docData, result._id, true)
+        }
         log(LOG_TYPES.RESERVATION_CREATE, '创建预约: ' + docData.customerName, { id: result._id })
         wx.showToast({ title: '创建成功', icon: 'success' })
       }
