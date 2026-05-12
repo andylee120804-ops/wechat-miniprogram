@@ -24,6 +24,7 @@ Page({
     guestCount: '',
     remark: '',
     dishPrice: '',
+    _dishPriceRequired: false,
     submitting: false,
     timeOptions: ['中午', '晚上'],
     roomOptions: [
@@ -483,7 +484,7 @@ Page({
     }
 
     // Service fee mode: dishPrice is required
-    if (this._dishPriceRequired) {
+    if (this.data._dishPriceRequired) {
       const dp = Number(data.dishPrice) || 0
       if (dp <= 0) {
         errors.dishPrice = '服务费模式下菜价必须填写'
@@ -507,7 +508,8 @@ Page({
       return
     }
 
-    this._dishPriceRequired = await this.isDishPriceRequired(this.data.date)
+    const dishPriceRequired = await this.isDishPriceRequired(this.data.date)
+    this.setData({ _dishPriceRequired: dishPriceRequired })
 
     if (!this.validate()) {
       wx.showToast({ title: '请检查表单', icon: 'none' })

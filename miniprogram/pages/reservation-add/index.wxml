@@ -148,7 +148,7 @@
           type="digit"
           value="{{dishPrice}}"
           bindinput="onDishPriceInput"
-          placeholder="请输入菜价总额（选填）"
+          placeholder="{{_dishPriceRequired ? '请输入菜价总额' : '请输入菜价总额（选填）'}}"
           placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}}; font-size: 28rpx;"
           style="color: {{theme.textPrimary || '#F5F0E8'}};"
         />
