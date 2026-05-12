@@ -271,8 +271,9 @@ for (const inc of (incomes.data || [])) {
 
 1. 用户在采购新增页选择分类为「宴会菜价」
 2. 页面出现「关联预约」选择器，列出：
-   - 今天及过去30天内的预约
    - `status=confirmed`
+   - 日期在 `serviceChargeEnabledDate` 及之后（即服务费模式激活后才适用）
+   - 今天及过去30天内的预约（不超过30天）
    - 尚未有宴会菜价采购记录关联的预约（检查 purchase 中 category='banquet' 且 sourceReservationId=预约Id 的记录不存在）
 3. 用户选择一个预约后，自动填入：
    - 金额（`amount`）= 预约的 `dishPrice`
