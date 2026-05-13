@@ -57,6 +57,7 @@ Page({
     } else if (options.date) {
       this.setData({ date: options.date })
     }
+    this.loadDishPriceRequired()
   },
 
   async loadVenueSettings() {
@@ -157,6 +158,7 @@ Page({
         dishPrice: res.dishPrice ? String(res.dishPrice) : '',
         selectedBossIndex: selectedBossIndex
       })
+      this.loadDishPriceRequired()
       wx.hideLoading()
     } catch (err) {
       wx.hideLoading()
@@ -173,6 +175,7 @@ Page({
     }
     this.setData({ date: selected })
     this.clearError('date')
+    this.loadDishPriceRequired()
   },
 
   selectTime(e) {
@@ -413,6 +416,11 @@ Page({
       String(today.getMonth() + 1).padStart(2, '0') + '-' +
       String(today.getDate()).padStart(2, '0')
     return dateStr < todayStr
+  },
+
+  async loadDishPriceRequired() {
+    const required = await this.isDishPriceRequired(this.data.date)
+    this.setData({ _dishPriceRequired: required })
   },
 
   async shouldSync(dateStr) {
