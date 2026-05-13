@@ -27,6 +27,7 @@ Page({
     selectedReservation: null,
     sourceReservationId: '',
     categoryOptions: [
+      { value: 'banquet', label: '宴会菜价' },
       { value: 'meat', label: '肉类' },
       { value: 'seafood', label: '海鲜' },
       { value: 'vegetable', label: '蔬菜' },
@@ -35,7 +36,6 @@ Page({
       { value: 'seasoning', label: '调味品' },
       { value: 'supplies', label: '日用品' },
       { value: 'equipment', label: '设备' },
-      { value: 'banquet', label: '宴会菜价' },
       { value: 'other', label: '其他' }
     ]
   },
@@ -57,6 +57,22 @@ Page({
 
     if (isEdit) {
       this.loadPurchase(options.id)
+    } else {
+      this.checkDefaultBanquet()
+    }
+  },
+
+  async checkDefaultBanquet() {
+    try {
+      const res = await db.queryAll(COLLECTIONS.SETTINGS, {})
+      const settings = {}
+      ;(res.data || []).forEach(s => { settings[s.key] = s.value })
+      if (settings.serviceChargeEnabled && settings.serviceChargeEnabledDate) {
+        this.setData({ category: 'banquet' })
+        this.loadAvailableReservations()
+      }
+    } catch (err) {
+      console.warn('[purchase-add] 检查默认分类失败:', err)
     }
   },
 

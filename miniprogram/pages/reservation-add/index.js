@@ -506,6 +506,17 @@ Page({
   async onSubmit() {
     if (this.data.submitting) return
 
+    // Block editing past reservations
+    if (this.data.isEdit && this.isPastDate(this.data.date)) {
+      wx.showModal({
+        title: '无法修改',
+        content: '预约已经过期无法修改',
+        showCancel: false
+      })
+      this.setData({ submitting: false })
+      return
+    }
+
     // Direct check: if allowNoStandard is off and no standard selected, block with modal
     if (!this.data.allowNoStandard && !this.data.standardPicked) {
       wx.showModal({
