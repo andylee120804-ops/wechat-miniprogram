@@ -97,9 +97,10 @@
       <view class="bar-btn bar-btn-danger" bindtap="onShowReject">拒绝</view>
       <view class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onApprove">通过</view>
     </view>
-    <!-- pending + isSubmitter + !isApprover → [编辑] -->
-    <view class="bottom-bar-inner single-btn" wx:elif="{{purchase.status === 'pending' && isSubmitter && !isApprover}}">
-      <view class="bar-btn bar-btn-primary" bindtap="onEdit">编辑</view>
+    <!-- pending + isSubmitter + !isApprover → [删除] [编辑] -->
+    <view class="bottom-bar-inner two-btns" wx:elif="{{purchase.status === 'pending' && isSubmitter && !isApprover}}">
+      <view wx:if="{{canDelete}}" class="bar-btn bar-btn-danger" bindtap="onDelete">删除</view>
+      <view wx:if="{{canEdit}}" class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onEdit">编辑</view>
     </view>
     <!-- approved + canReimburse → [确认报销] -->
     <view class="bottom-bar-inner single-btn" wx:elif="{{purchase.status === 'approved' && canReimburse}}">
@@ -108,11 +109,6 @@
     <!-- rejected + isSubmitter → [修改重提] -->
     <view class="bottom-bar-inner single-btn" wx:elif="{{purchase.status === 'rejected' && isSubmitter}}">
       <view class="bar-btn bar-btn-primary" bindtap="onResubmit">修改重提</view>
-    </view>
-    <!-- reimbursed → no buttons, fallback if needed: delete for pending only -->
-    <view class="bottom-bar-inner two-btns" wx:elif="{{purchase.status === 'pending' && isSubmitter && isApprover}}">
-      <view class="bar-btn bar-btn-danger" bindtap="onDelete">删除</view>
-      <view class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onEdit">编辑</view>
     </view>
   </view>
 

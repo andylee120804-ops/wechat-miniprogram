@@ -117,7 +117,7 @@ Page({
     })
   },
 
-  onApprove: function() {
+  onApprove: async function() {
     var that = this
     var userInfo = app.globalData.userInfo || {}
     var purchase = that.data.purchase
@@ -130,6 +130,20 @@ Page({
     }
 
     wx.showLoading({ title: '审批中...' })
+
+    // Re-fetch to verify current status hasn't changed
+    var currentDoc = await db.getDoc(COLLECTIONS.PURCHASE, that.data.id)
+    if (!currentDoc) {
+      wx.hideLoading()
+      wx.showToast({ title: '记录不存在', icon: 'none' })
+      return
+    }
+    if (currentDoc.status !== 'pending') {
+      wx.hideLoading()
+      wx.showToast({ title: '状态已变更，请刷新', icon: 'none' })
+      that.loadPurchase(that.data.id)
+      return
+    }
 
     var now = new Date()
     db.updateDoc(COLLECTIONS.PURCHASE, that.data.id, {
@@ -149,7 +163,7 @@ Page({
       })
     }).then(function() {
       wx.hideLoading()
-      log(LOG_TYPES.PURCHASE_EDIT, '审批通过: ' + (purchase.item || ''), { id: that.data.id })
+      log(LOG_TYPES.PURCHASE_UPDATE, '审批通过: ' + (purchase.item || ''), { id: that.data.id })
       wx.showToast({ title: '已通过', icon: 'success' })
       that.loadPurchase(that.data.id)
     }).catch(function(err) {
@@ -166,7 +180,7 @@ Page({
     this.setData({ rejectionReason: e.detail.value || '' })
   },
 
-  onRejectConfirm: function() {
+  onRejectConfirm: async function() {
     var that = this
     var reason = that.data.rejectionReason || ''
     if (!reason.trim()) {
@@ -181,6 +195,20 @@ Page({
     if (!purchase) return
 
     wx.showLoading({ title: '处理中...' })
+
+    // Re-fetch to verify current status hasn't changed
+    var currentDoc = await db.getDoc(COLLECTIONS.PURCHASE, that.data.id)
+    if (!currentDoc) {
+      wx.hideLoading()
+      wx.showToast({ title: '记录不存在', icon: 'none' })
+      return
+    }
+    if (currentDoc.status !== 'pending') {
+      wx.hideLoading()
+      wx.showToast({ title: '状态已变更，请刷新', icon: 'none' })
+      that.loadPurchase(that.data.id)
+      return
+    }
 
     var now = new Date()
     db.updateDoc(COLLECTIONS.PURCHASE, that.data.id, {
@@ -201,7 +229,7 @@ Page({
       })
     }).then(function() {
       wx.hideLoading()
-      log(LOG_TYPES.PURCHASE_EDIT, '审批拒绝: ' + (purchase.item || ''), { id: that.data.id, reason: reason.trim() })
+      log(LOG_TYPES.PURCHASE_UPDATE, '审批拒绝: ' + (purchase.item || ''), { id: that.data.id, reason: reason.trim() })
       wx.showToast({ title: '已拒绝', icon: 'success' })
       that.loadPurchase(that.data.id)
     }).catch(function(err) {
@@ -214,7 +242,7 @@ Page({
     this.setData({ showRejectModal: false, rejectionReason: '' })
   },
 
-  onReimburse: function() {
+  onReimburse: async function() {
     var that = this
     var userInfo = app.globalData.userInfo || {}
     var purchase = that.data.purchase
@@ -226,6 +254,20 @@ Page({
     }
 
     wx.showLoading({ title: '确认报销中...' })
+
+    // Re-fetch to verify current status hasn't changed
+    var currentDoc = await db.getDoc(COLLECTIONS.PURCHASE, that.data.id)
+    if (!currentDoc) {
+      wx.hideLoading()
+      wx.showToast({ title: '记录不存在', icon: 'none' })
+      return
+    }
+    if (currentDoc.status !== 'approved') {
+      wx.hideLoading()
+      wx.showToast({ title: '状态已变更，请刷新', icon: 'none' })
+      that.loadPurchase(that.data.id)
+      return
+    }
 
     var now = new Date()
     db.updateDoc(COLLECTIONS.PURCHASE, that.data.id, {
@@ -245,7 +287,7 @@ Page({
       })
     }).then(function() {
       wx.hideLoading()
-      log(LOG_TYPES.PURCHASE_EDIT, '确认报销: ' + (purchase.item || ''), { id: that.data.id })
+      log(LOG_TYPES.PURCHASE_UPDATE, '确认报销: ' + (purchase.item || ''), { id: that.data.id })
       wx.showToast({ title: '已确认报销', icon: 'success' })
       that.loadPurchase(that.data.id)
     }).catch(function(err) {
