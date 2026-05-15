@@ -305,10 +305,12 @@ Page({
         incomeByType[type] = (incomeByType[type] || 0) + amount
       })
 
-      // Calculate purchase totals
+      // Calculate purchase totals (only count reimbursed or unset status)
       let totalPurchase = 0
       purchaseData.forEach(function(item) {
-        totalPurchase += Number(item.amount) || 0
+        if (!item.status || item.status === 'reimbursed') {
+          totalPurchase += Number(item.amount) || 0
+        }
       })
 
       // Calculate expense totals (expense + fixed_expense)
