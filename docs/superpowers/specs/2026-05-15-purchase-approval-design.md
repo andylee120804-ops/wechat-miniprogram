@@ -1,0 +1,250 @@
+# 采购审批流程设计
+
+## 概述
+
+在现有采购模块上引入审批流程：采购员提交申请 → 审批人批复 → 报销人确认报销。同时保留直接采购路径（无需审批的类目自动通过）。
+
+## 1. 状态流转
+
+```
+需要审批的采购：
+  pending → approved / rejected → reimbursed
+
+直接采购（无需审批）：
+  approved → reimbursed
+
+宴会自动生成（autoSyncReservation）：
+  读取审批设置 → pending 或 approved → reimbursed
+```
+
+### 状态定义
+
+| 状态 | 含义 | 触发 |
+|------|------|------|
+| `pending` | 待审批 | 采购申请提交，等待审批人批复 |
+| `approved` | 已批准 | 审批人通过，或直接采购/自动批复 |
+| `rejected` | 已拒绝 | 审批人拒绝，附带拒绝理由 |
+| `reimbursed` | 已报销 | 报销人确认报销完成。**仅此状态计入报表** |
+
+## 2. 数据模型
+
+### 2.1 purchase 集合增强
+
+在现有字段基础上新增：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `status` | string | 状态：`pending` / `approved` / `rejected` / `reimbursed` |
+| `approverId` | string | 审批人 ID（提交时从设置读取默认审批人） |
+| `approverName` | string | 审批人姓名 |
+| `approvedAt` | Date | 审批通过时间 |
+| `rejectionReason` | string | 拒绝理由（拒绝时必填） |
+| `rejectedAt` | Date | 拒绝时间 |
+| `reimburserId` | string | 报销确认人 ID |
+| `reimburserName` | string | 报销确认人姓名 |
+| `reimbursedAt` | Date | 报销确认时间 |
+
+向后兼容：旧记录无 `status` 字段，前端读取时视同 `reimbursed`（已完成）。
+
+### 2.2 purchase_approval_log 集合（新增）
+
+```javascript
+{
+  purchaseId: string,    // 关联采购记录 _id
+  action: 'submit' | 'approve' | 'reject' | 'reimburse',
+  operatorId: string,    // 操作人 _id
+  operatorName: string,
+  remark: string,        // 拒绝理由等
+  createdAt: Date
+}
+```
+
+每次审批动作写入一条日志，用于详情页展示审批时间线。
+
+## 3. 审批规则配置
+
+### 3.1 存储位置
+
+独立页面「采购审批设置」，配置存入 `settings` 集合。
+
+### 3.2 配置结构
+
+```javascript
+// settings 集合
+{
+  approvalRules: {
+    enabled: true,          // 全局开关
+    categories: {           // 需要审批的类目（true = 需要审批）
+      meat: false,
+      seafood: false,
+      vegetable: false,
+      fruit: false,
+      drink: false,
+      seasoning: false,
+      supplies: false,
+      equipment: false,
+      banquet: false,
+      other: false
+    },
+    amountThreshold: 500,   // 超过此金额触发审批（0 = 不按金额）
+    defaultApproverId: '',  // 默认审批人 staff._id
+    defaultApproverName: '',
+    defaultReimburserId: '',// 默认报销人 staff._id
+    defaultReimburserName: ''
+  }
+}
+```
+
+### 3.3 判断逻辑
+
+```
+if approvalRules.enabled === false → status = 'approved'
+if category 被勾选 OR amount > amountThreshold → status = 'pending'
+else → status = 'approved'
+```
+
+创建采购时执行此判断，决定初始 status。
+
+### 3.4 三条路径
+
+| 路径 | 触发条件 | 初始 status | 审批人介入 | 报销人介入 |
+|------|---------|------------|-----------|-----------|
+| 直接通过 | 类目未勾选，金额低于阈值 | `approved` | 否 | 是 |
+| 人工审批 | 类目勾选 或 金额超阈值 | `pending` | 是 | 是 |
+| 宴会自动生成 | autoSyncReservation，读取 banquet 类目规则 | 按规则 | 按规则 | 是 |
+
+## 4. 权限与角色
+
+### 4.1 新增权限 action
+
+```javascript
+// permission.js 新增
+ACTIONS.APPROVE = 'approve'
+ACTIONS.REIMBURSE = 'reimburse'
+```
+
+### 4.2 权限矩阵
+
+| 操作 | boss | admin | purchase | chef | waiter |
+|------|------|-------|----------|------|--------|
+| 提交申请（add） | ✅ | ✅ | 需配置 | 需配置 | 需配置 |
+| 审批（approve） | ✅ 默认 | ✅ 默认 | 需配置 | 需配置 | 需配置 |
+| 报销确认（reimburse） | ✅ 默认 | ✅ 默认 | 需配置 | 需配置 | 需配置 |
+
+### 4.3 员工管理页改动
+
+在 `pages/admin/staff-add/` 中，当员工角色有 purchase 模块权限时，额外显示两个开关：
+- 可审批采购申请（对应 `approve` action）
+- 可确认采购报销（对应 `reimburse` action）
+
+### 4.4 重要业务规则
+
+**防自己审批**：提交人不能审批自己提交的申请。审批时校验 `currentUser._id !== purchaseBy`。即使 Boss 有审批权限，自己提交的申请也不能自己审批。
+
+**报销不限**：报销确认不限制自己确认自己的。
+
+## 5. 页面改动
+
+### 5.1 采购审批设置（新增页面）
+
+页面路径：`pages/admin/approval-settings/index`
+
+全局设置区块：
+- 全局开关（开启/关闭）
+- 每个采购类目的审批开关（10 个 toggle）
+- 金额门槛（数字输入框）
+- 默认审批人（下拉选择，从有 `approve` 权限的员工中选取）
+- 默认报销人（下拉选择，从有 `reimburse` 权限的员工中选取）
+
+### 5.2 采购列表页（改动）
+
+路径：`pages/purchase/index`
+
+**布局不变**，仅做以下调整：
+- 每行卡片增加状态标签（用 `theme-badge` 组件，新增 `approvalStatus` 类型）
+- 月度总额仅统计 `status === 'reimbursed'` 的条目
+- 分类筛选、月份切换、搜索完全不变
+- 状态颜色映射：pending → 黄、approved → 绿、rejected → 红、reimbursed → 灰/勾
+
+### 5.3 采购新增页（改动）
+
+路径：`pages/purchase-add/index`
+
+- 表单增加「审批人」展示行（显示从设置读取的默认审批人姓名）
+- 提交时根据审批规则计算初始 `status`
+- `pending` 时提示"已提交审批，请等待审批人确认"
+- `approved` 时提示"已自动通过，等待报销确认"
+- 保存时将 `approverId` / `approverName` 写入记录
+
+### 5.4 采购详情页（改动）
+
+路径：`pages/purchase-detail/index`
+
+#### 新增展示
+- 金额区增加状态标签
+- 详情卡片按状态显示不同字段（审批人、拒绝理由、报销人等）
+- 新增「审批日志」时间线区域
+
+#### 底部操作栏动态变化
+
+| 记录状态 | 当前用户角色 | 显示按钮 |
+|---------|-------------|---------|
+| `pending` | 审批人 & 非提交人 | [拒绝（填写理由）] [通过] |
+| `pending` | 提交人 | [编辑] [取消] |
+| `pending` | 其他 | 无操作 |
+| `approved` | 报销人 | [确认报销] |
+| `approved` | 提交人 | 无操作 |
+| `rejected` | 提交人 | [修改重提] |
+| `reimbursed` | 所有人 | 只读 |
+
+### 5.5 首页（改动）
+
+路径：`pages/index/index`
+
+在快捷操作区块之后，增加「待办」区块：
+- 仅对有 `approve` 或 `reimburse` 权限的用户显示
+- 精简展示：图标 + 标签 + 数字角标
+  - 待审批（pending count）
+  - 待报销（approved count）
+- 点击进入我的待办清单页
+
+### 5.6 我的页（改动）
+
+路径：`pages/me/index`
+
+- 在菜单列表中加入「待办」分组
+- 菜单项「我的待办」带角标数字（待审批数 + 待报销数）
+- 仅对有 `approve` 或 `reimburse` 权限的用户显示
+
+### 5.7 我的待办清单（新增页面）
+
+路径：`pages/todo/index`
+
+- 分为「待审批」和「待报销」两个区域
+- 待审批项（status = pending）：显示采购名称、金额、类目、提交人、日期
+- 待报销项（status = approved）：显示采购名称、金额、类目、审批人、日期
+- 点击某条 → `navigateTo` 采购详情页进行对应操作
+- 两个区域均空时显示「暂无待办」
+
+## 6. 云函数兼容
+
+### 6.1 autoSyncReservation
+
+在生成宴会采购记录前，读取 settings 中的 `approvalRules`：
+- 如果 `banquet` 类目被勾选需要审批 → `status = 'pending'`，`approverId` 设为默认审批人
+- 如果未勾选 → `status = 'approved'`（现有行为兼容）
+- 添加 `autoGenerated: true` 保持不变
+
+### 6.2 getPermissions
+
+云函数返回的权限需包含新的 `approve` / `reimburse` action。
+
+## 7. 报表统计
+
+所有统计报表（dashboard、经营报表、收入/支出图表）中，采购支出**仅统计 `status === 'reimbursed'` 的条目**。
+
+未报销的条目不参与财务报表计算。
+
+## 8. 数据迁移
+
+对现有 `purchase` 集合中的旧记录（无 `status` 字段）做向前兼容：读取时若 `status` 字段缺失，前端视为 `reimbursed`。无需批量写入迁移脚本，按需渐进。
