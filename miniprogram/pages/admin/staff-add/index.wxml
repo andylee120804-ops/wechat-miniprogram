@@ -57,6 +57,16 @@
             {{act === 'view' ? '查看' : act === 'add' ? '新增' : act === 'edit' ? '编辑' : act === 'delete' ? '删除' : act === 'export' ? '导出' : act}}
           </view>
         </view>
+        <view wx:if="{{item.key === 'purchase' && hasPurchasePerm}}" style="padding: 12rpx 32rpx; padding-bottom: 0;">
+          <view style="display: flex; justify-content: space-between; align-items: center; padding: 12rpx 0;">
+            <text style="color: {{theme.textPrimary || '#F5F0E8'}};">可审批采购申请</text>
+            <switch checked="{{canApprovePurchase}}" bindchange="onApprovePurchaseChange" color="{{theme.accentColor || '#C9A96E'}}" />
+          </view>
+          <view style="display: flex; justify-content: space-between; align-items: center; padding: 12rpx 0;">
+            <text style="color: {{theme.textPrimary || '#F5F0E8'}};">可确认采购报销</text>
+            <switch checked="{{canReimbursePurchase}}" bindchange="onReimbursePurchaseChange" color="{{theme.accentColor || '#C9A96E'}}" />
+          </view>
+        </view>
       </view>
     </theme-card>
   </view>

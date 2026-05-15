@@ -46,7 +46,10 @@ Page({
       { key: 'attendance', name: '考勤打卡', actions: ['view'] },
       { key: 'dashboard', name: '经营报表', actions: ['view', 'export'] }
     ],
-    showDeleteModal: false
+    showDeleteModal: false,
+    canApprovePurchase: false,
+    canReimbursePurchase: false,
+    hasPurchasePerm: false
   },
 
   onLoad(options) {
@@ -121,6 +124,16 @@ Page({
         }
       })
 
+      // Extract approve/reimburse from purchase permissions
+      var purchasePerm = perms.find(function(p) { return p.module === 'purchase' })
+      var canApprovePurchase = false
+      var canReimbursePurchase = false
+      if (purchasePerm && purchasePerm.actions) {
+        canApprovePurchase = purchasePerm.actions.includes('approve') || purchasePerm.actions.includes('*')
+        canReimbursePurchase = purchasePerm.actions.includes('reimburse') || purchasePerm.actions.includes('*')
+      }
+      var hasPurchasePerm = defaultPerms.purchase && (defaultPerms.purchase.view || defaultPerms.purchase.add || defaultPerms.purchase.edit || defaultPerms.purchase.delete)
+
       this.setData({
         name: s.name || '',
         role: s.role || 'admin',
@@ -128,7 +141,10 @@ Page({
         phone: s.phone || '',
         salary: s.salary ? String(s.salary) : '',
         hireDate: s.hireDate || '',
-        permissions: defaultPerms
+        permissions: defaultPerms,
+        canApprovePurchase: canApprovePurchase,
+        canReimbursePurchase: canReimbursePurchase,
+        hasPurchasePerm: hasPurchasePerm
       })
     } catch (err) {
       this.setData({ loading: false })
@@ -148,12 +164,24 @@ Page({
     if (!module || !action) return
     const perms = this.data.permissions
     if (!perms[module]) return
-    this.setData({
-      permissions: {
-        ...perms,
-        [module]: { ...perms[module], [action]: !perms[module][action] }
-      }
-    })
+    const newPerms = {
+      ...perms,
+      [module]: { ...perms[module], [action]: !perms[module][action] }
+    }
+    const update = { permissions: newPerms }
+    if (module === 'purchase') {
+      var p = newPerms.purchase
+      update.hasPurchasePerm = p.view || p.add || p.edit || p.delete
+    }
+    this.setData(update)
+  },
+
+  onApprovePurchaseChange(e) {
+    this.setData({ canApprovePurchase: e.detail.value })
+  },
+
+  onReimbursePurchaseChange(e) {
+    this.setData({ canReimbursePurchase: e.detail.value })
   },
 
   onModuleSelectAll(e) {
@@ -164,9 +192,13 @@ Page({
     const allSelected = modOption.actions.every(a => perms[module][a])
     const updatedModule = { ...perms[module] }
     modOption.actions.forEach(a => { updatedModule[a] = !allSelected })
-    this.setData({
-      permissions: { ...perms, [module]: updatedModule }
-    })
+    const newPerms = { ...perms, [module]: updatedModule }
+    const update = { permissions: newPerms }
+    if (module === 'purchase') {
+      var p = newPerms.purchase
+      update.hasPurchasePerm = p.view || p.add || p.edit || p.delete
+    }
+    this.setData(update)
   },
 
   async onSubmit() {
@@ -195,12 +227,19 @@ Page({
       }
 
       if (this.data.isEdit) {
+        const savePermissions = { ...permissions }
+        // Inject approve/reimburse into purchase module permissions
+        savePermissions.purchase = {
+          ...savePermissions.purchase,
+          approve: this.data.canApprovePurchase,
+          reimburse: this.data.canReimbursePurchase
+        }
         const res = await wx.cloud.callFunction({
           name: 'updateStaff',
           data: {
             staffId: this.data.id,
             staffData,
-            permissions,
+            permissions: savePermissions,
             callerRole: userInfo.role
           }
         })
@@ -214,9 +253,22 @@ Page({
         this.setData({ id: res._id })
 
         // Save permissions for new staff
+        const that = this
         const permArray = Object.entries(permissions)
-          .filter(([key, vals]) => Object.values(vals).some(v => v))
-          .map(([module, actions]) => ({ module, actions: Object.entries(actions).filter(([, v]) => v).map(([a]) => a) }))
+          .filter(([key, vals]) => {
+            if (key === 'purchase') {
+              return Object.values(vals).some(v => v) || that.data.canApprovePurchase || that.data.canReimbursePurchase
+            }
+            return Object.values(vals).some(v => v)
+          })
+          .map(([module, actions]) => {
+            const acts = Object.entries(actions).filter(([, v]) => v).map(([a]) => a)
+            if (module === 'purchase') {
+              if (that.data.canApprovePurchase) acts.push('approve')
+              if (that.data.canReimbursePurchase) acts.push('reimburse')
+            }
+            return { module, actions: acts }
+          })
         await db.addDoc(COLLECTIONS.PERMISSIONS, {
           staffId: res._id, permissions: permArray, updatedBy: userInfo._id, updatedAt: new Date()
         })
