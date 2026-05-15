@@ -3,7 +3,7 @@
   <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">
     <view class="nav-bar-content">
       <view class="nav-back" bindtap="onBack">
-        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">&#10094;</text>
+        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}};">❮</text>
       </view>
       <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">我的待办</text>
       <view class="nav-action"></view>
