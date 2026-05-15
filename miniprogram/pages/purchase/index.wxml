@@ -52,6 +52,7 @@
         </view>
         <view class="card-meta flex-row mt-sm">
           <theme-badge theme="{{theme}}" status="{{item.category}}" type="category" text="{{item.categoryName}}" size="sm" />
+          <theme-badge theme="{{theme}}" status="{{item.status || 'reimbursed'}}" type="approvalStatus" size="sm" />
           <text class="card-date text-caption ml-sm" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.formattedDate}}</text>
         </view>
         <view class="card-footer flex-row flex-between mt-sm" wx:if="{{item.purchaseByName || item.remark}}">

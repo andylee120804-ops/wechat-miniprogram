@@ -1,5 +1,5 @@
 const app = getApp()
-const { formatDate, formatAmount, getCategoryName, getMonthRange } = require('../../utils/helpers')
+const { formatDate, formatAmount, getCategoryName, getMonthRange, getApprovalStatusName } = require('../../utils/helpers')
 const { handleCloudError } = require('../../utils/error-handler')
 const { checkPermission, ACTIONS, hasPermission } = require('../../utils/permission')
 const { COLLECTIONS } = require('../../utils/db')
@@ -74,7 +74,12 @@ Page({
     Promise.all([totalPromise, pagePromise]).then(function(results) {
       const allData = results[0].data || []
       let totalAmount = 0
-      allData.forEach(function(p) { totalAmount += Number(p.amount) || 0 })
+      allData.forEach(function(p) {
+        // Only count reimbursed purchases in total
+        if (!p.status || p.status === 'reimbursed') {
+          totalAmount += Number(p.amount) || 0
+        }
+      })
 
       const res = results[1]
       const purchases = (res.data || []).map(function(p) {
@@ -82,7 +87,8 @@ Page({
           ...p,
           categoryName: getCategoryName(p.category),
           formattedAmount: formatAmount(p.amount),
-          formattedDate: formatDate(p.date)
+          formattedDate: formatDate(p.date),
+          approvalStatusName: getApprovalStatusName(p.status)
         }
       })
 
@@ -136,7 +142,8 @@ Page({
           ...p,
           categoryName: getCategoryName(p.category),
           formattedAmount: formatAmount(p.amount),
-          formattedDate: formatDate(p.date)
+          formattedDate: formatDate(p.date),
+          approvalStatusName: getApprovalStatusName(p.status)
         }
       })
       const allItems = that.data.purchases.concat(newItems)
