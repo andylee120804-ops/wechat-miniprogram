@@ -28,7 +28,10 @@ Page({
     canAddIncome: false,
     unreadAnnouncementCount: 0,
     hasUrgentUnread: false,
-    marqueeReset: false
+    marqueeReset: false,
+    pendingApprovalCount: 0,
+    pendingReimburseCount: 0,
+    showTodo: false
   },
 
   onShow() {
@@ -44,7 +47,8 @@ Page({
       showSummary: hasPermission('income', ACTIONS.VIEW),
       canAddReservation: hasPermission('reservation', ACTIONS.ADD),
       canAddPurchase: hasPermission('purchase', ACTIONS.ADD),
-      canAddIncome: hasPermission('income', ACTIONS.ADD)
+      canAddIncome: hasPermission('income', ACTIONS.ADD),
+      showTodo: hasPermission('purchase', ACTIONS.APPROVE) || hasPermission('purchase', ACTIONS.REIMBURSE)
     })
     this.loadData()
   },
@@ -133,7 +137,7 @@ Page({
 
       const todayIncomeTotal = (todayIncomeRes.data || []).reduce((sum, item) => sum + (item.amount || 0), 0)
       const todayExpenseTotal = (todayExpenseRes.data || []).reduce((sum, item) => sum + (item.amount || 0), 0) +
-        (todayPurchaseRes.data || []).reduce((sum, item) => sum + (item.amount || 0), 0)
+        (todayPurchaseRes.data || []).filter(function(p) { return !p.status || p.status === 'reimbursed' }).reduce(function(sum, item) { return sum + (item.amount || 0) }, 0)
       // Fixed costs: sum monthlyAmount (new format), only include currently active items
       let monthlyFixedCostTotal = 0
       ;(fixedExpenseItemsRes.data || []).forEach(item => {
@@ -168,6 +172,9 @@ Page({
         hasUrgentUnread: hasUrgentUnread
       })
       this.startMarqueeCycle()
+      if (this.data.showTodo) {
+        this.loadTodoCounts()
+      }
     } catch (err) {
       console.error('加载首页数据失败:', err)
       this.setData({ loading: false })
@@ -275,6 +282,31 @@ Page({
         })
       }, 60)
     }, 15000)
+  },
+
+  loadTodoCounts: async function() {
+    var userInfo = app.globalData.userInfo
+    if (!userInfo || !userInfo._id) return
+    try {
+      var dbInst = db.getDb()
+      var _ = dbInst.command
+      var pendingRes = await dbInst.collection(COLLECTIONS.PURCHASE)
+        .where({
+          status: 'pending',
+          approverId: userInfo._id,
+          purchaseBy: _.neq(userInfo._id)
+        }).count()
+      var reimbursedRes = await dbInst.collection(COLLECTIONS.PURCHASE)
+        .where({ status: 'approved' }).count()
+      this.setData({
+        pendingApprovalCount: pendingRes.total || 0,
+        pendingReimburseCount: reimbursedRes.total || 0
+      })
+    } catch (e) {}
+  },
+
+  onTodoTap() {
+    wx.navigateTo({ url: '/pages/todo/index' })
   },
 
   onHide() {
