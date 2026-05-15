@@ -70,6 +70,22 @@ Component({
         const key = status || text
         let color = colors[key] || '#9CA3AF'
         this.setData({ bgColor: color + '22', textColor: color, displayText: displayText })
+      } else if (type === 'approvalStatus') {
+        var colors = {
+          'pending': '#FBBF24',
+          'approved': '#4ADE80',
+          'rejected': '#F87171',
+          'reimbursed': '#9CA3AF'
+        }
+        var color = colors[status] || '#9CA3AF'
+        var labels = {
+          'pending': '待审批',
+          'approved': '已批准',
+          'rejected': '已拒绝',
+          'reimbursed': '已报销'
+        }
+        var label = labels[status] || ''
+        this.setData({ bgColor: color + '22', textColor: color, displayText: text || label })
       } else {
         this.setData({ displayText: displayText })
       }
