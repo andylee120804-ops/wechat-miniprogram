@@ -108,6 +108,12 @@
       </view>
     </theme-card>
 
+    <!-- 审批人展示 -->
+    <view class="approver-row" wx:if="{{approverName}}" style="margin: 16rpx 0; padding: 12rpx 0;">
+      <text style="color: {{theme.textSecondary || '#9A9AB0'}};">审批人：</text>
+      <text style="color: {{theme.accentColor || '#C9A96E'}};">{{approverName}}</text>
+    </view>
+
     <!-- Bottom Spacer for fixed bar -->
     <view style="height: 200rpx;"></view>
   </view>

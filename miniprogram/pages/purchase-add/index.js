@@ -26,6 +26,7 @@ Page({
     pickerIndex: -1,
     selectedReservation: null,
     sourceReservationId: '',
+    approverName: '',
     categoryOptions: [
       { value: 'banquet', label: '宴会菜价' },
       { value: 'meat', label: '肉类' },
@@ -60,6 +61,7 @@ Page({
     } else {
       this.checkDefaultBanquet()
     }
+    this.loadApprovalPreview()
   },
 
   async checkDefaultBanquet() {
@@ -73,6 +75,22 @@ Page({
       }
     } catch (err) {
       console.warn('[purchase-add] 检查默认分类失败:', err)
+    }
+  },
+
+  // 加载审批预览信息（默认审批人姓名）
+  loadApprovalPreview: async function() {
+    try {
+      var res = await wx.cloud.callFunction({
+        name: 'sendMessage',
+        data: { action: 'getApprovalSettings' }
+      })
+      if (res.result && res.result.success && res.result.data) {
+        var rules = res.result.data
+        this.setData({ approverName: rules.defaultApproverName || '' })
+      }
+    } catch (e) {
+      // 静默忽略加载失败
     }
   },
 
@@ -212,7 +230,7 @@ Page({
     return Object.keys(errors).length === 0
   },
 
-  onSubmit: function() {
+  onSubmit: async function() {
     if (this.data.submitting) return
     if (!this.validate()) return
 
@@ -233,6 +251,35 @@ Page({
     if (!data.purchaseBy) {
       delete data.purchaseBy
       delete data.purchaseByName
+    }
+
+    // 审批规则判断：检查是否需要审批
+    data.status = 'approved'
+    try {
+      var rulesRes = await wx.cloud.callFunction({
+        name: 'sendMessage',
+        data: { action: 'getApprovalSettings' }
+      })
+      if (rulesRes.result && rulesRes.result.success && rulesRes.result.data) {
+        var rules = rulesRes.result.data
+        var needApproval = false
+        // 检查分类是否在审批范围内
+        if (rules.categories && rules.categories.indexOf(data.category) >= 0) {
+          needApproval = true
+        }
+        // 检查金额是否超过阈值
+        if (rules.amountThreshold && data.amount > Number(rules.amountThreshold)) {
+          needApproval = true
+        }
+        if (needApproval) {
+          data.status = 'pending'
+          data.approverId = rules.approverId || rules.defaultApproverId || ''
+          data.approverName = rules.approverName || rules.defaultApproverName || ''
+        }
+      }
+    } catch (e) {
+      // 获取审批设置失败，默认通过
+      console.warn('[purchase-add] 获取审批设置失败，默认通过:', e)
     }
 
     that.setData({ submitting: true })
@@ -260,9 +307,24 @@ Page({
         wx.hideLoading()
         return
       }
-      db.addDoc(COLLECTIONS.PURCHASE, data).then(function() {
+      db.addDoc(COLLECTIONS.PURCHASE, data).then(function(result) {
         wx.hideLoading()
         log(LOG_TYPES.PURCHASE_CREATE, '新增采购: ' + data.item, { amount: data.amount, category: data.category })
+
+        // 如果需要审批，写入审批日志
+        if (data.status === 'pending') {
+          db.addDoc(COLLECTIONS.APPROVAL_LOG, {
+            purchaseId: result._id,
+            action: 'submit',
+            operatorId: userInfo._id,
+            operatorName: userInfo.name || userInfo.nickName,
+            remark: '',
+            createdAt: db.getDb().serverDate()
+          }).catch(function(e) {
+            console.warn('[purchase-add] 写入审批日志失败:', e)
+          })
+        }
+
         wx.showToast({ title: '添加成功', icon: 'success' })
         setTimeout(function() { wx.navigateBack() }, 1500)
       }).catch(function(err) {
