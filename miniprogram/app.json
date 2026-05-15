@@ -25,6 +25,7 @@
     "pages/insights/index",
     "pages/announcements/index",
     "pages/announcement-detail/index",
+    "pages/todo/index",
     "pages/admin/dashboard/index",
     "pages/admin/staff/index",
     "pages/admin/staff-add/index",

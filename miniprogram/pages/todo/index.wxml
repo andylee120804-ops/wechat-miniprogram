@@ -1,0 +1,69 @@
+<view class="todo-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx; padding-top: {{statusBarHeight + 44}}px;">
+  <!-- Custom Navigation Bar -->
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">
+    <view class="nav-bar-content">
+      <view class="nav-back" bindtap="onBack">
+        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">&#10094;</text>
+      </view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">我的待办</text>
+      <view class="nav-action"></view>
+    </view>
+  </view>
+
+  <!-- Skeleton Loading -->
+  <view wx:if="{{loading}}" style="padding: 24rpx 32rpx;">
+    <view wx:for="{{[1,2,3]}}" wx:key="*this" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border-radius: 20rpx; padding: 28rpx; margin-bottom: 16rpx; opacity: 0.5;">
+      <view style="height: 32rpx; width: 60%; background: {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 8rpx; margin-bottom: 16rpx;"></view>
+      <view style="height: 24rpx; width: 40%; background: {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 8rpx; margin-bottom: 12rpx;"></view>
+      <view style="height: 24rpx; width: 30%; background: {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 8rpx;"></view>
+    </view>
+  </view>
+
+  <!-- Content -->
+  <view wx:else style="padding: 24rpx 32rpx;">
+    <!-- Pending Approvals Section -->
+    <view class="todo-section" wx:if="{{pendingApprovals.length > 0}}">
+      <text class="section-title" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 16rpx; padding-left: 4rpx;">待审批 ({{pendingApprovals.length}})</text>
+      <view class="todo-item" wx:for="{{pendingApprovals}}" wx:key="_id" bindtap="onItemTap" data-id="{{item._id}}"
+        style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 12rpx;">
+        <view class="todo-item-top" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rpx;">
+          <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 30rpx; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{item.item}}</text>
+          <text style="color: {{theme.amountNegative || '#F87171'}}; font-size: 30rpx; font-weight: 700; margin-left: 16rpx; flex-shrink: 0;">{{item.formattedAmount}}</text>
+        </view>
+        <view class="todo-item-meta" style="display: flex; align-items: center; justify-content: space-between;">
+          <view style="display: flex; align-items: center; gap: 12rpx;">
+            <view style="background: {{theme.elevated || '#252540'}}; border-radius: 8rpx; padding: 4rpx 16rpx;">
+              <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx;">{{item.categoryName}}</text>
+            </view>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.purchaseByName || ''}}</text>
+          </view>
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.formattedDate}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Pending Reimbursements Section -->
+    <view class="todo-section" wx:if="{{pendingReimbursements.length > 0}}" style="margin-top: {{pendingApprovals.length > 0 ? '32rpx' : '0'}};">
+      <text class="section-title" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 16rpx; padding-left: 4rpx;">待报销 ({{pendingReimbursements.length}})</text>
+      <view class="todo-item" wx:for="{{pendingReimbursements}}" wx:key="_id" bindtap="onItemTap" data-id="{{item._id}}"
+        style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 12rpx;">
+        <view class="todo-item-top" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rpx;">
+          <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 30rpx; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{item.item}}</text>
+          <text style="color: {{theme.amountPositive || '#4ADE80'}}; font-size: 30rpx; font-weight: 700; margin-left: 16rpx; flex-shrink: 0;">{{item.formattedAmount}}</text>
+        </view>
+        <view class="todo-item-meta" style="display: flex; align-items: center; justify-content: space-between;">
+          <view style="display: flex; align-items: center; gap: 12rpx;">
+            <view style="background: {{theme.elevated || '#252540'}}; border-radius: 8rpx; padding: 4rpx 16rpx;">
+              <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx;">{{item.categoryName}}</text>
+            </view>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.purchaseByName || ''}}</text>
+          </view>
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.formattedDate}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Empty State -->
+    <empty-state wx:if="{{pendingApprovals.length === 0 && pendingReimbursements.length === 0}}" theme="{{theme}}" type="no-data" title="暂无待办" description="没有需要您处理的事项" />
+  </view>
+</view>
