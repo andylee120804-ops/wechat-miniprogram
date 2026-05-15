@@ -54,17 +54,7 @@
         </view>
         <view class="perm-actions" style="margin-top: 16rpx; display: flex; flex-wrap: wrap; gap: 12rpx;">
           <view class="perm-action {{permissions[item.key][act] ? 'active' : ''}}" wx:for="{{item.actions}}" wx:for-item="act" wx:key="*this" data-module="{{item.key}}" data-action="{{act}}" bindtap="onPermChange" style="{{permissions[item.key][act] ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.surface || '#1A1A2E') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}} padding: 8rpx 20rpx; border-radius: 999rpx; font-size: 24rpx;">
-            {{act === 'view' ? '查看' : act === 'add' ? '新增' : act === 'edit' ? '编辑' : act === 'delete' ? '删除' : act === 'export' ? '导出' : act}}
-          </view>
-        </view>
-        <view wx:if="{{item.key === 'purchase' && hasPurchasePerm}}" style="padding: 12rpx 32rpx; padding-bottom: 0;">
-          <view style="display: flex; justify-content: space-between; align-items: center; padding: 12rpx 0;">
-            <text style="color: {{theme.textPrimary || '#F5F0E8'}};">可审批采购申请</text>
-            <switch checked="{{canApprovePurchase}}" bindchange="onApprovePurchaseChange" color="{{theme.accentColor || '#C9A96E'}}" />
-          </view>
-          <view style="display: flex; justify-content: space-between; align-items: center; padding: 12rpx 0;">
-            <text style="color: {{theme.textPrimary || '#F5F0E8'}};">可确认采购报销</text>
-            <switch checked="{{canReimbursePurchase}}" bindchange="onReimbursePurchaseChange" color="{{theme.accentColor || '#C9A96E'}}" />
+            {{act === 'view' ? '查看' : act === 'add' ? '新增' : act === 'edit' ? '编辑' : act === 'delete' ? '删除' : act === 'approve' ? '审批' : act === 'reimburse' ? '报销' : act === 'export' ? '导出' : act}}
           </view>
         </view>
       </view>

@@ -16,8 +16,9 @@
 
 .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 24rpx 28rpx; border-radius: 16rpx; }
 
-.category-grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
-.category-item { display: flex; justify-content: space-between; align-items: center; padding: 18rpx 24rpx; border-radius: 14rpx; flex: 0 0 calc(50% - 8rpx); box-sizing: border-box; font-size: 28rpx; }
+.category-grid { display: flex; flex-wrap: wrap; gap: 12rpx; }
+.category-item { display: flex; justify-content: center; align-items: center; padding: 14rpx 16rpx; border-radius: 12rpx; flex: 0 0 calc(50% - 6rpx); box-sizing: border-box; transition: all 0.2s ease; }
+.category-item:active { transform: scale(0.96); }
 
 .threshold-input-wrap { display: flex; align-items: center; gap: 8rpx; }
 .threshold-input { width: 120rpx; text-align: right; font-size: 28rpx; }

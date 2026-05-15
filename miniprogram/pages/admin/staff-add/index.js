@@ -20,7 +20,7 @@ Page({
     hireDate: '',
     submitting: false,
     permissions: {
-      purchase: { view: false, add: false, edit: false, delete: false },
+      purchase: { view: false, add: false, edit: false, delete: false, approve: false, reimburse: false },
       reservation: { view: false, add: false, edit: false, delete: false },
       income: { view: false, add: false, edit: false, delete: false },
       expense: { view: false, add: false, edit: false, delete: false },
@@ -37,7 +37,7 @@ Page({
       { value: 'waiter', label: '服务员' }
     ],
     moduleOptions: [
-      { key: 'purchase', name: '采购管理', actions: ['view', 'add', 'edit', 'delete'] },
+      { key: 'purchase', name: '采购管理', actions: ['view', 'add', 'edit', 'delete', 'approve', 'reimburse'] },
       { key: 'reservation', name: '预约管理', actions: ['view', 'add', 'edit', 'delete'] },
       { key: 'income', name: '收入管理', actions: ['view', 'add', 'edit', 'delete'] },
       { key: 'expense', name: '支出管理', actions: ['view', 'add', 'edit', 'delete'] },
@@ -46,10 +46,7 @@ Page({
       { key: 'attendance', name: '考勤打卡', actions: ['view'] },
       { key: 'dashboard', name: '经营报表', actions: ['view', 'export'] }
     ],
-    showDeleteModal: false,
-    canApprovePurchase: false,
-    canReimbursePurchase: false,
-    hasPurchasePerm: false
+    showDeleteModal: false
   },
 
   onLoad(options) {
@@ -105,7 +102,7 @@ Page({
 
       // Convert array format to { action: boolean } format for the UI
       const defaultPerms = {
-        purchase: { view: false, add: false, edit: false, delete: false },
+        purchase: { view: false, add: false, edit: false, delete: false, approve: false, reimburse: false },
         reservation: { view: false, add: false, edit: false, delete: false },
         income: { view: false, add: false, edit: false, delete: false },
         expense: { view: false, add: false, edit: false, delete: false },
@@ -124,16 +121,6 @@ Page({
         }
       })
 
-      // Extract approve/reimburse from purchase permissions
-      var purchasePerm = perms.find(function(p) { return p.module === 'purchase' })
-      var canApprovePurchase = false
-      var canReimbursePurchase = false
-      if (purchasePerm && purchasePerm.actions) {
-        canApprovePurchase = purchasePerm.actions.includes('approve') || purchasePerm.actions.includes('*')
-        canReimbursePurchase = purchasePerm.actions.includes('reimburse') || purchasePerm.actions.includes('*')
-      }
-      var hasPurchasePerm = defaultPerms.purchase && (defaultPerms.purchase.view || defaultPerms.purchase.add || defaultPerms.purchase.edit || defaultPerms.purchase.delete)
-
       this.setData({
         name: s.name || '',
         role: s.role || 'admin',
@@ -141,10 +128,7 @@ Page({
         phone: s.phone || '',
         salary: s.salary ? String(s.salary) : '',
         hireDate: s.hireDate || '',
-        permissions: defaultPerms,
-        canApprovePurchase: canApprovePurchase,
-        canReimbursePurchase: canReimbursePurchase,
-        hasPurchasePerm: hasPurchasePerm
+        permissions: defaultPerms
       })
     } catch (err) {
       this.setData({ loading: false })
@@ -168,20 +152,7 @@ Page({
       ...perms,
       [module]: { ...perms[module], [action]: !perms[module][action] }
     }
-    const update = { permissions: newPerms }
-    if (module === 'purchase') {
-      var p = newPerms.purchase
-      update.hasPurchasePerm = p.view || p.add || p.edit || p.delete
-    }
-    this.setData(update)
-  },
-
-  onApprovePurchaseChange(e) {
-    this.setData({ canApprovePurchase: e.detail.value })
-  },
-
-  onReimbursePurchaseChange(e) {
-    this.setData({ canReimbursePurchase: e.detail.value })
+    this.setData({ permissions: newPerms })
   },
 
   onModuleSelectAll(e) {
@@ -193,12 +164,7 @@ Page({
     const updatedModule = { ...perms[module] }
     modOption.actions.forEach(a => { updatedModule[a] = !allSelected })
     const newPerms = { ...perms, [module]: updatedModule }
-    const update = { permissions: newPerms }
-    if (module === 'purchase') {
-      var p = newPerms.purchase
-      update.hasPurchasePerm = p.view || p.add || p.edit || p.delete
-    }
-    this.setData(update)
+    this.setData({ permissions: newPerms })
   },
 
   async onSubmit() {
@@ -227,19 +193,12 @@ Page({
       }
 
       if (this.data.isEdit) {
-        const savePermissions = { ...permissions }
-        // Inject approve/reimburse into purchase module permissions
-        savePermissions.purchase = {
-          ...savePermissions.purchase,
-          approve: this.data.canApprovePurchase,
-          reimburse: this.data.canReimbursePurchase
-        }
         const res = await wx.cloud.callFunction({
           name: 'updateStaff',
           data: {
             staffId: this.data.id,
             staffData,
-            permissions: savePermissions,
+            permissions: permissions,
             callerRole: userInfo.role
           }
         })
@@ -253,21 +212,13 @@ Page({
         this.setData({ id: res._id })
 
         // Save permissions for new staff
-        const that = this
         const permArray = Object.entries(permissions)
-          .filter(([key, vals]) => {
-            if (key === 'purchase') {
-              return Object.values(vals).some(v => v) || that.data.canApprovePurchase || that.data.canReimbursePurchase
+          .filter(function(_a) { return Object.values(_a[1]).some(function(v) { return v }) })
+          .map(function(_a) {
+            return {
+              module: _a[0],
+              actions: Object.entries(_a[1]).filter(function(_b) { return _b[1] }).map(function(_b) { return _b[0] })
             }
-            return Object.values(vals).some(v => v)
-          })
-          .map(([module, actions]) => {
-            const acts = Object.entries(actions).filter(([, v]) => v).map(([a]) => a)
-            if (module === 'purchase') {
-              if (that.data.canApprovePurchase) acts.push('approve')
-              if (that.data.canReimbursePurchase) acts.push('reimburse')
-            }
-            return { module, actions: acts }
           })
         await db.addDoc(COLLECTIONS.PERMISSIONS, {
           staffId: res._id, permissions: permArray, updatedBy: userInfo._id, updatedAt: new Date()
