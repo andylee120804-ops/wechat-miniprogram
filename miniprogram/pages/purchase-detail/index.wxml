@@ -3,7 +3,7 @@
   <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">
     <view class="nav-bar-content">
       <view class="nav-back" bindtap="onBack">
-        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
+        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}};">❮</text>
       </view>
       <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">采购详情</text>
       <view class="nav-action"></view>
@@ -16,8 +16,9 @@
       <view class="p-xl flex-col flex-center">
         <text class="text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">采购金额</text>
         <text class="hero-amount text-display font-mono mt-xs" style="color: {{theme.amountNegative || '#F87171'}};">-¥{{purchase.formattedAmount}}</text>
-        <view class="hero-badge mt-sm">
-          <theme-badge theme="{{theme}}" status="{{purchase.category}}" type="category" text="{{purchase.categoryName}}" size="md" />
+        <view class="hero-badge-row flex-row flex-center mt-sm">
+          <theme-badge theme="{{theme}}" status="{{purchase.status}}" type="approvalStatus" size="md" />
+          <theme-badge theme="{{theme}}" status="{{purchase.category}}" type="category" text="{{purchase.categoryName}}" size="md" style="margin-left: 12rpx;" />
         </view>
       </view>
     </view>
@@ -41,6 +42,22 @@
           <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">采购人</text>
           <text class="detail-value text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{purchase.purchaseByName}}</text>
         </view>
+        <view class="detail-row flex-row flex-between py-md" wx:if="{{purchase.approverName}}" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
+          <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">审批人</text>
+          <text class="detail-value text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{purchase.approverName}}</text>
+        </view>
+        <view class="detail-row flex-row flex-between py-md" wx:if="{{purchase.rejectionReason}}" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
+          <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">拒绝原因</text>
+          <text class="detail-value text-body" style="color: #F87171; max-width: 420rpx; text-align: right;">{{purchase.rejectionReason}}</text>
+        </view>
+        <view class="detail-row flex-row flex-between py-md" wx:if="{{purchase.formattedApprovedAt}}" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
+          <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">审批时间</text>
+          <text class="detail-value text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">{{purchase.formattedApprovedAt}}</text>
+        </view>
+        <view class="detail-row flex-row flex-between py-md" wx:if="{{purchase.reimburserName}}" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
+          <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">报销人</text>
+          <text class="detail-value text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{purchase.reimburserName}}</text>
+        </view>
         <view class="detail-row flex-row flex-between py-md" wx:if="{{purchase.remark}}" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
           <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">备注</text>
           <text class="detail-value text-body" style="color: {{theme.textPrimary || '#F5F0E8'}}; max-width: 420rpx; text-align: right;">{{purchase.remark}}</text>
@@ -51,6 +68,18 @@
         </view>
       </view>
     </theme-card>
+
+    <!-- Approval Log Timeline -->
+    <view class="log-section mt-lg" wx:if="{{approvalLogs.length > 0}}">
+      <text class="text-subtitle" style="display: block; color: {{theme.textSecondary || '#9A9AB0'}}; margin-bottom: 16rpx;">审批记录</text>
+      <view class="log-list">
+        <view class="log-item" wx:for="{{approvalLogs}}" wx:key="_id">
+          <text class="log-time" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.formattedTime}}</text>
+          <text class="log-action" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.operatorName}} {{item.action === 'approved' ? '审批通过' : item.action === 'rejected' ? '拒绝' : '确认报销'}}</text>
+          <text class="log-remark" wx:if="{{item.remark}}" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{item.remark}}</text>
+        </view>
+      </view>
+    </view>
 
     <!-- Bottom Spacer -->
     <view style="height: 200rpx;"></view>
@@ -63,11 +92,39 @@
 
   <!-- Fixed Bottom Action Bar -->
   <view class="bottom-bar" wx:if="{{!loading && purchase}}">
-    <view class="bottom-bar-inner two-btns">
-      <view wx:if="{{canDelete}}" class="bar-btn bar-btn-danger" bindtap="onDelete">删除</view>
-      <view wx:if="{{canEdit}}" class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onEdit">编辑</view>
+    <!-- pending + isApprover → [拒绝] [通过] -->
+    <view class="bottom-bar-inner two-btns" wx:if="{{purchase.status === 'pending' && isApprover}}">
+      <view class="bar-btn bar-btn-danger" bindtap="onShowReject">拒绝</view>
+      <view class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onApprove">通过</view>
+    </view>
+    <!-- pending + isSubmitter + !isApprover → [编辑] -->
+    <view class="bottom-bar-inner single-btn" wx:elif="{{purchase.status === 'pending' && isSubmitter && !isApprover}}">
+      <view class="bar-btn bar-btn-primary" bindtap="onEdit">编辑</view>
+    </view>
+    <!-- approved + canReimburse → [确认报销] -->
+    <view class="bottom-bar-inner single-btn" wx:elif="{{purchase.status === 'approved' && canReimburse}}">
+      <view class="bar-btn bar-btn-primary" bindtap="onReimburse">确认报销</view>
+    </view>
+    <!-- rejected + isSubmitter → [修改重提] -->
+    <view class="bottom-bar-inner single-btn" wx:elif="{{purchase.status === 'rejected' && isSubmitter}}">
+      <view class="bar-btn bar-btn-primary" bindtap="onResubmit">修改重提</view>
+    </view>
+    <!-- reimbursed → no buttons, fallback if needed: delete for pending only -->
+    <view class="bottom-bar-inner two-btns" wx:elif="{{purchase.status === 'pending' && isSubmitter && isApprover}}">
+      <view class="bar-btn bar-btn-danger" bindtap="onDelete">删除</view>
+      <view class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onEdit">编辑</view>
     </view>
   </view>
+
+  <!-- Reject Reason Modal -->
+  <theme-modal theme="{{theme}}" visible="{{showRejectModal}}" title="拒绝原因" confirmText="确认拒绝" cancelText="取消" bind:confirm="onRejectConfirm" bind:close="onRejectCancel">
+    <view class="p-lg">
+      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; display: block; margin-bottom: 16rpx;">请输入拒绝原因：</text>
+      <view class="reject-input-wrap">
+        <input class="reject-input" value="{{rejectionReason}}" placeholder="请输入拒绝原因" placeholder-style="color: rgba(255,255,255,0.3);" bindinput="onRejectionReasonInput" style="background: {{theme.inputBg || 'rgba(255,255,255,0.06)'}}; color: {{theme.textPrimary || '#F5F0E8'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.1)'}}; border-radius: 12rpx; padding: 20rpx 24rpx; font-size: 28rpx; width: 100%; box-sizing: border-box;" />
+      </view>
+    </view>
+  </theme-modal>
 
   <!-- Delete Confirmation Modal -->
   <theme-modal theme="{{theme}}" visible="{{showDeleteModal}}" title="确认删除" confirmText="删除" cancelText="取消" bind:confirm="onDeleteConfirm" bind:close="onDeleteCancel">
