@@ -5,7 +5,6 @@ Page({
     theme: {},
     statusBarHeight: 44,
     wechatId: '',
-    phone: '',
     loading: false,
     shakeAnimation: false,
     autoLoginLoading: true
@@ -54,14 +53,10 @@ Page({
     this.setData({ wechatId: e.detail.value })
   },
 
-  onPhoneInput(e) {
-    this.setData({ phone: e.detail.value })
-  },
-
   async onLogin() {
     const { wechatId } = this.data
     if (!wechatId || !wechatId.trim()) {
-      wx.showToast({ title: '请输入微信号', icon: 'none' })
+      wx.showToast({ title: '请输入用户名', icon: 'none' })
       this.shakeCard()
       return
     }

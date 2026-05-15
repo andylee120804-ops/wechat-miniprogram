@@ -44,8 +44,7 @@
             <view class="res-card-main">
               <view class="res-card-left">
                 <text class="res-card-room" style="color: {{theme.accentColor || '#C9A96E'}};">{{item.roomName || (item.room === 'big' ? '大包厢' : '小包厢')}}</text>
-                <text class="res-card-price" style="color: {{theme.textMuted || '#5C5C72'}};">¥{{item.standard || 300}}/人</text>
-                <text wx:if="{{item.dishPrice > 0}}" class="res-card-price" style="color: {{theme.textMuted || '#5C5C72'}}; margin-left: 12rpx;">菜价¥{{item.dishPrice}}</text>
+                <text class="res-card-price" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.dishPrice > 0 ? '菜价¥' + item.dishPrice : '¥' + (item.standard || 300) + '/人'}}</text>
               </view>
               <text class="res-card-customer" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{item.customerName}}</text>
             </view>
@@ -66,8 +65,7 @@
             <view class="res-card-main">
               <view class="res-card-left">
                 <text class="res-card-room" style="color: {{theme.accentColor || '#C9A96E'}};">{{item.roomName || (item.room === 'big' ? '大包厢' : '小包厢')}}</text>
-                <text class="res-card-price" style="color: {{theme.textMuted || '#5C5C72'}};">¥{{item.standard || 300}}/人</text>
-                <text wx:if="{{item.dishPrice > 0}}" class="res-card-price" style="color: {{theme.textMuted || '#5C5C72'}}; margin-left: 12rpx;">菜价¥{{item.dishPrice}}</text>
+                <text class="res-card-price" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.dishPrice > 0 ? '菜价¥' + item.dishPrice : '¥' + (item.standard || 300) + '/人'}}</text>
               </view>
               <text class="res-card-customer" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{item.customerName}}</text>
             </view>
@@ -99,8 +97,7 @@
             </view>
             <view class="tomorrow-right">
               <view class="tomorrow-room">{{item.roomName || (item.room === 'big' ? '大包厢' : '小包厢')}}</view>
-              <view class="tomorrow-price" style="color: {{theme.textMuted || '#5C5C72'}};">¥{{item.standard || 300}}/人</view>
-              <view wx:if="{{item.dishPrice > 0}}" class="tomorrow-price" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">菜价¥{{item.dishPrice}}</view>
+              <view class="tomorrow-price" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.dishPrice > 0 ? '菜价¥' + item.dishPrice : '¥' + (item.standard || 300) + '/人'}}</view>
             </view>
           </view>
           <view wx:if="{{tomorrowReservations.length > 3}}" class="tomorrow-more">

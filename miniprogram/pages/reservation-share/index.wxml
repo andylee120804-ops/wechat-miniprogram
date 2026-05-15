@@ -48,7 +48,7 @@
       <view class="detail-list">
         <view class="detail-item" wx:for="{{detailItems}}" wx:key="label">
           <view class="detail-label">
-            <text class="label-icon">{{item.icon}}</text>
+            <text class="label-icon {{item.iconClass}}">{{item.icon}}</text>
             <text class="label-text">{{item.label}}</text>
           </view>
           <text class="detail-value {{item.label === '备注' || item.label === '温馨提示' ? 'detail-value-remark' : ''}}">{{item.value}}</text>

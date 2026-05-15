@@ -324,21 +324,26 @@ Page({
       })
 
       // Fixed expenses: new format (monthlyAmount) scaled to period; old format (date) matched by range
+      // Calculate months in the period — month=1, year=computed from dates (handles YTD correctly)
       let periodMonths = 1
-      if (that.data.periodType === 'year') periodMonths = 12
-      else if (that.data.periodType === 'week') periodMonths = 0.23
+      if (that.data.periodType === 'year') {
+        const dStart = new Date(startDate + 'T00:00:00')
+        const dEnd = new Date(endDate + 'T23:59:59')
+        periodMonths = (dEnd - dStart) / (1000 * 60 * 60 * 24) / 30.4375
+      } else if (that.data.periodType === 'week') {
+        periodMonths = 7 / 30.4375
+      }
 
       const fixedByName = {}
 
       fixedExpenseData.forEach(function(item) {
         if (item.monthlyAmount) {
-          // New format: recurring item with monthly amount — check active period
-          // Only include if item is active during the selected period
-          if (item.startDate && item.startDate > endDate) return
-          if (item.endDate && item.endDate < startDate) return
-
+          // New format: recurring item with monthly amount — prorate by active period
           const monthlyVal = Number(item.monthlyAmount) || 0
-          const amount = monthlyVal * periodMonths
+          const proratedMonths = that.calcProratedMonths(item.startDate, item.endDate, startDate, endDate, periodMonths)
+          if (proratedMonths <= 0) return
+
+          const amount = monthlyVal * proratedMonths
           totalExpense += amount
           const name = item.name || '固定成本'
           fixedByName[name] = (fixedByName[name] || 0) + amount
@@ -351,12 +356,14 @@ Page({
         }
       })
 
-      // Calculate salary totals (respect hireDate and scale by periodMonths)
+      // Calculate salary totals (respect hireDate and prorate by active period)
       let totalSalary = 0
       staffData.forEach(function(item) {
         // Only include salary if staff was hired on or before the period end date
         if (item.hireDate && item.hireDate > endDate) return
-        totalSalary += (Number(item.salary) || 0) * periodMonths
+
+        const proratedMonths = that.calcProratedMonths(item.hireDate, null, startDate, endDate, periodMonths)
+        totalSalary += (Number(item.salary) || 0) * proratedMonths
       })
 
       let totalExpenseAll = totalPurchase + totalExpense + totalSalary
@@ -512,5 +519,36 @@ Page({
 
   onBack: function() {
     wx.navigateBack()
+  },
+
+  // ==================== Proration Helpers ====================
+
+  /**
+   * Calculate prorated months multiplier based on the overlap between
+   * an item's active period and the report period.
+   * Handles mid-period start/end dates for accurate expense allocation.
+   * @param {string|null} itemStart - Item start date (YYYY-MM-DD) or null
+   * @param {string|null} itemEnd - Item end date (YYYY-MM-DD) or null
+   * @param {string} periodStart - Report period start (YYYY-MM-DD)
+   * @param {string} periodEnd - Report period end (YYYY-MM-DD)
+   * @param {number} periodMonths - Number of months in the period (computed from date range)
+   * @returns {number} Prorated months multiplier (0 if no overlap)
+   */
+  calcProratedMonths: function(itemStart, itemEnd, periodStart, periodEnd, periodMonths) {
+    const pStart = new Date(periodStart + 'T00:00:00')
+    const pEnd = new Date(periodEnd + 'T23:59:59')
+
+    const start = itemStart ? new Date(itemStart + 'T00:00:00') : pStart
+    const end = itemEnd ? new Date(itemEnd + 'T23:59:59') : pEnd
+
+    const activeStart = start > pStart ? start : pStart
+    const activeEnd = end < pEnd ? end : pEnd
+
+    if (activeStart >= activeEnd) return 0
+
+    const totalDays = (pEnd - pStart) / (1000 * 60 * 60 * 24)
+    const activeDays = (activeEnd - activeStart) / (1000 * 60 * 60 * 24)
+
+    return periodMonths * (activeDays / totalDays)
   }
 })

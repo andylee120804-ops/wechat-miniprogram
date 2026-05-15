@@ -28,7 +28,7 @@ Page({
     detailItems: [],
     templateConfig: {
       business: {
-        headerEmojis: ['🏛️'],
+        headerEmojis: ['❤️'],
         fieldEmojis: ['📋', '⌚', '🏠', '👔', '📝', '💌']
       },
       friend: {
@@ -77,19 +77,23 @@ Page({
       const template = validTemplates.includes(sc.template) ? sc.template : 'business'
       const templateData = this.data.templateConfig[template]
 
-      const EMOJI_FALLBACKS = ['📅', '🕐', '🚪', '👥', '📝', '💌']
+      const EMOJI_FALLBACKS = ['📅', '🕐', '🚪', '👔', '📝', '💌']
       const detailItems = [
         { icon: templateData.fieldEmojis[0] || EMOJI_FALLBACKS[0], label: '日期', value: formatDate(r.date) },
         { icon: templateData.fieldEmojis[1] || EMOJI_FALLBACKS[1], label: '时段', value: r.time || '' },
-        { icon: templateData.fieldEmojis[2] || EMOJI_FALLBACKS[2], label: '包厢', value: roomName },
+        { icon: templateData.fieldEmojis[2] || EMOJI_FALLBACKS[2], label: '包厢', value: roomName, iconClass: 'label-icon-accent' },
         { icon: templateData.fieldEmojis[3] || EMOJI_FALLBACKS[3], label: '人数', value: (r.guestCount || '') + '人' }
       ]
       // 客人看到的「温馨提示」：只有 sc.shareRemark（员工在弹窗里填写的）才显示
       if (sc.shareRemark) detailItems.push({ icon: templateData.fieldEmojis[5] || EMOJI_FALLBACKS[5], label: '温馨提示', value: sc.shareRemark })
 
+      // 根据模板生成默认标题
+      const defaultTitle = template === 'friend'
+        ? '朋友们，不见不散！'
+        : (r.customerName || '预约') + ' · 预定信息'
       this.setData({
         loading: false,
-        shareTitle: sc.shareTitle || (r.customerName || '预约') + ' · 预定信息',
+        shareTitle: sc.shareTitle || defaultTitle,
         shareRemark: sc.shareRemark || '',
         customerName: r.customerName || '',
         phone: r.phone || '',

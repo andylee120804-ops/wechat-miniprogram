@@ -25,6 +25,10 @@ class ReservationDetailPage extends BasePage {
     return this.getData('showShareModal')
   }
 
+  async getSelectedTemplate() {
+    return this.getData('selectedTemplate')
+  }
+
   async isLoading() {
     return this.getData('loading')
   }
@@ -63,6 +67,10 @@ class ReservationDetailPage extends BasePage {
 
   async setShareRemark(remark) {
     return this.setData({ shareRemark: remark })
+  }
+
+  async selectTemplate(templateId) {
+    return this.callMethod('onTemplateSelect', { currentTarget: { dataset: { id: templateId } } })
   }
 
   async _buildShareConfig() {

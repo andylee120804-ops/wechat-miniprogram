@@ -39,6 +39,10 @@ class ReservationAddPage extends BasePage {
     return this.getData('customerName')
   }
 
+  async getDishPrice() {
+    return this.getData('dishPrice')
+  }
+
   async getBossList() {
     return this.getData('bossList')
   }
@@ -87,6 +91,10 @@ class ReservationAddPage extends BasePage {
 
   async setRoom(room) {
     return this.setData({ room: room })
+  }
+
+  async setDishPrice(val) {
+    return this.setData({ dishPrice: String(val) })
   }
 
   async submit() {

@@ -182,7 +182,13 @@ Page({
   },
 
   onTemplateSelect(e) {
-    this.setData({ selectedTemplate: e.currentTarget.dataset.id })
+    const template = e.currentTarget.dataset.id
+    const r = this.data.reservation
+    const customerName = (r && r.customerName) || '预约'
+    const title = template === 'friend'
+      ? '朋友们，不见不散！'
+      : customerName + ' · 预定信息'
+    this.setData({ selectedTemplate: template, shareTitle: title })
   },
 
   _buildShareConfig() {

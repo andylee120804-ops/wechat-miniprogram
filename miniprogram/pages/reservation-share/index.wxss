@@ -139,6 +139,11 @@
   font-size: 28rpx;
   color: #B0A89A;
 }
+.label-icon-accent {
+  display: inline-block;
+  -webkit-filter: sepia(1) saturate(4) hue-rotate(-8deg) brightness(1.1);
+  filter: sepia(1) saturate(4) hue-rotate(-8deg) brightness(1.1);
+}
 .detail-value {
   font-size: 28rpx;
   color: #2D2D3A;
@@ -330,4 +335,9 @@
 }
 .friend .footer-text {
   color: #B0CCF0;
+}
+.friend .label-icon-accent {
+  display: inline-block;
+  -webkit-filter: sepia(1) saturate(3) hue-rotate(190deg) brightness(1.1) saturate(1.5);
+  filter: sepia(1) saturate(3) hue-rotate(190deg) brightness(1.1) saturate(1.5);
 }

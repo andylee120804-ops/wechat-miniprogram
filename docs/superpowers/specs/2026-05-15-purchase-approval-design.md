@@ -248,3 +248,57 @@ ACTIONS.REIMBURSE = 'reimburse'
 ## 8. 数据迁移
 
 对现有 `purchase` 集合中的旧记录（无 `status` 字段）做向前兼容：读取时若 `status` 字段缺失，前端视为 `reimbursed`。无需批量写入迁移脚本，按需渐进。
+
+## 9. E2E 测试
+
+### 9.1 运行环境
+
+- 微信开发者工具需打开项目并启用「服务端口」（设置 → 安全 → 服务端口 9420）
+- 云函数需在开发者工具中上传部署（sendMessage、autoSyncReservation）
+
+### 9.2 运行命令
+
+```bash
+# 进入项目目录
+cd C:\Users\Andy\miniprograme
+
+# 安装依赖（首次）
+npm install
+
+# 运行审批流程专项测试
+npm run test:e2e:purchase-approval
+
+# 运行全部 E2E 测试
+npm run test:e2e
+```
+
+### 9.3 测试账号
+
+| 角色 | wechatId | 用途 |
+|------|----------|------|
+| boss | david | 审批采购申请 |
+| admin | boss | 管理审批设置 |
+| purchase | sun | 提交采购申请 |
+
+### 9.4 测试覆盖
+
+| Test Suite | 验证内容 |
+|------------|---------|
+| Settings | 审批设置页加载、全局开关、10 类目 toggle、金额门槛、员工 picker |
+| Purchase Add | 采购新增页加载、approverName 字段、分类列表 |
+| Purchase List | 列表加载、approvalStatusName 字段、金额仅统计 reimbursed |
+| Purchase Detail | 状态字段、canApprove/canReimburse/isApprover 标志、approvalLogs |
+| Todo Page | pendingApprovals + pendingReimbursements 列表、格式化字段 |
+| Dashboard Todo | showTodo 标志、pendingApprovalCount/pendingReimburseCount |
+| Self-Approval | 防身审批 guard 存在 |
+
+### 9.5 手动集成测试流程
+
+测试账号：**张三 = sun (purchase)**，**李四 = david (boss)**
+
+1. 打开审批设置 → 开启全局开关 → 勾选「设备」类目 → 保存
+2. 以 sun 身份登录 → 新增「设备」采购 → 应进入 pending 状态
+3. 以 david 身份登录 → 首页待办出现 → 进入详情 → 点「通过」
+4. 记录变为 approved → david 点「确认报销」→ 变为 reimbursed
+5. 新增「肉类」采购（未勾选审批）→ 应直接 approved
+6. david 提交采购后尝试自己审批 → 应被阻止（防身审批）

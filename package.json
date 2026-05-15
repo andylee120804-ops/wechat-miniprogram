@@ -4,14 +4,25 @@
   "private": true,
   "description": "听澜轩小程序 E2E 测试",
   "scripts": {
-    "test:e2e": "jest --config jest.config.js",
+    "test": "jest --config jest.config.js",
+    "test:unit": "jest --config tests/unit/jest.config.js",
+    "test:unit:helpers": "jest --config tests/unit/jest.config.js helpers",
+    "test:unit:validators": "jest --config tests/unit/jest.config.js validators",
+    "test:unit:cache": "jest --config tests/unit/jest.config.js cache",
+    "test:unit:permission": "jest --config tests/unit/jest.config.js permission",
+    "test:unit:error-handler": "jest --config tests/unit/jest.config.js error-handler",
+    "test:unit:logger": "jest --config tests/unit/jest.config.js logger",
+    "test:unit:db": "jest --config tests/unit/jest.config.js db",
+    "test:e2e": "jest --config jest.config.js --testPathPattern=e2e",
     "test:e2e:login": "jest --config jest.config.js --testPathPattern=login",
     "test:e2e:home": "jest --config jest.config.js --testPathPattern=home",
     "test:e2e:reservation": "jest --config jest.config.js --testPathPattern=reservation",
     "test:e2e:purchase": "jest --config jest.config.js --testPathPattern=purchase",
     "test:e2e:income": "jest --config jest.config.js --testPathPattern=income",
     "test:e2e:consistency": "jest --config jest.config.js --testPathPattern=consistency",
-    "test:e2e:purchase-approval": "jest --config jest.config.js --testPathPattern=purchase-approval"
+    "test:e2e:purchase-approval": "jest --config jest.config.js --testPathPattern=purchase-approval",
+    "test:e2e:dish-price": "jest --config jest.config.js --testPathPattern=dish-price",
+    "test:e2e:service-fee": "jest --config jest.config.js --testPathPattern=service-fee"
   },
   "devDependencies": {
     "miniprogram-automator": "^0.12.1",

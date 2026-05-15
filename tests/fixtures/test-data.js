@@ -10,6 +10,7 @@ const TEST_ACCOUNTS = {
   admin: { wechatId: 'boss', expectedRole: 'admin' },
   boss: { wechatId: 'david', expectedRole: 'boss' },
   boss2: { wechatId: 'fanmk', expectedRole: 'boss' },
+  purchase: { wechatId: 'sun', expectedRole: 'purchase' },
 }
 
 const PAGES = {

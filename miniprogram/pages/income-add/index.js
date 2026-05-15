@@ -54,7 +54,10 @@ Page({
       const res = await db.queryAll(COLLECTIONS.SETTINGS, {})
       const settings = res.data || []
       const data = {}
+      const seenKey = new Set()
       settings.forEach(function(s) {
+        if (seenKey.has(s.key)) return
+        seenKey.add(s.key)
         if (s.key === 'serviceChargeEnabled') data.serviceChargeEnabled = !!s.value
         if (s.key === 'serviceChargeEnabledDate') data.serviceChargeEnabledDate = String(s.value || '')
         if (s.key === 'serviceChargeNoon') data.serviceChargeNoon = Number(s.value) || 0
@@ -132,9 +135,22 @@ Page({
 
       const allReservations = results.data || []
       const currentReservationId = that.data.reservationId
+      // Query income collection directly to find which reservations are already linked
+      const allIds = allReservations.map(function(r) { return r._id })
+      let linkedIds = new Set()
+      if (allIds.length > 0) {
+        try {
+          const incomeRes = await db.queryAll(COLLECTIONS.INCOME, {
+            reservationId: _.in(allIds)
+          })
+          ;(incomeRes.data || []).forEach(function(i) { linkedIds.add(i.reservationId) })
+        } catch (e) {
+          console.warn('[IncomeAdd] 查询关联收入失败:', e)
+        }
+      }
       // Filter out reservations linked to other income records, but keep the current one
       const available = allReservations.filter(function(r) {
-        return r.hasIncome !== true || r._id === currentReservationId
+        return !linkedIds.has(r._id) || r._id === currentReservationId
       })
 
       // Sort by date descending

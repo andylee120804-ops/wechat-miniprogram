@@ -41,7 +41,10 @@ Page({
       const res = await db.queryAll(COLLECTIONS.SETTINGS, {})
       const settings = res.data || []
       const data = {}
+      const seenKey = new Set()
       settings.forEach(s => {
+        if (seenKey.has(s.key)) return
+        seenKey.add(s.key)
         if (s.key === 'min_amount_room') data.min_room = String(s.value || '')
         if (s.key === 'min_amount_noon') data.min_noon = String(s.value || '')
         if (s.key === 'min_amount_night') data.min_night = String(s.value || '')
@@ -111,6 +114,10 @@ Page({
         const existing = await db.queryAll(COLLECTIONS.SETTINGS, { key: item.key })
         if (existing.data && existing.data.length > 0) {
           await db.updateDoc(COLLECTIONS.SETTINGS, existing.data[0]._id, { value: item.value })
+          // 清理重复文档，防止旧值覆盖新值
+          for (let i = 1; i < existing.data.length; i++) {
+            await db.deleteDoc(COLLECTIONS.SETTINGS, existing.data[i]._id)
+          }
         } else {
           await db.addDoc(COLLECTIONS.SETTINGS, { key: item.key, value: item.value })
         }

@@ -336,7 +336,7 @@ Page({
       // Load service charge settings
       const settingsRes = await db.queryAll(COLLECTIONS.SETTINGS, {})
       const settings = {}
-      ;(settingsRes.data || []).forEach(s => { settings[s.key] = s.value })
+      ;(settingsRes.data || []).forEach(s => { if (!(s.key in settings)) settings[s.key] = s.value })
       const charge = time === '中午'
         ? (Number(settings.serviceChargeNoon) || 0)
         : (Number(settings.serviceChargeNight) || 0)

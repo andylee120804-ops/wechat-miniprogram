@@ -12,7 +12,7 @@ exports.main = async (event, context) => {
     // 1. Load settings
     const settingsRes = await db.collection('settings').get()
     const settings = {}
-    ;(settingsRes.data || []).forEach(s => { settings[s.key] = s.value })
+    ;(settingsRes.data || []).forEach(s => { if (!(s.key in settings)) settings[s.key] = s.value })
 
     if (!settings.serviceChargeEnabled) {
       console.log('[autoSync] 服务费模式未开启，跳过')

@@ -68,7 +68,7 @@ Page({
     try {
       const res = await db.queryAll(COLLECTIONS.SETTINGS, {})
       const settings = {}
-      ;(res.data || []).forEach(s => { settings[s.key] = s.value })
+      ;(res.data || []).forEach(s => { if (!(s.key in settings)) settings[s.key] = s.value })
       if (settings.serviceChargeEnabled && settings.serviceChargeEnabledDate) {
         this.setData({ category: 'banquet' })
         this.loadAvailableReservations()
@@ -117,13 +117,23 @@ Page({
         status: 'confirmed'
       })
       const allReservations = resvRes.data || []
-      const available = []
-      for (const r of allReservations) {
-        const linked = await db.queryAll(COLLECTIONS.PURCHASE, {
-          sourceReservationId: r._id, category: 'banquet'
-        })
-        if (!linked.data || linked.data.length === 0) available.push(r)
+      // Single query: find all linked banquet purchases for these reservations
+      const allIds = allReservations.map(function(r) { return r._id })
+      let linkedIds = new Set()
+      if (allIds.length > 0) {
+        try {
+          const linkedRes = await db.queryAll(COLLECTIONS.PURCHASE, {
+            sourceReservationId: _.in(allIds),
+            category: 'banquet'
+          })
+          ;(linkedRes.data || []).forEach(function(p) { linkedIds.add(p.sourceReservationId) })
+        } catch (e) {
+          console.warn('[purchase-add] 查询关联采购失败:', e)
+        }
       }
+      const available = allReservations.filter(function(r) {
+        return !linkedIds.has(r._id)
+      })
       available.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       const items = available.map(r =>
         formatDate(r.date) + ' ' + (r.customerName || '') + ' ' + (r.time || '') + ' ' + (r.roomName || '')

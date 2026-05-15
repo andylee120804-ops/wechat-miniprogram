@@ -23,16 +23,11 @@
   <glass-card theme="{{theme}}" blur="24" opacity="0.08" padding="32rpx 36rpx" class="login-card {{shakeAnimation ? 'shake' : ''}}" style="width: 100%; box-sizing: border-box;">
     <view class="login-form">
       <view class="form-title" style="color: {{theme.textPrimary || '#F0F0F5'}};">欢迎回家</view>
-      <view class="form-subtitle" style="color: {{theme.textMuted || '#5C5C72'}};">请输入您的微信号登录</view>
+      <view class="form-subtitle" style="color: {{theme.textMuted || '#5C5C72'}};">请输入您的用户名登录</view>
 
       <view class="input-group" style="border-bottom: 2rpx solid {{theme.border || 'rgba(255,255,255,0.1)'}};">
-        <text class="input-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">微信号</text>
-        <input class="login-input" placeholder="请输入微信号" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" value="{{wechatId}}" bindinput="onWechatIdInput" confirm-type="done" style="color: {{theme.textPrimary || '#F0F0F5'}};" />
-      </view>
-
-      <view class="input-group" style="border-bottom: 2rpx solid {{theme.border || 'rgba(255,255,255,0.1)'}};">
-        <text class="input-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">手机号(选填)</text>
-        <input class="login-input" type="number" placeholder="请输入手机号" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" value="{{phone}}" bindinput="onPhoneInput" maxlength="11" style="color: {{theme.textPrimary || '#F0F0F5'}};" />
+        <text class="input-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">用户名</text>
+        <input class="login-input" placeholder="请输入用户名" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" value="{{wechatId}}" bindinput="onWechatIdInput" confirm-type="done" style="color: {{theme.textPrimary || '#F0F0F5'}};" />
       </view>
 
       <view class="login-btn-wrap">
