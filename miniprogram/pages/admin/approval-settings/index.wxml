@@ -1,0 +1,75 @@
+<view class="page" style="background: {{theme.surfaceColor || '#1A1A2E'}};">
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">
+    <view class="nav-bar-content">
+      <view class="nav-back" bindtap="onBack"><text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}};">❮</text></view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">采购审批设置</text>
+      <view class="nav-action"></view>
+    </view>
+  </view>
+
+  <view class="page-content" wx:if="{{!loading}}">
+    <view class="settings-section">
+      <view class="section-title" style="color: {{theme.accentColor || '#C9A96E'}};">全局设置</view>
+      <view class="setting-row" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+        <text style="color: {{theme.textPrimary || '#F5F0E8'}};">启用审批流程</text>
+        <switch checked="{{enabled}}" bindchange="onToggleEnabled" color="{{theme.accentColor || '#C9A96E'}}" />
+      </view>
+    </view>
+
+    <view class="settings-section">
+      <view class="section-title" style="color: {{theme.accentColor || '#C9A96E'}};">需要审批的采购类目</view>
+      <view class="category-grid">
+        <view class="category-item" wx:for="{{['meat','seafood','vegetable','fruit','drink','seasoning','supplies','equipment','banquet','other']}}" wx:key="*this"
+          data-key="{{item}}" bindtap="onCategoryToggle"
+          style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{categories[item] ? (theme.accentColor || '#C9A96E') : (theme.borderColor || 'rgba(255,255,255,0.10)')}};">
+          <text style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item === 'meat' ? '肉类' : item === 'seafood' ? '海鲜' : item === 'vegetable' ? '蔬菜' : item === 'fruit' ? '水果' : item === 'drink' ? '饮品' : item === 'seasoning' ? '调味品' : item === 'supplies' ? '日用品' : item === 'equipment' ? '设备' : item === 'banquet' ? '宴会菜价' : '其他'}}</text>
+          <view wx:if="{{categories[item]}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 30rpx;">✓</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="settings-section">
+      <view class="section-title" style="color: {{theme.accentColor || '#C9A96E'}};">金额门槛</view>
+      <view class="setting-row" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+        <text style="color: {{theme.textPrimary || '#F5F0E8'}};">超过此金额需审批</text>
+        <view class="threshold-input-wrap">
+          <input class="threshold-input" type="digit" value="{{amountThreshold || ''}}" placeholder="0" bindinput="onThresholdInput" style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}};">元</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="settings-section">
+      <view class="section-title" style="color: {{theme.accentColor || '#C9A96E'}};">默认审批人</view>
+      <view class="setting-row" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+        <text style="color: {{theme.textPrimary || '#F5F0E8'}};">审批人</text>
+        <picker value="{{approverIndex}}" range="{{approverList}}" range-key="name" bindchange="onApproverChange">
+          <text style="color: {{approverIndex >= 0 ? (theme.textPrimary || '#F5F0E8') : (theme.textMuted || '#5C5C72')}};">{{approverIndex >= 0 ? approverList[approverIndex].name : '请选择'}}</text>
+        </picker>
+      </view>
+    </view>
+
+    <view class="settings-section">
+      <view class="section-title" style="color: {{theme.accentColor || '#C9A96E'}};">默认报销人</view>
+      <view class="setting-row" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+        <text style="color: {{theme.textPrimary || '#F5F0E8'}};">报销确认人</text>
+        <picker value="{{reimburserIndex}}" range="{{reimburserList}}" range-key="name" bindchange="onReimburserChange">
+          <text style="color: {{reimburserIndex >= 0 ? (theme.textPrimary || '#F5F0E8') : (theme.textMuted || '#5C5C72')}};">{{reimburserIndex >= 0 ? reimburserList[reimburserIndex].name : '请选择'}}</text>
+        </picker>
+      </view>
+    </view>
+
+    <view class="save-section" style="padding-bottom: env(safe-area-inset-bottom);">
+      <view class="save-btn {{saving ? 'saving' : ''}}" bindtap="onSave"
+        style="background: {{theme.gradientButton || 'linear-gradient(135deg, #C9A96E 0%, #D4B87A 100%)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
+        <text style="color: {{theme.textInverse || '#0F0F1A'}};">{{saving ? '保存中...' : '保存设置'}}</text>
+      </view>
+    </view>
+
+    <view style="height: 60rpx;"></view>
+  </view>
+
+  <view wx:if="{{loading}}" style="display: flex; justify-content: center; padding-top: 400rpx;">
+    <text style="color: {{theme.textMuted || '#5C5C72'}};">加载中...</text>
+  </view>
+</view>

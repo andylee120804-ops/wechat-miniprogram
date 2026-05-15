@@ -1,0 +1,28 @@
+@import '../../../styles/mixins.wxss';
+
+.page { min-height: 100vh; }
+
+.nav-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+.nav-bar-content { display: flex; align-items: center; justify-content: space-between; height: 88rpx; padding: 0 24rpx; }
+.nav-back { width: 64rpx; height: 64rpx; display: flex; align-items: center; justify-content: center; }
+.nav-back-icon { font-size: 44rpx; font-weight: 300; }
+.nav-title { font-size: 34rpx; font-weight: 600; }
+.nav-action { min-width: 64rpx; }
+
+.page-content { padding-top: calc(env(safe-area-inset-top, 44px) + 88rpx + 20rpx); padding-left: 32rpx; padding-right: 32rpx; }
+
+.settings-section { margin-top: 28rpx; }
+.section-title { font-size: 26rpx; font-weight: 600; margin-bottom: 12rpx; padding-left: 4rpx; }
+
+.setting-row { display: flex; justify-content: space-between; align-items: center; padding: 24rpx 28rpx; border-radius: 16rpx; }
+
+.category-grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
+.category-item { display: flex; justify-content: space-between; align-items: center; padding: 18rpx 24rpx; border-radius: 14rpx; flex: 0 0 calc(50% - 8rpx); box-sizing: border-box; font-size: 28rpx; }
+
+.threshold-input-wrap { display: flex; align-items: center; gap: 8rpx; }
+.threshold-input { width: 120rpx; text-align: right; font-size: 28rpx; }
+
+.save-section { margin-top: 48rpx; padding-bottom: 40rpx; }
+.save-btn { padding: 28rpx; border-radius: 20rpx; text-align: center; }
+.save-btn.saving { opacity: 0.6; }
+.save-btn:active { transform: scale(0.97); opacity: 0.9; }
