@@ -54,6 +54,22 @@ class PurchasePage extends BasePage {
   async navigateNextMonth() {
     await this.callMethod('onMonthNext')
   }
+
+  // --- Approval status ---
+
+  async getFirstPurchase() {
+    var purchases = await this.getFilteredPurchases()
+    return purchases && purchases.length > 0 ? purchases[0] : null
+  }
+
+  async getFirstPurchaseStatus() {
+    var p = await this.getFirstPurchase()
+    return p ? (p.status || 'reimbursed') : null
+  }
+
+  async getTotalAmount() {
+    return this.getData('totalAmount')
+  }
 }
 
 module.exports = PurchasePage

@@ -27,6 +27,8 @@ const PAGES = {
   announcements: 'pages/announcements/index',
   announcementDetail: 'pages/announcement-detail/index',
   venueSettings: 'pages/admin/venue-settings/index',
+  approvalSettings: 'pages/admin/approval-settings/index',
+  todo: 'pages/todo/index',
   reservationDetail: 'pages/reservation-detail/index',
 }
 

@@ -10,7 +10,8 @@
     "test:e2e:reservation": "jest --config jest.config.js --testPathPattern=reservation",
     "test:e2e:purchase": "jest --config jest.config.js --testPathPattern=purchase",
     "test:e2e:income": "jest --config jest.config.js --testPathPattern=income",
-    "test:e2e:consistency": "jest --config jest.config.js --testPathPattern=consistency"
+    "test:e2e:consistency": "jest --config jest.config.js --testPathPattern=consistency",
+    "test:e2e:purchase-approval": "jest --config jest.config.js --testPathPattern=purchase-approval"
   },
   "devDependencies": {
     "miniprogram-automator": "^0.12.1",
