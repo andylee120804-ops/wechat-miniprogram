@@ -10,6 +10,7 @@ Page({
     userInfo: null,
     roleName: '',
     managementGroup: [],
+    todoGroup: [],
     featureGroup: [],
     settingsGroup: []
   },
@@ -34,6 +35,7 @@ Page({
 
   buildMenuGroups() {
     const managementGroup = []
+    const todoGroup = []
     const featureGroup = []
     const settingsGroup = []
 
@@ -69,8 +71,13 @@ Page({
     }
     settingsGroup.push({ key: 'about', icon: 'ℹ️', text: '关于' })
 
+    if (hasPermission('purchase', ACTIONS.APPROVE) || hasPermission('purchase', ACTIONS.REIMBURSE)) {
+      todoGroup.push({ key: 'todo', icon: '📋', text: '我的待办' })
+    }
+
     this.setData({
       managementGroup,
+      todoGroup,
       featureGroup,
       settingsGroup
     })
@@ -90,6 +97,7 @@ Page({
       fixedExpense: '/pages/admin/expense/index',
       logs: '/pages/admin/logs/index',
       venueSettings: '/pages/admin/venue-settings/index',
+      todo: '/pages/todo/index',
       about: ''
     }
 
