@@ -21,7 +21,8 @@ const COLLECTIONS = {
   ANNOUNCEMENT: 'announcement',
   NOTIFICATION_LOG: 'notification_log',
   SETTINGS: 'settings',
-  PERMISSIONS: 'permissions'
+  PERMISSIONS: 'permissions',
+  APPROVAL_LOG: 'purchase_approval_log'
 }
 
 /**

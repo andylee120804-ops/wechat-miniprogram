@@ -8,7 +8,9 @@ const ACTIONS = {
   VIEW: 'view',
   ADD: 'add',
   EDIT: 'edit',
-  DELETE: 'delete'
+  DELETE: 'delete',
+  APPROVE: 'approve',
+  REIMBURSE: 'reimburse'
 }
 
 // Modules that only admin can access; boss is excluded

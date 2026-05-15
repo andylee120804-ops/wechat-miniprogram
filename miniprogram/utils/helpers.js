@@ -297,6 +297,36 @@ function isLate(clockInTime, threshold) {
   return clockInMinutes > thresholdTotalMinutes
 }
 
+/**
+ * Get display name for approval status
+ * @param {string} status - pending / approved / rejected / reimbursed
+ * @returns {string}
+ */
+function getApprovalStatusName(status) {
+  var map = {
+    pending: '待审批',
+    approved: '已批准',
+    rejected: '已拒绝',
+    reimbursed: '已报销'
+  }
+  return map[status] || status || ''
+}
+
+/**
+ * Get theme color for approval status
+ * @param {string} status - pending / approved / rejected / reimbursed
+ * @returns {string} hex color
+ */
+function getApprovalStatusColor(status) {
+  var map = {
+    pending: '#FBBF24',
+    approved: '#4ADE80',
+    rejected: '#F87171',
+    reimbursed: '#9CA3AF'
+  }
+  return map[status] || '#9CA3AF'
+}
+
 // ==================== Exports ====================
 
 module.exports = {
@@ -316,5 +346,7 @@ module.exports = {
   getRoomName,
   getExclusiveTypeName,
   calcWorkDuration,
-  isLate
+  isLate,
+  getApprovalStatusName,
+  getApprovalStatusColor
 }
