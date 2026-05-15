@@ -263,18 +263,20 @@ Page({
       if (rulesRes.result && rulesRes.result.success && rulesRes.result.data) {
         var rules = rulesRes.result.data
         var needApproval = false
-        // 检查分类是否在审批范围内
-        if (rules.categories && rules.categories.indexOf(data.category) >= 0) {
-          needApproval = true
-        }
-        // 检查金额是否超过阈值
-        if (rules.amountThreshold && data.amount > Number(rules.amountThreshold)) {
-          needApproval = true
+        if (rules.enabled !== false) {
+          // 检查分类是否在审批范围内
+          if (rules.categories && rules.categories[data.category] === true) {
+            needApproval = true
+          }
+          // 检查金额是否超过阈值
+          if (!needApproval && rules.amountThreshold && data.amount > Number(rules.amountThreshold)) {
+            needApproval = true
+          }
         }
         if (needApproval) {
           data.status = 'pending'
-          data.approverId = rules.approverId || rules.defaultApproverId || ''
-          data.approverName = rules.approverName || rules.defaultApproverName || ''
+          data.approverId = rules.defaultApproverId || ''
+          data.approverName = rules.defaultApproverName || ''
         }
       }
     } catch (e) {
