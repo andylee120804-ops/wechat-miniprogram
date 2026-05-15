@@ -62,6 +62,10 @@ Page({
     if (hasPermission('expense', ACTIONS.VIEW)) {
       managementGroup.push({ key: 'fixedExpense', icon: '🏠', text: '固定成本' })
     }
+    // Approval settings — users with purchase edit permission
+    if (hasPermission('purchase', ACTIONS.EDIT)) {
+      managementGroup.push({ key: 'approvalSettings', icon: '✅', text: '采购审批设置' })
+    }
     // Admin-only settings
     if (hasPermission('minAmount', ACTIONS.VIEW)) {
       managementGroup.push({ key: 'minAmount', icon: '💰', text: '收费设置' })
@@ -97,6 +101,7 @@ Page({
       fixedExpense: '/pages/admin/expense/index',
       logs: '/pages/admin/logs/index',
       venueSettings: '/pages/admin/venue-settings/index',
+      approvalSettings: '/pages/admin/approval-settings/index',
       todo: '/pages/todo/index',
       about: ''
     }
