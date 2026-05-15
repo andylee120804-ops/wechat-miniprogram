@@ -69,6 +69,10 @@ exports.main = async (event, context) => {
         return await updateSettings(event)
       case 'resolveCreator':
         return await resolveCreator(event)
+      case 'getApprovalSettings':
+        return await getApprovalSettings(event)
+      case 'updateApprovalSettings':
+        return await updateApprovalSettings(event)
       default:
         return { success: false, message: '未知操作' }
     }
@@ -314,6 +318,61 @@ async function updateSettings(event) {
     await db.collection('settings').doc(existing.data[0]._id).update({ data: updateData })
   } else {
     updateData.key = 'venue_info'
+    updateData.createdAt = db.serverDate()
+    await db.collection('settings').add({ data: updateData })
+  }
+
+  return { success: true }
+}
+
+async function getApprovalSettings(event) {
+  var result = await db.collection('settings').where({ key: 'approval_rules' }).get()
+  var data = result.data && result.data.length > 0 ? result.data[0] : {}
+
+  return {
+    success: true,
+    data: {
+      enabled: data.enabled !== undefined ? data.enabled : true,
+      categories: data.categories || {},
+      amountThreshold: data.amountThreshold || 0,
+      defaultApproverId: data.defaultApproverId || '',
+      defaultApproverName: data.defaultApproverName || '',
+      defaultReimburserId: data.defaultReimburserId || '',
+      defaultReimburserName: data.defaultReimburserName || ''
+    }
+  }
+}
+
+async function updateApprovalSettings(event) {
+  var { OPENID } = cloud.getWXContext()
+  var { approvalRules, callerWechatId } = event
+
+  if (!approvalRules) {
+    return { success: false, message: '缺少审批设置数据' }
+  }
+
+  // Verify caller — must have purchase edit permission
+  var staff = await findStaffByCaller(OPENID, callerWechatId)
+  if (!staff || !(await hasPermission(staff, 'purchase', 'edit'))) {
+    return { success: false, message: '无权限修改审批设置' }
+  }
+
+  var updateData = {
+    enabled: !!approvalRules.enabled,
+    categories: approvalRules.categories || {},
+    amountThreshold: Number(approvalRules.amountThreshold) || 0,
+    defaultApproverId: approvalRules.defaultApproverId || '',
+    defaultApproverName: approvalRules.defaultApproverName || '',
+    defaultReimburserId: approvalRules.defaultReimburserId || '',
+    defaultReimburserName: approvalRules.defaultReimburserName || '',
+    updatedAt: db.serverDate()
+  }
+
+  var existing = await db.collection('settings').where({ key: 'approval_rules' }).get()
+  if (existing.data && existing.data.length > 0) {
+    await db.collection('settings').doc(existing.data[0]._id).update({ data: updateData })
+  } else {
+    updateData.key = 'approval_rules'
     updateData.createdAt = db.serverDate()
     await db.collection('settings').add({ data: updateData })
   }
