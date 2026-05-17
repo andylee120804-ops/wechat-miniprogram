@@ -415,6 +415,46 @@ Page({
         return
       }
       db.addDoc(COLLECTIONS.PURCHASE, data).then(function(result) {
+        // Re-upload receipt images with proper cloudPath using purchaseId
+        var purchaseId = result._id
+        var receiptImages = that.data.receiptImages
+        if (receiptImages.length > 0) {
+          var reuploadPromises = receiptImages.map(function(img, idx) {
+            return new Promise(function(resolve) {
+              wx.cloud.downloadFile({
+                fileID: img.fileID,
+                success: function(dlRes) {
+                  var newCloudPath = 'purchase-receipts/' + purchaseId + '_' + Date.now() + '_' + idx + '.jpg'
+                  wx.cloud.uploadFile({
+                    cloudPath: newCloudPath,
+                    filePath: dlRes.tempFilePath,
+                    success: function(uploadRes) {
+                      wx.cloud.deleteFile({ fileList: [img.fileID] }).catch(function() {})
+                      resolve({
+                        fileID: uploadRes.fileID,
+                        uploadedAt: img.uploadedAt,
+                        uploadedBy: img.uploadedBy
+                      })
+                    },
+                    fail: function() {
+                      resolve(img)
+                    }
+                  })
+                },
+                fail: function() {
+                  resolve(img)
+                }
+              })
+            })
+          })
+
+          Promise.all(reuploadPromises).then(function(finalImages) {
+            db.updateDoc(COLLECTIONS.PURCHASE, purchaseId, { receiptImages: finalImages }).catch(function(e) {
+              console.warn('更新单据图片路径失败:', e)
+            })
+          })
+        }
+
         wx.hideLoading()
         log(LOG_TYPES.PURCHASE_CREATE, '新增采购: ' + data.item, { amount: data.amount, category: data.category })
 
