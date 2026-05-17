@@ -27,6 +27,9 @@ Page({
     selectedReservation: null,
     sourceReservationId: '',
     approverName: '',
+    receiptImages: [],
+    uploadingReceipt: false,
+    pendingDeleteFileIDs: [],
     categoryOptions: [
       { value: 'banquet', label: '宴会菜价' },
       { value: 'meat', label: '肉类' },
@@ -174,7 +177,8 @@ Page({
         amount: data.amount !== undefined ? String(data.amount) : '',
         category: data.category || 'meat',
         date: data.date || formatDate(new Date()),
-        remark: data.remark || ''
+        remark: data.remark || '',
+        receiptImages: data.receiptImages || []
       })
     }).catch(function(err) {
       wx.hideLoading()
@@ -222,6 +226,90 @@ Page({
     this.setData({ remark: e.detail.value })
   },
 
+  onAddReceiptImage: function() {
+    var that = this
+    if (this.data.uploadingReceipt) return
+    var remaining = 3 - this.data.receiptImages.length
+    if (remaining <= 0) return
+
+    wx.chooseMedia({
+      count: remaining,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      sizeType: ['compressed'],
+      success: function(res) {
+        var files = res.tempFiles || []
+        that.uploadReceiptFiles(files)
+      }
+    })
+  },
+
+  uploadReceiptFiles: function(files) {
+    var that = this
+    if (!files || files.length === 0) return
+
+    that.setData({ uploadingReceipt: true })
+    wx.showLoading({ title: '上传中' })
+
+    var uploadPromises = files.map(function(file, index) {
+      var ext = file.tempFilePath.match(/\.\w+$/)
+      var extStr = ext ? ext[0] : '.jpg'
+      var cloudPath = 'purchase-receipts/temp_' + Date.now() + '_' + index + extStr
+
+      return new Promise(function(resolve, reject) {
+        wx.cloud.uploadFile({
+          cloudPath: cloudPath,
+          filePath: file.tempFilePath,
+          success: function(uploadRes) {
+            var userInfo = app.globalData.userInfo || {}
+            resolve({
+              fileID: uploadRes.fileID,
+              uploadedAt: new Date(),
+              uploadedBy: userInfo._id || ''
+            })
+          },
+          fail: function(err) {
+            console.warn('上传单据图片失败:', err)
+            reject(err)
+          }
+        })
+      })
+    })
+
+    Promise.all(uploadPromises).then(function(results) {
+      var newImages = that.data.receiptImages.concat(results).slice(0, 3)
+      that.setData({ receiptImages: newImages, uploadingReceipt: false })
+      wx.hideLoading()
+      wx.showToast({ title: '上传成功', icon: 'success' })
+    }).catch(function(err) {
+      that.setData({ uploadingReceipt: false })
+      wx.hideLoading()
+      wx.showToast({ title: '上传失败', icon: 'none' })
+    })
+  },
+
+  onRemoveReceiptImage: function(e) {
+    var that = this
+    var index = e.currentTarget.dataset.index
+    var removed = this.data.receiptImages[index]
+    if (!removed) return
+
+    wx.showModal({
+      title: '删除确认',
+      content: '确定删除该单据照片吗？',
+      confirmColor: '#F87171',
+      success: function(res) {
+        if (!res.confirm) return
+        var newImages = that.data.receiptImages.filter(function(_, i) { return i !== index })
+        var pendingDeletes = that.data.pendingDeleteFileIDs
+        if (removed.fileID) {
+          pendingDeletes = pendingDeletes.concat([removed.fileID])
+        }
+        that.setData({ receiptImages: newImages, pendingDeleteFileIDs: pendingDeletes })
+      }
+    })
+  },
+
   validate: function() {
     const errors = {}
 
@@ -253,6 +341,7 @@ Page({
       category: this.data.category,
       date: this.data.date,
       remark: this.data.remark.trim(),
+      receiptImages: this.data.receiptImages,
       sourceReservationId: this.data.sourceReservationId || '',
       purchaseBy: userInfo._id || '',
       purchaseByName: userInfo.name || userInfo.nickName || ''
@@ -304,6 +393,12 @@ Page({
         return
       }
       db.updateDoc(COLLECTIONS.PURCHASE, that.data.id, data).then(function() {
+        // Clean up deleted images from cloud storage
+        if (that.data.pendingDeleteFileIDs.length > 0) {
+          wx.cloud.deleteFile({ fileList: that.data.pendingDeleteFileIDs }).catch(function(e) {
+            console.warn('清理云存储图片失败:', e)
+          })
+        }
         wx.hideLoading()
         log(LOG_TYPES.PURCHASE_UPDATE, '更新采购: ' + data.item, { id: that.data.id, amount: data.amount })
         wx.showToast({ title: '保存成功', icon: 'success' })
