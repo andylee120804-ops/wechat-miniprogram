@@ -69,6 +69,33 @@
       </view>
     </theme-card>
 
+    <!-- Receipt Images -->
+    <view class="receipt-section mt-lg" wx:if="{{purchase.receiptImages.length > 0 || canEdit || canDelete}}">
+      <text class="text-subtitle" style="display: block; color: {{theme.textSecondary || '#9A9AB0'}}; margin-bottom: 16rpx;">单据照片</text>
+      <view style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 16rpx; padding: 20rpx;">
+        <view class="receipt-header">
+          <view class="receipt-header-right">
+            <text class="receipt-count" style="color: {{theme.textMuted || '#5C5C72'}};">{{purchase.receiptImages.length || 0}}/3</text>
+            <text class="receipt-add-link" style="color: {{theme.accentColor || '#C9A96E'}};" bindtap="onAddReceiptImage" wx:if="{{(purchase.receiptImages || []).length < 3}}">+ 添加</text>
+          </view>
+        </view>
+        <view class="receipt-grid">
+          <view class="receipt-thumb" wx:for="{{purchase.receiptImages}}" wx:key="fileID" data-index="{{index}}" bindtap="onPreviewReceiptImage">
+            <image class="receipt-thumb-image" src="{{item.fileID}}" mode="aspectFill" />
+            <view class="receipt-thumb-del" data-index="{{index}}" catchtap="onRemoveReceiptImage">
+              <text>×</text>
+            </view>
+          </view>
+          <view class="receipt-add" wx:if="{{(purchase.receiptImages || []).length < 3}}"
+            style="background: rgba(201,169,110,0.1); border: 1.5rpx dashed rgba(201,169,110,0.4);"
+            bindtap="onAddReceiptImage">
+            <text class="receipt-add-icon" style="color: {{theme.accentColor || '#C9A96E'}};">+</text>
+            <text class="receipt-add-text" style="color: {{theme.textMuted || '#5C5C72'}};">上传</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- Approval Log Timeline -->
     <view class="log-section mt-lg" wx:if="{{approvalLogs.length > 0}}">
       <text class="text-subtitle" style="display: block; color: {{theme.textSecondary || '#9A9AB0'}}; margin-bottom: 16rpx;">审批记录</text>
