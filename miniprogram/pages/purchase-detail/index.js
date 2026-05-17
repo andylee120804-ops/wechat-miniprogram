@@ -22,7 +22,8 @@ Page({
     canReimburse: false,
     isSubmitter: false,
     isApprover: false,
-    approvalLogs: []
+    approvalLogs: [],
+    uploadingReceipt: false
   },
 
   onLoad: function(options) {
@@ -114,6 +115,131 @@ Page({
       that.setData({ approvalLogs: logs })
     }).catch(function(err) {
       console.warn('加载审批日志失败:', err)
+    })
+  },
+
+  onPreviewReceiptImage: function(e) {
+    var index = e.currentTarget.dataset.index
+    var images = this.data.purchase.receiptImages || []
+    var urls = images.map(function(img) { return img.fileID })
+    if (urls.length === 0) return
+    wx.previewImage({
+      current: urls[index] || urls[0],
+      urls: urls
+    })
+  },
+
+  onAddReceiptImage: function() {
+    var that = this
+    if (this.data.uploadingReceipt) return
+    var currentImages = this.data.purchase.receiptImages || []
+    var remaining = 3 - currentImages.length
+    if (remaining <= 0) {
+      wx.showToast({ title: '最多上传3张', icon: 'none' })
+      return
+    }
+
+    wx.chooseMedia({
+      count: remaining,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      sizeType: ['compressed'],
+      success: function(res) {
+        var files = res.tempFiles || []
+        that.uploadReceiptFiles(files)
+      }
+    })
+  },
+
+  uploadReceiptFiles: function(files) {
+    var that = this
+    if (!files || files.length === 0) return
+    var purchaseId = that.data.id
+
+    that.setData({ uploadingReceipt: true })
+    wx.showLoading({ title: '上传中' })
+
+    var uploadPromises = files.map(function(file, index) {
+      var ext = file.tempFilePath.match(/\.\w+$/)
+      var extStr = ext ? ext[0] : '.jpg'
+      var cloudPath = 'purchase-receipts/' + purchaseId + '_' + Date.now() + '_' + index + extStr
+
+      return new Promise(function(resolve, reject) {
+        wx.cloud.uploadFile({
+          cloudPath: cloudPath,
+          filePath: file.tempFilePath,
+          success: function(uploadRes) {
+            var userInfo = app.globalData.userInfo || {}
+            resolve({
+              fileID: uploadRes.fileID,
+              uploadedAt: new Date(),
+              uploadedBy: userInfo._id || ''
+            })
+          },
+          fail: function(err) {
+            console.warn('上传单据图片失败:', err)
+            reject(err)
+          }
+        })
+      })
+    })
+
+    Promise.all(uploadPromises).then(function(results) {
+      var currentImages = that.data.purchase.receiptImages || []
+      var newImages = currentImages.concat(results).slice(0, 3)
+
+      return db.updateDoc(COLLECTIONS.PURCHASE, purchaseId, {
+        receiptImages: newImages
+      }).then(function() {
+        that.setData({
+          'purchase.receiptImages': newImages,
+          uploadingReceipt: false
+        })
+        wx.hideLoading()
+        wx.showToast({ title: '上传成功', icon: 'success' })
+      })
+    }).catch(function(err) {
+      that.setData({ uploadingReceipt: false })
+      wx.hideLoading()
+      wx.showToast({ title: '上传失败', icon: 'none' })
+      console.warn('上传单据图片失败:', err)
+    })
+  },
+
+  onRemoveReceiptImage: function(e) {
+    var that = this
+    var index = e.currentTarget.dataset.index
+    var currentImages = this.data.purchase.receiptImages || []
+    var removed = currentImages[index]
+    if (!removed) return
+
+    wx.showModal({
+      title: '删除确认',
+      content: '确定删除该单据照片吗？',
+      confirmColor: '#F87171',
+      success: function(res) {
+        if (!res.confirm) return
+        wx.showLoading({ title: '删除中' })
+
+        var newImages = currentImages.filter(function(_, i) { return i !== index })
+
+        db.updateDoc(COLLECTIONS.PURCHASE, that.data.id, {
+          receiptImages: newImages
+        }).then(function() {
+          that.setData({ 'purchase.receiptImages': newImages })
+          // Delete cloud file (best-effort)
+          if (removed.fileID) {
+            wx.cloud.deleteFile({ fileList: [removed.fileID] }).catch(function(e) {
+              console.warn('删除云存储图片失败:', e)
+            })
+          }
+          wx.hideLoading()
+          wx.showToast({ title: '已删除', icon: 'success' })
+        }).catch(function(err) {
+          wx.hideLoading()
+          handleCloudError(err, '删除单据照片')
+        })
+      }
     })
   },
 
@@ -320,6 +446,14 @@ Page({
 
     wx.showLoading({ title: '删除中...' })
     db.deleteDoc(COLLECTIONS.PURCHASE, that.data.id).then(function() {
+      // Clean up receipt images from cloud storage
+      var receiptImages = that.data.purchase.receiptImages || []
+      var fileIDs = receiptImages.map(function(img) { return img.fileID }).filter(Boolean)
+      if (fileIDs.length > 0) {
+        wx.cloud.deleteFile({ fileList: fileIDs }).catch(function(e) {
+          console.warn('清理云存储单据图片失败:', e)
+        })
+      }
       wx.hideLoading()
       log(LOG_TYPES.PURCHASE_DELETE, '删除采购: ' + (that.data.purchase ? that.data.purchase.item : ''), { id: that.data.id })
       wx.showToast({ title: '已删除', icon: 'success' })
