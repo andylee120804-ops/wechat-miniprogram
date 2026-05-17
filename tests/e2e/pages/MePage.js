@@ -24,6 +24,10 @@ class MePage extends BasePage {
   async getSettingsGroup() {
     return this.getData('settingsGroup')
   }
+
+  async getPendingGroup() {
+    return this.getData('pendingGroup')
+  }
 }
 
 module.exports = MePage

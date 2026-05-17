@@ -30,6 +30,7 @@ const PAGES = {
   venueSettings: 'pages/admin/venue-settings/index',
   approvalSettings: 'pages/admin/approval-settings/index',
   todo: 'pages/todo/index',
+  myPurchases: 'pages/my-purchases/index',
   reservationDetail: 'pages/reservation-detail/index',
 }
 
