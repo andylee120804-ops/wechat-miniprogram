@@ -2,6 +2,8 @@ const app = getApp()
 const { getRoleName } = require('../../utils/helpers')
 const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { log, LOG_TYPES } = require('../../utils/logger')
+const { COLLECTIONS } = require('../../utils/db')
+const db = require('../../utils/db')
 
 Page({
   data: {
@@ -10,9 +12,13 @@ Page({
     userInfo: null,
     roleName: '',
     managementGroup: [],
-    todoGroup: [],
     featureGroup: [],
-    settingsGroup: []
+    settingsGroup: [],
+    pendingApprovalCount: 0,
+    pendingReimburseCount: 0,
+    pendingTotal: 0,
+    hasTodoPermission: false,
+    pendingGroup: []
   },
 
   onShow() {
@@ -35,7 +41,6 @@ Page({
 
   buildMenuGroups() {
     const managementGroup = []
-    const todoGroup = []
     const featureGroup = []
     const settingsGroup = []
 
@@ -62,8 +67,9 @@ Page({
     if (hasPermission('expense', ACTIONS.VIEW)) {
       managementGroup.push({ key: 'fixedExpense', icon: '🏠', text: '固定成本' })
     }
-    // Approval settings — users with purchase edit permission
-    if (hasPermission('purchase', ACTIONS.EDIT)) {
+    // Approval settings — admin only
+    const userInfo = app.globalData.userInfo || {}
+    if (userInfo.role === 'admin') {
       managementGroup.push({ key: 'approvalSettings', icon: '✅', text: '采购审批设置' })
     }
     // Admin-only settings
@@ -75,16 +81,55 @@ Page({
     }
     settingsGroup.push({ key: 'about', icon: 'ℹ️', text: '关于' })
 
-    if (hasPermission('purchase', ACTIONS.APPROVE) || hasPermission('purchase', ACTIONS.REIMBURSE)) {
-      todoGroup.push({ key: 'todo', icon: '📋', text: '我的待办' })
+    const hasTodoPerm = hasPermission('purchase', ACTIONS.APPROVE) || hasPermission('purchase', ACTIONS.REIMBURSE)
+    const hasPurchaseAdd = hasPermission('purchase', ACTIONS.ADD)
+
+    // Build pending group (dynamic menu items)
+    var pendingGroup = []
+    if (hasTodoPerm) {
+      pendingGroup.push({ key: 'todo', icon: '📋', text: '我的待办事项' + (pendingTotal > 0 ? '（' + pendingTotal + '）' : '') })
+    }
+    if (hasPurchaseAdd) {
+      pendingGroup.push({ key: 'myPurchases', icon: '📦', text: '我的采购申请' })
     }
 
     this.setData({
       managementGroup,
-      todoGroup,
       featureGroup,
-      settingsGroup
+      settingsGroup,
+      pendingGroup,
+      hasTodoPermission: hasTodoPerm || hasPurchaseAdd
     })
+
+    // Load todo counts
+    if (hasTodoPerm) {
+      this.loadTodoCounts()
+    }
+  },
+
+  loadTodoCounts: async function() {
+    var userInfo = app.globalData.userInfo
+    if (!userInfo || !userInfo._id) return
+    try {
+      var dbInst = db.getDb()
+      var _ = dbInst.command
+      var pendingRes = await dbInst.collection(COLLECTIONS.PURCHASE)
+        .where({
+          status: 'pending',
+          approverId: userInfo._id,
+          purchaseBy: _.neq(userInfo._id)
+        }).count()
+      var reimbursedRes = await dbInst.collection(COLLECTIONS.PURCHASE)
+        .where({ status: 'approved' }).count()
+      var total = (pendingRes.total || 0) + (reimbursedRes.total || 0)
+      this.setData({
+        pendingApprovalCount: pendingRes.total || 0,
+        pendingReimburseCount: reimbursedRes.total || 0,
+        pendingTotal: total
+      })
+    } catch (e) {
+      console.warn('[me] 加载待办数量失败:', e)
+    }
   },
 
   onMenuTap(e) {
@@ -103,6 +148,7 @@ Page({
       venueSettings: '/pages/admin/venue-settings/index',
       approvalSettings: '/pages/admin/approval-settings/index',
       todo: '/pages/todo/index',
+      myPurchases: '/pages/my-purchases/index',
       about: ''
     }
 

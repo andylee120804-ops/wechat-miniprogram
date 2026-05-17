@@ -1,0 +1,82 @@
+<view class="my-purchases-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 120rpx; padding-top: {{statusBarHeight + 44}}px;">
+  <!-- Custom Navigation Bar -->
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">
+    <view class="nav-bar-content">
+      <view class="nav-back" bindtap="onBack">
+        <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}};">❮</text>
+      </view>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">我的采购</text>
+      <view class="nav-action"></view>
+    </view>
+  </view>
+
+  <!-- Skeleton Loading -->
+  <view wx:if="{{loading}}" style="padding: 24rpx 32rpx;">
+    <view wx:for="{{[1,2,3]}}" wx:key="*this" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border-radius: 20rpx; padding: 28rpx; margin-bottom: 16rpx; opacity: 0.5;">
+      <view style="height: 32rpx; width: 60%; background: {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 8rpx; margin-bottom: 16rpx;"></view>
+      <view style="height: 24rpx; width: 40%; background: {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 8rpx; margin-bottom: 12rpx;"></view>
+      <view style="height: 24rpx; width: 30%; background: {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 8rpx;"></view>
+    </view>
+  </view>
+
+  <!-- Content -->
+  <view wx:else>
+    <!-- Empty state: no records at all -->
+    <view wx:if="{{!hasRecords}}" class="empty-state">
+      <text class="empty-state-icon">📋</text>
+      <text class="empty-state-text" style="color: {{theme.textMuted || '#5C5C72'}};">没有申请记录</text>
+    </view>
+
+    <!-- Has records -->
+    <view wx:else>
+      <!-- Status cards row -->
+      <view class="status-cards">
+        <view wx:for="{{statusCards}}" wx:key="key" class="status-card {{activeStatus === item.key ? 'active' : ''}}"
+          data-key="{{item.key}}" bindtap="onCardTap"
+          style="background: {{item.bgColor}}; border-color: {{item.borderColor}}; {{activeStatus === item.key ? 'border-width: 2rpx; border-style: solid;' : 'border-width: 0;'}}">
+          <text class="status-card-num" style="color: {{item.color}};">{{item.count}}</text>
+          <text class="status-card-label" style="color: {{item.color}};">{{item.label}}</text>
+        </view>
+      </view>
+
+      <!-- All button -->
+      <view style="padding: 0 32rpx 16rpx;">
+        <view bindtap="onCardTap" data-key=""
+          style="display: inline-block; padding: 8rpx 24rpx; border-radius: 999rpx; font-size: 24rpx;
+            {{activeStatus === '' ? 'background: ' + (theme.accentColor || '#C9A96E') + '; color: #0F0F1A; font-weight: 600;' : 'background: ' + (theme.elevated || '#252540') + '; color: ' + (theme.textSecondary || '#9A9AB0') + ';'}}">
+          全部
+        </view>
+      </view>
+
+      <!-- Section header -->
+      <view class="section-header" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">
+        <text>{{sectionLabel}}</text>
+      </view>
+
+      <!-- Empty filtered -->
+      <view wx:if="{{filteredList.length === 0}}" class="empty-state" style="padding-top: 80rpx;">
+        <text class="empty-state-text" style="color: {{theme.textMuted || '#5C5C72'}};">暂无此类状态的采购记录</text>
+      </view>
+
+      <!-- Purchase list -->
+      <view class="purchase-list" wx:if="{{filteredList.length > 0}}">
+        <view class="purchase-item" wx:for="{{filteredList}}" wx:key="_id" bindtap="onItemTap" data-id="{{item._id}}"
+          style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}};">
+          <view class="purchase-item-top">
+            <text class="purchase-item-name" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.item}}</text>
+            <text class="purchase-item-amount" style="color: {{theme.amountNegative || '#F87171'}};">-¥{{item.formattedAmount}}</text>
+          </view>
+          <view class="purchase-item-meta">
+            <view class="purchase-item-meta-left">
+              <view class="meta-tag" style="background: {{theme.elevated || '#252540'}};">
+                <text style="color: {{theme.textSecondary || '#9A9AB0'}};">{{item.categoryName}}</text>
+              </view>
+              <text class="meta-text" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.formattedDate}}</text>
+            </view>
+            <text style="font-size: 24rpx; color: {{item.statusColor}};">{{item.statusLabel}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

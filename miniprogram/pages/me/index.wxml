@@ -46,11 +46,12 @@
     </view>
 
     <!-- Todo Group -->
-    <view class="menu-group mt-lg" wx:if="{{todoGroup.length > 0}}">
+    <view class="menu-group mt-lg" wx:if="{{hasTodoPermission}}">
       <text class="menu-group-title text-overline" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">待办</text>
       <view class="menu-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx; overflow: hidden; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};">
-        <view class="menu-item flex-row flex-between" wx:for="{{todoGroup}}" wx:key="key"
-          data-key="{{item.key}}" bindtap="onMenuTap">
+        <view class="menu-item flex-row flex-between" wx:for="{{pendingGroup}}" wx:key="key"
+          data-key="{{item.key}}" bindtap="onMenuTap"
+          style="border-bottom: {{index < pendingGroup.length - 1 ? '1rpx solid ' + (theme.divider || 'rgba(255,255,255,0.08)') : 'none'}};">
           <view class="menu-item-left flex-row">
             <text class="menu-icon">{{item.icon}}</text>
             <text class="menu-text text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.text}}</text>

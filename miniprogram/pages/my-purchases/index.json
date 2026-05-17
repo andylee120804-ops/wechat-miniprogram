@@ -1,0 +1,8 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "glass-card": "../../components/glass-card/index",
+    "theme-badge": "../../components/theme-badge/index"
+  },
+  "enablePullDownRefresh": false
+}
