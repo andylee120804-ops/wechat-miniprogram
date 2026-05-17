@@ -103,6 +103,30 @@
       </view>
     </theme-card>
 
+    <!-- Receipt Images -->
+    <theme-card theme="{{theme}}" class="mt-md">
+      <view class="p-lg">
+        <view class="receipt-header">
+          <text class="text-bodySmall" style="color: {{theme.textPrimary || '#F5F0E8'}}; font-weight: 600;">单据照片</text>
+          <text class="receipt-count" style="color: {{theme.textMuted || '#5C5C72'}};">{{receiptImages.length}}/3</text>
+        </view>
+        <view class="receipt-grid">
+          <view class="receipt-thumb" wx:for="{{receiptImages}}" wx:key="fileID">
+            <image class="receipt-thumb-image" src="{{item.fileID}}" mode="aspectFill" />
+            <view class="receipt-thumb-del" data-index="{{index}}" bindtap="onRemoveReceiptImage">
+              <text>×</text>
+            </view>
+          </view>
+          <view class="receipt-add" wx:if="{{receiptImages.length < 3}}"
+            style="background: rgba(201,169,110,0.1); border: 1.5rpx dashed rgba(201,169,110,0.4);"
+            bindtap="onAddReceiptImage">
+            <text class="receipt-add-icon" style="color: {{theme.accentColor || '#C9A96E'}};">+</text>
+            <text class="receipt-add-text" style="color: {{theme.textMuted || '#5C5C72'}};">上传</text>
+          </view>
+        </view>
+      </view>
+    </theme-card>
+
     <!-- 审批人展示 -->
     <view class="approver-row" wx:if="{{approverName}}" style="margin: 16rpx 0; padding: 12rpx 0;">
       <text style="color: {{theme.textSecondary || '#9A9AB0'}};">审批人：</text>
