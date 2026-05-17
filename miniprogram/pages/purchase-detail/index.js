@@ -70,6 +70,7 @@ Page({
 
       var purchase = {
         ...data,
+        receiptImages: data.receiptImages || [], // Ensure receiptImages is always an array
         status: status,
         categoryName: getCategoryName(data.category),
         formattedAmount: formatAmount(data.amount),
@@ -221,15 +222,16 @@ Page({
         if (!res.confirm) return
         wx.showLoading({ title: '删除中' })
 
-        var newImages = currentImages.filter(function(_, i) { return i !== index })
+        var latestImages = that.data.purchase.receiptImages || []
+        var newImages = latestImages.filter(function(_, i) { return i !== index })
+        var removedFileID = (latestImages[index] || {}).fileID
 
         db.updateDoc(COLLECTIONS.PURCHASE, that.data.id, {
           receiptImages: newImages
         }).then(function() {
           that.setData({ 'purchase.receiptImages': newImages })
-          // Delete cloud file (best-effort)
-          if (removed.fileID) {
-            wx.cloud.deleteFile({ fileList: [removed.fileID] }).catch(function(e) {
+          if (removedFileID) {
+            wx.cloud.deleteFile({ fileList: [removedFileID] }).catch(function(e) {
               console.warn('删除云存储图片失败:', e)
             })
           }
