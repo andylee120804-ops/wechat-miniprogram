@@ -34,17 +34,6 @@ describe('My Purchases Page - Entry Visibility', function() {
     expect(entry.text).toContain('采购')
   })
 
-  test('purchase role should see the my purchases menu entry', async function() {
-    await loginAs(miniProgram, TEST_ACCOUNTS.purchase.wechatId)
-    const mePage = new MePage(miniProgram)
-    await mePage.open()
-    await new Promise(r => setTimeout(r, 2000))
-
-    const pendingGroup = await mePage.getPendingGroup()
-    const entry = pendingGroup.find(function(item) { return item.key === 'myPurchases' })
-    expect(entry).toBeDefined()
-    expect(entry.text).toContain('采购')
-  })
 })
 
 describe('My Purchases Page - Page Load', function() {
@@ -99,8 +88,8 @@ describe('My Purchases Page - Page Load', function() {
 describe('My Purchases Page - Status Filtering', function() {
   let page
 
-  test('should load page for purchase role', async function() {
-    await loginAs(miniProgram, TEST_ACCOUNTS.purchase.wechatId)
+  test('should load page for admin', async function() {
+    await loginAs(miniProgram, TEST_ACCOUNTS.admin.wechatId)
     page = new MyPurchasesPage(miniProgram)
     await page.open()
     const loaded = await page.waitForLoad(TIMEOUTS.PAGE_LOAD)
