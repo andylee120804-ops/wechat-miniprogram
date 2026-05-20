@@ -77,3 +77,8 @@
   margin-right: 16rpx;
 }
 
+/* 详情内容区：为底部固定操作栏留出空间 */
+.detail-content-wrapper {
+  padding-bottom: 180rpx;
+}
+

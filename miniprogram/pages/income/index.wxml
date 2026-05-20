@@ -11,24 +11,42 @@
   <!-- Sticky Filter Bar (same pattern as purchase page) -->
   <view class="filter-bar" style="background: {{theme.surface || '#1A1A2E'}};">
     <!-- Month Picker -->
-    <view class="month-picker">
+    <view class="month-picker" style="padding: 0 24rpx 16rpx;">
       <view class="month-arrow" bindtap="onPrevMonth" style="color: {{theme.textSecondary || '#9A9AB0'}};">‹</view>
-      <text class="month-label" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{currentMonth}}</text>
+      <text class="month-label" style="color: {{filterDate ? theme.textMuted : theme.textPrimary || '#F5F0E8'}};">{{filterDateDisplay || currentMonth}}</text>
       <view class="month-arrow {{monthOffset >= 0 ? 'nav-arrow-disabled' : ''}}" bindtap="onNextMonth" style="color: {{theme.textSecondary || '#9A9AB0'}};">›</view>
     </view>
     <!-- Type Filter Chips -->
-    <filter-chips theme="{{theme}}" items="{{typeOptions}}" activeId="{{activeType}}" bind:change="onTypeChange" />
-    <!-- Search Bar -->
-    <view class="search-wrapper">
-      <search-bar theme="{{theme}}" placeholder="搜索来源/备注" value="{{searchKeyword}}" bind:search="onSearch" />
+    <filter-chips style="position: relative; border-radius: 18rpx; left: 8rpx;top: 6rpx" theme="{{theme}}" items="{{typeOptions}}" activeId="{{activeType}}" bind:change="onTypeChange" />
+    <!-- Search & Date Row -->
+    <view style="display: flex; align-items: center; gap: 8rpx; padding: 0 24rpx 10rpx; overflow: hidden;">
+      <!-- Sort Toggle -->
+      <view bindtap="onSortToggle" style="display: flex; align-items: center; flex-shrink: 0; background: {{theme.elevated || '#252540'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; padding: 0 14rpx; height: 60rpx; white-space: nowrap;">
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 23rpx;">↕ {{sortField === 'date' ? '收入日期' : '创建日期'}}</text>
+      </view>
+      <!-- Search Bar -->
+      <view class="search-wrapper" style="flex: 1; min-width: 0; display: flex; align-items: center;">
+        <search-bar style="position: relative; width: 100%; display: block; box-sizing: border-box; left: 0rpx; top: 8rpx" theme="{{theme}}" placeholder="搜索来源/备注..." value="{{searchKeyword}}" bind:search="onSearch" bind:clear="onSearchClear" />
+      </view>
+      <!-- Date Picker Button -->
+      <picker mode="date" value="{{filterDate}}" bindchange="onDateChange" fields="day">
+        <view style="display: flex; align-items: center; flex-shrink: 0; background: {{filterDate ? theme.accentColor || '#C9A96E' : theme.elevated || '#252540'}}; border-radius: 20rpx; border: 1rpx solid {{filterDate ? theme.accentColor || '#C9A96E' : theme.border || 'rgba(255,255,255,0.06)'}}; padding: 0 14rpx; height: 60rpx; white-space: nowrap;">
+          <text style="color: {{filterDate ? theme.textInverse || '#0F0F1A' : theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx;">📅</text>
+          <text wx:if="{{filterDate}}" style="color: {{filterDate ? theme.textInverse || '#0F0F1A' : theme.textSecondary || '#9A9AB0'}}; font-size: 22rpx; margin-left: 6rpx; max-width: 140rpx; overflow: hidden; text-overflow: ellipsis;">{{filterDateDisplay}}</text>
+        </view>
+      </picker>
+      <view wx:if="{{filterDate}}" bindtap="onClearDateFilter" style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 64rpx; height: 64rpx; background: rgba(255,255,255,0.05); border-radius: 50%;">
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">✕</text>
+      </view>
     </view>
   </view>
 
   <!-- Summary Card -->
-  <view class="summary-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 24rpx; margin: 24rpx 32rpx; padding: 28rpx 32rpx;">
-    <text class="summary-label" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">本月收入</text>
-    <text class="summary-amount" style="color: {{theme.amountPositive || '#4ADE80'}}; font-size: 52rpx; font-weight: 800; font-family: 'DIN Alternate', 'SF Mono', monospace; margin-top: 8rpx;">¥{{totalAmount}}</text>
-    <text class="summary-count" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; margin-top: 8rpx;">{{filteredIncomes.length}} 条记录</text>
+  <view class="summary-card mx-lg" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}}; border-radius: 12rpx; padding: 16rpx 24rpx; margin-top: 16rpx; position: relative; left: 0rpx; top: -6rpx">
+    <view style="display: flex; align-items: center; justify-content: space-between;">
+      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx; font-weight: 600;">本月收入</text>
+      <text class="font-mono" style="color: {{theme.amountPositive || '#4ADE80'}}; font-size: 36rpx; font-weight: 700;">¥{{totalAmount}}</text>
+    </view>
   </view>
 
   <!-- Skeleton -->
@@ -36,16 +54,23 @@
 
   <!-- Income List -->
   <view class="income-list" wx:else>
-    <view class="income-item stagger-item" wx:for="{{filteredIncomes}}" wx:key="_id" bindtap="onItemTap" data-id="{{item._id}}" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 24rpx; margin: 0 32rpx 16rpx; padding: 24rpx;">
+    <view class="income-item stagger-item" wx:for="{{filteredIncomes}}" wx:key="_id" bindtap="onItemTap" data-id="{{item._id}}" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 16rpx; margin: 0 24rpx 10rpx; padding: 16rpx;">
       <view class="item-header">
         <theme-badge theme="{{theme}}" status="{{item.type}}" type="status" text="{{item.typeText}}" />
-        <text class="item-amount" style="color: {{theme.amountPositive || '#4ADE80'}}; font-size: 36rpx; font-weight: 700; font-family: 'DIN Alternate', monospace;">+¥{{item.amountText}}</text>
+        <text class="item-amount" style="color: {{theme.amountPositive || '#4ADE80'}}; font-size: 30rpx; font-weight: 700; font-family: 'DIN Alternate', monospace;">+¥{{item.amountText}}</text>
       </view>
-      <view class="item-meta" style="margin-top: 12rpx;">
-        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">{{item.source || '无来源'}} · {{item.dateText}}</text>
-        <text wx:if="{{item.reservationId}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 22rpx; margin-left: 12rpx;">📅 已关联</text>
+      <view class="item-meta flex-row flex-between" style="margin-top: 8rpx;">
+        <view class="flex-row" style="align-items: center; min-width: 0; flex:1">
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx;">{{item.source || '无来源'}}</text>
+          <text wx:if="{{item.reservationId}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 22rpx; margin-left: 12rpx;">📅 已关联</text>
+        </view>
+        <view class="flex-row" style="align-items: center;">
+          <text wx:if="{{item.collectedByName}}" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 20rpx; white-space: nowrap;">{{item.collectedByName}}</text>
+          <text wx:if="{{item.collectedByName}}" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 20rpx; margin: 0 8rpx;">|</text>
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 20rpx; white-space: nowrap;">{{item.dateText}}</text>
+        </view>
       </view>
-      <view class="item-remark" wx:if="{{item.remark}}" style="margin-top: 8rpx;">
+      <view class="item-remark" wx:if="{{item.remark}}" style="margin-top: 6rpx;">
         <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.remark}}</text>
       </view>
     </view>

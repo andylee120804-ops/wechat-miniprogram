@@ -3,7 +3,7 @@ const { hasPermission, checkPermission, ACTIONS } = require('../../utils/permiss
 const { log } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
-const { formatDate, formatAmount, getIncomeTypeText } = require('../../utils/helpers')
+const { formatDate, formatAmount, getIncomeTypeText, getRoomName, getReservationStatusText, getExclusiveTypeName } = require('../../utils/helpers')
 const db = require('../../utils/db')
 
 Page({
@@ -12,6 +12,7 @@ Page({
     statusBarHeight: 44,
     id: '',
     income: null,
+    reservation: null,
     loading: true,
     showDeleteModal: false,
     canEdit: false,
@@ -34,7 +35,9 @@ Page({
   },
 
   async loadData() {
+    this._isLoading = true
     try {
+      this.setData({ loading: true })
       const res = await db.getDoc(COLLECTIONS.INCOME, this.data.id)
       if (!res) {
         wx.showToast({ title: '记录不存在', icon: 'none' })
@@ -47,8 +50,36 @@ Page({
         formattedAmount: formatAmount(res.amount),
         formattedDate: formatDate(res.date)
       }
+
+      // 加载关联预约数据
+      let reservation = null
+      if (income.reservationId) {
+        try {
+          const resData = await db.getDoc(COLLECTIONS.RESERVATION, income.reservationId)
+          if (resData) {
+            const et = resData.exclusiveType || (resData.isExclusive ? 'full' : 'none')
+            reservation = {
+              ...resData,
+              statusText: getReservationStatusText(resData.status),
+              dateDisplay: formatDate(resData.date),
+              roomNameDisplay: getExclusiveTypeName(et, resData.room),
+              customerName: resData.customerName || '未知客户',
+              phone: resData.phone || '',
+              guestCount: resData.guestCount || 0,
+              standard: resData.standard || 0,
+              dishPrice: resData.dishPrice || 0,
+              time: resData.time || '',
+              remark: resData.remark || ''
+            }
+          }
+        } catch (e) {
+          console.warn('加载关联预约失败:', e)
+        }
+      }
+
       this.setData({
         income,
+        reservation,
         loading: false,
         canEdit: hasPermission('income', ACTIONS.EDIT),
         canDelete: hasPermission('income', ACTIONS.DELETE)
@@ -56,6 +87,8 @@ Page({
     } catch (err) {
       handleCloudError(err, '加载收入详情')
       this.setData({ loading: false })
+    } finally {
+      this._isLoading = false
     }
   },
 

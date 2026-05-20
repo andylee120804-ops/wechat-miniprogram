@@ -18,7 +18,7 @@
     </view>
 
     <!-- Detail Card -->
-    <view style="padding: 32rpx;">
+    <view class="detail-content-wrapper" style="padding: 32rpx 32rpx 180rpx;">
       <theme-card theme="{{theme}}" padding="32rpx">
         <view class="detail-row">
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">来源</text>
@@ -52,17 +52,59 @@
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">收款人</text>
           <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">{{income.collectedByName}}</text>
         </view>
-        <view class="detail-row" wx:if="{{income.remark}}">
+        <view class="detail-row" wx:if="{{income.remark && !reservation}}">
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">备注</text>
           <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; flex: 1; text-align: right;">{{income.remark}}</text>
         </view>
       </theme-card>
 
       <!-- Linked Reservation -->
-      <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;" wx:if="{{income.reservationId}}">
-        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 16rpx;">关联预约</text>
-        <view class="detail-row">
-          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx;">关联预约</text>
+      <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;" wx:if="{{reservation}}">
+        <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx;">
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; font-weight: 500;">关联预约</text>
+          <view style="display: inline-flex; align-items: center; background: {{reservation.status === 'cancelled' ? 'rgba(248,113,113,0.15)' : 'rgba(74,222,128,0.15)'}}; padding: 6rpx 16rpx; border-radius: 100rpx;">
+            <view style="width: 10rpx; height: 10rpx; border-radius: 50%; background: {{reservation.status === 'cancelled' ? '#F87171' : '#4ADE80'}}; margin-right: 8rpx;"></view>
+            <text style="color: {{reservation.status === 'cancelled' ? '#F87171' : '#4ADE80'}}; font-size: 22rpx; font-weight: 500;">{{reservation.statusText}}</text>
+          </view>
+        </view>
+        <view style="background: {{theme.glassBg || 'rgba(255,255,255,0.04)'}}; border-radius: 16rpx; padding: 24rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.08)'}};">
+          <view style="margin-bottom: 20rpx;">
+            <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 34rpx; font-weight: 700;">{{reservation.customerName}}</text>
+          </view>
+          <view style="display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 16rpx;">
+            <view style="display: flex; align-items: center; background: rgba(255,255,255,0.05); padding: 8rpx 16rpx; border-radius: 8rpx;">
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">📅</text>
+              <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; margin-left: 8rpx;">{{reservation.dateDisplay}}</text>
+            </view>
+            <view style="display: flex; align-items: center; background: rgba(255,255,255,0.05); padding: 8rpx 16rpx; border-radius: 8rpx;">
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">⏰</text>
+              <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; margin-left: 8rpx;">{{reservation.time}}</text>
+            </view>
+            <view style="display: flex; align-items: center; background: rgba(255,255,255,0.05); padding: 8rpx 16rpx; border-radius: 8rpx;">
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">👥</text>
+              <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; margin-left: 8rpx;">{{reservation.guestCount}}人</text>
+            </view>
+            <view style="display: flex; align-items: center; background: rgba(255,255,255,0.05); padding: 8rpx 16rpx; border-radius: 8rpx;">
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">🚪</text>
+              <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; margin-left: 8rpx;">{{reservation.roomNameDisplay}}</text>
+            </view>
+          </view>
+          <view wx:if="{{reservation.phone}}" style="padding: 12rpx 0; border-top: 1rpx solid rgba(255,255,255,0.06);">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">📞 </text>
+            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx;">{{reservation.phone}}</text>
+          </view>
+          <view wx:if="{{reservation.dishPrice > 0}}" style="padding: 12rpx 0; border-top: 1rpx solid rgba(255,255,255,0.06);">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">菜价 </text>
+            <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 26rpx; font-weight: 600;">¥{{reservation.dishPrice}}</text>
+          </view>
+          <view style="padding: 12rpx 0; border-top: 1rpx solid rgba(255,255,255,0.06);">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">人均 </text>
+            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx;">¥{{reservation.standard}}/人</text>
+          </view>
+          <view wx:if="{{reservation.remark}}" style="padding: 12rpx 0; border-top: 1rpx solid rgba(255,255,255,0.06);">
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">备注 </text>
+            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx;">{{reservation.remark}}</text>
+          </view>
         </view>
       </theme-card>
     </view>

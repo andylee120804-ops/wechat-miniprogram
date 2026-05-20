@@ -45,7 +45,16 @@
   min-width: 64rpx;
 }
 
-/* Item Card */
+/* Compact spacing utilities */
+.px-md { padding-left: 20rpx; padding-right: 20rpx; }
+.pt-sm { padding-top: 12rpx; }
+.pb-sm { padding-bottom: 12rpx; }
+.pt-xs { padding-top: 6rpx; }
+.mx-md { margin-left: 16rpx; margin-right: 16rpx; }
+.mt-md { margin-top: 14rpx; }
+.mb-sm { margin-bottom: 8rpx; }
+
+/* Item Card — compact */
 .item-card {
   overflow: hidden;
   transition: transform 0.15s ease;
@@ -118,13 +127,11 @@
   flex: 1;
 }
 
-.form-section {
-  margin-bottom: 8rpx;
-}
-
 .form-input {
   border-bottom: 1rpx solid rgba(255,255,255,0.06);
   padding: 8rpx 0;
+  height: 88rpx;
+  font-size: 28rpx;
 }
 
 /* Cycle selector */
@@ -132,16 +139,82 @@
   opacity: 0.8;
 }
 
-/* Stagger animation */
-.stagger-item {
-  opacity: 0;
-  transform: translateY(30rpx);
-  animation: staggerIn 0.4s ease-out forwards;
+/* Total card typography */
+.total-label { font-size: 25rpx; }
+.total-amount { font-size: 40rpx; font-weight: 800; }
+.total-count { font-size: 23rpx; }
+
+/* Item card typography */
+.item-name { font-size: 28rpx; font-weight: 600; }
+.cycle-badge { font-size: 20rpx; padding: 2rpx 10rpx; border-radius: 6rpx; white-space: nowrap; }
+.item-amount { font-size: 32rpx; font-weight: 700; }
+.item-per-month { font-size: 21rpx; }
+.item-yearly { font-size: 20rpx; }
+
+/* Form common */
+.form-label { font-size: 26rpx; font-weight: 500; }
+.form-section { margin-bottom: 8rpx; }
+
+/* Card border radius */
+.card-radius { border-radius: 16rpx; }
+
+/* Date picker */
+.date-picker-value { height: 80rpx; border-radius: 12rpx; padding: 0 24rpx; font-size: 28rpx; }
+
+/* Input wrap */
+.input-wrap { height: 88rpx; border-radius: 12rpx; padding: 0 24rpx; }
+.input-prefix { font-size: 36rpx; }
+.amount-input { font-size: 36rpx; height: 88rpx; }
+
+/* Cycle selector */
+.cycle-btn {
+  flex: 1;
+  padding: 20rpx 0;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  text-align: center;
 }
 
-@keyframes staggerIn {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Action buttons */
+.delete-btn {
+  padding: 20rpx 32rpx;
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
 }
+.save-btn {
+  flex: 1;
+  padding: 20rpx 0;
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+/* ===== [Fix #5] 从内联样式抽取的公共布局类 ===== */
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.flex-center { display: flex; align-items: center; }
+.flex-baseline { display: flex; align-items: baseline; }
+.flex-col { display: flex; flex-direction: column; }
+.flex-1 { flex: 1; }
+.flex-shrink-0 { flex-shrink: 0; }
+.gap-4rpx { gap: 4rpx; }
+.gap-8rpx { gap: 8rpx; }
+.gap-10rpx { gap: 10rpx; }
+.gap-12rpx { gap: 12rpx; }
+.gap-16rpx { gap: 16rpx; }
+.text-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.block { display: block; }
+.ml-4rpx { margin-left: 4rpx; }
+.ml-16rpx { margin-left: 16rpx; }
+.mt-8rpx { margin-top: 8rpx; }
+.mt-16rpx { margin-top: 16rpx; }
+.mr-12rpx { margin-right: 12rpx; }
+.max-w-300rpx { max-width: 300rpx; }
+.p-lg { padding: 24rpx; }

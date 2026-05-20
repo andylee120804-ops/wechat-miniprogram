@@ -30,12 +30,13 @@ Page({
   },
 
   onShow() {
-    if (this.data.id) {
+    if (this.data.id && !this._isLoading) {
       this.loadData()
     }
   },
 
   async loadData() {
+    this._isLoading = true
     try {
       this.setData({ loading: true })
       const [res, settingsRes] = await Promise.all([
@@ -65,6 +66,8 @@ Page({
     } catch (err) {
       handleCloudError(err, '加载预约详情')
       this.setData({ loading: false })
+    } finally {
+      this._isLoading = false
     }
   },
 
@@ -99,9 +102,30 @@ Page({
   },
 
   onBack() {
+    // 如果正在加载中，先提示用户等待
+    if (this.data.loading) {
+      wx.showToast({ title: '正在加载，请稍候', icon: 'none' })
+      return
+    }
+
+    // 关闭所有可能打开的 Modal，避免遮罩拦截点击
+    if (this.data.showCancelModal || this.data.showShareModal) {
+      this.setData({
+        showCancelModal: false,
+        showShareModal: false
+      })
+      return
+    }
+
     const pages = getCurrentPages()
     if (pages.length > 1) {
-      wx.navigateBack()
+      wx.navigateBack({
+        fail: function(err) {
+          // navigateBack 失败时的兜底方案
+          console.warn('[reservation-detail] navigateBack failed:', err)
+          wx.reLaunch({ url: '/pages/index/index' })
+        }
+      })
     } else {
       wx.reLaunch({ url: '/pages/index/index' })
     }

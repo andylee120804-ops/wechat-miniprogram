@@ -233,7 +233,7 @@ Page({
         updates.standard = 0
         updates.standardPicked = false
       } else {
-        var defaultStd = this.data.defaultStandard
+        let defaultStd = this.data.defaultStandard
         if (defaultStd === 'partner') defaultStd = this.data.partnerStandard
         updates.standard = defaultStd || 0
         updates.standardPicked = !!updates.standard
@@ -312,7 +312,6 @@ Page({
 
         if (hasExisting) {
           if (!isCreate) await db.updateDoc(COLLECTIONS.PURCHASE, first._id, purchaseData)
-          // isCreate + hasExisting → skip (avoid duplicate)
         } else {
           await db.addDoc(COLLECTIONS.PURCHASE, purchaseData)
         }
@@ -333,13 +332,11 @@ Page({
       if (dishPrice <= 0) return
       const time = docData.time || '中午'
 
-      // Load service charge settings
-      const settingsRes = await db.queryAll(COLLECTIONS.SETTINGS, {})
-      const settings = {}
-      ;(settingsRes.data || []).forEach(s => { if (!(s.key in settings)) settings[s.key] = s.value })
-      const charge = time === '中午'
-        ? (Number(settings.serviceChargeNoon) || 0)
-        : (Number(settings.serviceChargeNight) || 0)
+      // Load service charge settings (cached on page instance to avoid duplicate queries)
+      const settings = await this._getSettingsCache()
+      const chargeNoon = Number(settings.serviceChargeNoon) || 0
+      const chargeNight = Number(settings.serviceChargeNight) || 0
+      const charge = time === '中午' ? chargeNoon : chargeNight
       const amount = dishPrice + charge
 
       const existing = await db.queryAll(COLLECTIONS.INCOME, { reservationId })
@@ -423,11 +420,19 @@ Page({
     this.setData({ _dishPriceRequired: required })
   },
 
-  async shouldSync(dateStr) {
-    try {
+  async _getSettingsCache() {
+    if (!this._settingsCache) {
       const res = await db.queryAll(COLLECTIONS.SETTINGS, {})
       const settings = {}
-      ;(res.data || []).forEach(s => { settings[s.key] = s.value })
+      ;(res.data || []).forEach(s => { if (!(s.key in settings)) settings[s.key] = s.value })
+      this._settingsCache = settings
+    }
+    return this._settingsCache
+  },
+
+  async shouldSync(dateStr) {
+    try {
+      const settings = await this._getSettingsCache()
       if (!settings.serviceChargeEnabled) return false
       if (!settings.serviceChargeEnabledDate) return false
       if (dateStr < settings.serviceChargeEnabledDate) return false
@@ -446,9 +451,7 @@ Page({
 
   async isDishPriceRequired(dateStr) {
     try {
-      const res = await db.queryAll(COLLECTIONS.SETTINGS, {})
-      const settings = {}
-      ;(res.data || []).forEach(s => { settings[s.key] = s.value })
+      const settings = await this._getSettingsCache()
       if (!settings.serviceChargeEnabled) return false
       if (!settings.serviceChargeEnabledDate) return false
       return dateStr >= settings.serviceChargeEnabledDate
@@ -531,7 +534,8 @@ Page({
     this.setData({ _dishPriceRequired: dishPriceRequired })
 
     if (!this.validate()) {
-      wx.showToast({ title: '请检查表单', icon: 'none' })
+      const errKeys = Object.keys(this.data.errors)
+      wx.showToast({ title: errKeys.length > 0 ? this.data.errors[errKeys[0]] : '请检查表单', icon: 'none' })
       return
     }
 
@@ -578,9 +582,9 @@ Page({
         const oldData = await db.getDoc(COLLECTIONS.RESERVATION, this.data.id)
         await db.updateDoc(COLLECTIONS.RESERVATION, this.data.id, docData)
 
-        // Sync banquet purchase and income if conditions met
-        const laterDate = formatDate(docData.date)
-        if (await this.shouldSync(laterDate)) {
+        // Sync banquet purchase and income — create if today & missing, otherwise only update existing
+        const dateStr = formatDate(docData.date)
+        if (await this.shouldSync(dateStr)) {
           const oldDishPrice = oldData ? (Number(oldData.dishPrice) || 0) : 0
           const newDishPrice = Number(docData.dishPrice) || 0
           const oldCustomerName = oldData ? (oldData.customerName || '') : ''
@@ -589,13 +593,13 @@ Page({
           const hasRemarkChanged = docData.customerName !== oldCustomerName || docData.roomName !== oldRoomName
 
           if (hasDishPriceChanged || hasRemarkChanged) {
-            const dateStr = formatDate(docData.date)
             if (this.isPastDate(dateStr)) {
               await this.showSyncConfirmDialog()
             }
-            await this.syncBanquetPurchase(docData, this.data.id, false)
+            const isToday = dateStr === formatDate(new Date())
+            await this.syncBanquetPurchase(docData, this.data.id, isToday)
             if (hasDishPriceChanged) {
-              await this.syncIncome(docData, this.data.id, false)
+              await this.syncIncome(docData, this.data.id, isToday)
             }
           }
         }
@@ -620,7 +624,10 @@ Page({
         docData.createdBy = userInfo._id || ''
         docData.createdByName = userInfo.name || userInfo.nickName || ''
         const result = await db.addDoc(COLLECTIONS.RESERVATION, docData)
-        if (await this.shouldSync(formatDate(docData.date))) {
+        // 预约当天才立即创建采购和收入，未来日期由云函数在当天自动生成
+        const dateStr = formatDate(docData.date)
+        const isToday = dateStr === formatDate(new Date())
+        if (isToday && await this.shouldSync(dateStr)) {
           await this.syncBanquetPurchase(docData, result._id, true)
           await this.syncIncome(docData, result._id, true)
         }

@@ -91,7 +91,9 @@ Page({
 
       const rawData = res.data || []
       const reservations = rawData.map(function(r) {
-        return { ...r, statusText: getReservationStatusText(r.status) }
+        // 优先显示菜价金额，否则显示标准餐标
+        const displayPrice = (r.dishPrice && r.dishPrice > 0) ? r.dishPrice : r.standard
+        return { ...r, statusText: getReservationStatusText(r.status), displayPrice }
       })
       const grouped = this.groupByRoom(reservations)
 

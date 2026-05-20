@@ -44,7 +44,7 @@
 
     <!-- Pending Reimbursements Section -->
     <view class="todo-section" wx:if="{{pendingReimbursements.length > 0}}" style="margin-top: {{pendingApprovals.length > 0 ? '32rpx' : '0'}};">
-      <text class="section-title" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 16rpx; padding-left: 4rpx;">待报销 ({{pendingReimbursements.length}})</text>
+      <text class="section-title" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 16rpx; padding-left: 4rpx;">待付款 ({{pendingReimbursements.length}})</text>
       <view class="todo-item" wx:for="{{pendingReimbursements}}" wx:key="_id" bindtap="onItemTap" data-id="{{item._id}}"
         style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 12rpx;">
         <view class="todo-item-top" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rpx;">
@@ -64,6 +64,9 @@
     </view>
 
     <!-- Empty State -->
-    <empty-state wx:if="{{pendingApprovals.length === 0 && pendingReimbursements.length === 0}}" theme="{{theme}}" type="no-data" title="暂无待办" description="没有需要您处理的事项" />
+    <view wx:if="{{pendingApprovals.length === 0 && pendingReimbursements.length === 0}}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 160rpx;">
+      <text style="font-size: 80rpx;">✅</text>
+      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 30rpx; margin-top: 24rpx;">无待办事项，都已完成</text>
+    </view>
   </view>
 </view>

@@ -82,7 +82,7 @@
 }
 
 .search-wrapper {
-  padding: 0 32rpx 16rpx;
+  padding-bottom: 16rpx;
 }
 
 /* Summary Card */

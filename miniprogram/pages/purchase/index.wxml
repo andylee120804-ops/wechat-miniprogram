@@ -11,51 +11,71 @@
   <!-- Sticky Filter Bar -->
   <view class="filter-bar" style="background: {{theme.surfaceColor || '#1A1A2E'}};">
     <!-- Month Picker -->
-    <view class="month-picker">
+    <view class="month-picker" style="padding: 0 24rpx 16rpx;">
       <view class="month-arrow" bindtap="onMonthPrev" style="color: {{theme.textSecondary || '#9A9AB0'}};">‹</view>
-      <text class="month-label" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{monthLabel}}</text>
+      <text class="month-label" style="color: {{filterDate ? theme.textMuted : theme.textPrimary || '#F5F0E8'}};">{{filterDateDisplay || monthLabel}}</text>
       <view class="month-arrow" bindtap="onMonthNext" style="color: {{theme.textSecondary || '#9A9AB0'}};">›</view>
     </view>
     <!-- Category Filter Chips -->
     <filter-chips style="position: relative; border-radius: 18rpx; left: 8rpx;top: 6rpx" theme="{{theme}}" items="{{categories}}" activeId="{{activeCategory}}" bind:change="onCategoryChange" />
-    <!-- Search Bar -->
-    <view class="search-wrapper px-md">
-      <search-bar theme="{{theme}}" placeholder="搜索采购项..." value="{{searchKeyword}}" bind:search="onSearch" bind:clear="onSearchClear" />
-    </view>
-  </view>
-
-  <!-- Monthly Summary Card -->
-  <view class="summary-card mx-lg mt-md" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
-    <view class="summary-inner p-lg" style="width: 100%; display: flex; box-sizing: border-box">
-      <text class="text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">本月采购总额</text>
-      <view class="summary-amount-row flex-row flex-between mt-xs" style="width: 576rpx; display: flex; box-sizing: border-box">
-        <text class="text-display font-mono" style="color: {{theme.amountNegative || '#F87171'}};">¥{{totalFormatted}}</text>
-        
+    <!-- Search & Date Row -->
+    <view style="display: flex; align-items: center; gap: 8rpx; padding: 0 24rpx 10rpx; overflow: hidden;">
+      <!-- Sort Toggle -->
+      <view bindtap="onSortToggle" style="display: flex; align-items: center; flex-shrink: 0; background: {{theme.elevated || '#252540'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 20rpx; padding: 0 14rpx; height: 60rpx; white-space: nowrap;">
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 23rpx;">↕ {{sortField === 'date' ? '采购日期' : '创建日期'}}</text>
+      </view>
+      <!-- Search Bar -->
+      <view class="search-wrapper" style="flex: 1; min-width: 0; display: flex; align-items: center;">
+        <search-bar style="position: relative; width: 100%; display: block; box-sizing: border-box; left: 0rpx; top: 8rpx" theme="{{theme}}" placeholder="搜索采购项..." value="{{searchKeyword}}" bind:search="onSearch" bind:clear="onSearchClear" />
+      </view>
+      <!-- Date Picker Button -->
+      <picker mode="date" value="{{filterDate}}" bindchange="onDateChange" fields="day">
+        <view style="display: flex; align-items: center; flex-shrink: 0; background: {{filterDate ? theme.accentColor || '#C9A96E' : theme.elevated || '#252540'}}; border-radius: 20rpx; border: 1rpx solid {{filterDate ? theme.accentColor || '#C9A96E' : theme.border || 'rgba(255,255,255,0.06)'}}; padding: 0 14rpx; height: 60rpx; white-space: nowrap;">
+          <text style="color: {{filterDate ? theme.textInverse || '#0F0F1A' : theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx;">📅</text>
+          <text wx:if="{{filterDate}}" style="color: {{filterDate ? theme.textInverse || '#0F0F1A' : theme.textSecondary || '#9A9AB0'}}; font-size: 22rpx; margin-left: 6rpx; max-width: 140rpx; overflow: hidden; text-overflow: ellipsis;">{{filterDateDisplay}}</text>
+        </view>
+      </picker>
+      <view wx:if="{{filterDate}}" bindtap="onClearDateFilter" style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 64rpx; height: 64rpx; background: rgba(255,255,255,0.05); border-radius: 50%;">
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">✕</text>
       </view>
     </view>
   </view>
 
+  <!-- Monthly Summary Card -->
+  <view class="summary-card mx-lg" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}}; border-radius: 12rpx; padding: 16rpx 24rpx; margin-top: 16rpx; position: relative; left: 0rpx; top: -16rpx">
+    <view style="display: flex; align-items: center; justify-content: space-between;">
+      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx; font-weight: 600;">本月采购</text>
+      <text class="font-mono" style="color: {{theme.amountNegative || '#F87171'}}; font-size: 36rpx; font-weight: 700;">¥{{totalFormatted}}</text>
+    </view>
+  </view>
+
   <!-- Purchase List -->
-  <view class="purchase-list px-lg mt-md" wx:if="{{!loading}}" style="position: relative; left: 0rpx; top: 17rpx">
-    <view class="purchase-card stagger-item mx-xs mb-md {{index > 0 ? 'mt-md' : ''}}"
+  <view class="purchase-list" wx:if="{{!loading}}">
+    <view class="purchase-card stagger-item"
       wx:for="{{filteredPurchases}}" wx:key="_id"
-      style="animation-delay: {{index * 60}}ms; background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};"
+      style="animation-delay: {{index * 60}}ms; background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.06)'}}; border-radius: 16rpx; margin: 0 24rpx 12rpx; padding: 20rpx;"
       data-id="{{item._id}}" bindtap="onItemTap">
-      <view class="card-inner p-lg">
-        <view class="card-header flex-row flex-between">
-          <view class="card-title-row flex-row flex-1">
-            <text class="card-item-name text-title3 ellipsis flex-1" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.item}}</text>
+      <view>
+        <!-- 分类标签 + 审批状态 + 金额 -->
+        <view class="flex-row flex-between items-center">
+          <view class="flex-row items-center">
+            <theme-badge theme="{{theme}}" status="{{item.category}}" type="category" text="{{item.categoryName}}" size="sm" />
+            <theme-badge theme="{{theme}}" status="{{item.status || 'reimbursed'}}" type="approvalStatus" size="sm" />
           </view>
-          <text class="card-amount font-mono text-title2" style="color: {{theme.amountNegative || '#F87171'}};">-¥{{item.formattedAmount}}</text>
+          <text class="font-mono" style="color: {{theme.amountNegative || '#F87171'}}; font-size: 26rpx; font-weight: 600;">-¥{{item.formattedAmount}}</text>
         </view>
-        <view class="card-meta flex-row mt-sm">
-          <theme-badge theme="{{theme}}" status="{{item.category}}" type="category" text="{{item.categoryName}}" size="sm" />
-          <theme-badge theme="{{theme}}" status="{{item.status || 'reimbursed'}}" type="approvalStatus" size="sm" />
-          <text class="card-date text-caption ml-sm" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.formattedDate}}</text>
+        <!-- 采购物品名称 + 创建人 -->
+        <view class="flex-row flex-between items-center mt-sm">
+          <text class="ellipsis" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; flex: 1;">{{item.item}}</text>
+          <view class="flex-row" style="align-items: center;">
+            <text wx:if="{{item.purchaseByName}}" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 22rpx; white-space: nowrap;">{{item.purchaseByName}}</text>
+            <text wx:if="{{item.purchaseByName}}" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 22rpx; margin: 0 8rpx;">|</text>
+            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 22rpx; white-space: nowrap;">{{item.formattedDate}}</text>
+          </view>
         </view>
-        <view class="card-footer flex-row flex-between mt-sm" wx:if="{{item.purchaseByName || item.remark}}">
-          <text class="card-buyer text-bodySmall" wx:if="{{item.purchaseByName}}" style="color: {{theme.textSecondary || '#9A9AB0'}};">采购人: {{item.purchaseByName}}</text>
-          <text class="card-remark text-caption ellipsis" wx:if="{{item.remark}}" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.remark}}</text>
+        <!-- 备注 -->
+        <view class="mt-xs" wx:if="{{item.remark}}">
+          <text class="ellipsis" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.remark}}</text>
         </view>
       </view>
     </view>

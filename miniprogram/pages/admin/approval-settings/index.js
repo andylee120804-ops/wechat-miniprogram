@@ -1,6 +1,5 @@
 const app = getApp()
 const { handleCloudError } = require('../../../utils/error-handler')
-const { hasPermission, ACTIONS } = require('../../../utils/permission')
 const { COLLECTIONS } = require('../../../utils/db')
 const db = require('../../../utils/db')
 
@@ -33,14 +32,17 @@ Page({
   },
 
   onLoad: function() {
-    var canEdit = hasPermission('purchase', ACTIONS.EDIT)
-    if (!canEdit) {
-      wx.showToast({ title: '无权限修改设置', icon: 'none' })
+    var theme = app.getThemePageData()
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
+
+    // 只有admin可以访问此页面
+    var userInfo = app.globalData.userInfo || {}
+    var role = userInfo.role || ''
+    if (role !== 'admin') {
+      wx.showToast({ title: '此页面仅管理员可访问', icon: 'none' })
       setTimeout(function() { wx.navigateBack() }, 1500)
       return
     }
-    var theme = app.getThemePageData()
-    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
   },
 
   onShow: function() {
@@ -54,9 +56,10 @@ Page({
 
     try {
       // 加载审批规则
+      var userInfo = app.globalData.userInfo || {}
       var rulesRes = await wx.cloud.callFunction({
         name: 'sendMessage',
-        data: { action: 'getApprovalSettings' }
+        data: { action: 'getApprovalSettings', callerWechatId: userInfo.wechatId || '' }
       })
       if (rulesRes.result && rulesRes.result.success && rulesRes.result.data) {
         var d = rulesRes.result.data

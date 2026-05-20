@@ -7,6 +7,7 @@ const db = require('../../utils/db')
 
 const ALL_CATEGORIES = [
   { id: '', name: '全部', count: 0 },
+  { id: 'banquet', name: '宴会菜价', count: 0 },
   { id: 'meat', name: '肉类', count: 0 },
   { id: 'seafood', name: '海鲜', count: 0 },
   { id: 'vegetable', name: '蔬菜', count: 0 },
@@ -15,7 +16,6 @@ const ALL_CATEGORIES = [
   { id: 'seasoning', name: '调味品', count: 0 },
   { id: 'supplies', name: '日用品', count: 0 },
   { id: 'equipment', name: '设备', count: 0 },
-  { id: 'banquet', name: '宴会菜价', count: 0 },
   { id: 'other', name: '其他', count: 0 }
 ]
 
@@ -35,6 +35,11 @@ Page({
     activeCategory: '',
     categories: ALL_CATEGORIES.map(function(c) { return Object.assign({}, c) }),
     searchKeyword: '',
+    // Sort
+    sortField: 'createdAt', // 'date' = 采购日期, 'createdAt' = 创建日期
+    // Date filter
+    filterDate: '',
+    filterDateDisplay: '',
     // Pagination
     page: 1,
     pageSize: 20,
@@ -59,17 +64,25 @@ Page({
     const that = this
     that.setData({ loading: true, page: 1, purchases: [], filteredPurchases: [] })
 
-    const range = getMonthRange(that.data.currentMonth)
+    const filterDate = that.data.filterDate
+    let query
 
-    // Query all records in month for accurate total amount
-    const totalPromise = db.queryAll(COLLECTIONS.PURCHASE, {
-      date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
-    })
+    if (filterDate) {
+      // Specific date filter — use exact date string match (same format as stored data)
+      query = { date: filterDate }
+    } else {
+      // Month filter
+      const range = getMonthRange(that.data.currentMonth)
+      query = {
+        date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
+      }
+    }
+
+    // Query all records for accurate total amount
+    const totalPromise = db.queryAll(COLLECTIONS.PURCHASE, query)
 
     // Query first page for display
-    const pagePromise = db.queryPage(COLLECTIONS.PURCHASE, {
-      date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
-    }, 1, that.data.pageSize, 'date', 'desc')
+    const pagePromise = db.queryPage(COLLECTIONS.PURCHASE, query, 1, that.data.pageSize, that.data.sortField, 'desc')
 
     Promise.all([totalPromise, pagePromise]).then(function(results) {
       const allData = results[0].data || []
@@ -107,6 +120,8 @@ Page({
         return { ...cat, count: categoryCounts[cat.id] || 0 }
       })
 
+      const range = filterDate ? null : getMonthRange(that.data.currentMonth)
+
       that.setData({
         purchases: purchases,
         filteredPurchases: purchases,
@@ -114,8 +129,8 @@ Page({
         totalFormatted: formatAmount(totalAmount),
         totalCount: res.total,
         categories: updatedCategories,
-        monthStr: range.monthStr,
-        monthLabel: range.label,
+        monthStr: range ? range.monthStr : that.data.monthStr,
+        monthLabel: range ? range.label : that.data.filterDateDisplay,
         hasMore: res.hasMore,
         page: 1,
         pageSize: that.data.pageSize,
@@ -132,11 +147,20 @@ Page({
     if (this.data.loadingMore || !this.data.hasMore) return
     const that = this
     that.setData({ loadingMore: true })
-    const range = getMonthRange(that.data.currentMonth)
 
-    db.queryPage(COLLECTIONS.PURCHASE, {
-      date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
-    }, that.data.page + 1, that.data.pageSize, 'date', 'desc').then(function(res) {
+    const filterDate = that.data.filterDate
+    let query
+
+    if (filterDate) {
+      query = { date: filterDate }
+    } else {
+      const range = getMonthRange(that.data.currentMonth)
+      query = {
+        date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
+      }
+    }
+
+    db.queryPage(COLLECTIONS.PURCHASE, query, that.data.page + 1, that.data.pageSize, that.data.sortField, 'desc').then(function(res) {
       const newItems = (res.data || []).map(function(p) {
         return {
           ...p,
@@ -163,17 +187,35 @@ Page({
   onMonthChange: function(e) {
     const offset = e.currentTarget.dataset.offset
     const newMonth = this.data.currentMonth + (offset || 0)
-    this.setData({ currentMonth: newMonth })
+    this.setData({ currentMonth: newMonth, filterDate: '', filterDateDisplay: '' })
     this.loadData()
   },
 
   onMonthPrev: function() {
-    this.setData({ currentMonth: this.data.currentMonth - 1 })
+    this.setData({ currentMonth: this.data.currentMonth - 1, filterDate: '', filterDateDisplay: '' })
     this.loadData()
   },
 
   onMonthNext: function() {
-    this.setData({ currentMonth: this.data.currentMonth + 1 })
+    this.setData({ currentMonth: this.data.currentMonth + 1, filterDate: '', filterDateDisplay: '' })
+    this.loadData()
+  },
+
+  onDateChange: function(e) {
+    const date = e.detail.value
+    if (date) {
+      const displayDate = date.replace(/-/g, '/')
+      this.setData({ filterDate: date, filterDateDisplay: displayDate, activeCategory: '', searchKeyword: '' })
+    } else {
+      const range = getMonthRange(this.data.currentMonth)
+      this.setData({ filterDate: '', filterDateDisplay: '', monthLabel: range.label })
+    }
+    this.loadData()
+  },
+
+  onClearDateFilter: function() {
+    const range = getMonthRange(this.data.currentMonth)
+    this.setData({ filterDate: '', filterDateDisplay: '', monthLabel: range.label })
     this.loadData()
   },
 
@@ -213,6 +255,12 @@ Page({
   onAddPurchase: function() {
     if (!checkPermission('purchase', ACTIONS.ADD)) return
     wx.navigateTo({ url: '/pages/purchase-add/index' })
+  },
+
+  onSortToggle: function() {
+    const newField = this.data.sortField === 'date' ? 'createdAt' : 'date'
+    this.setData({ sortField: newField })
+    this.loadData()
   },
 
   onItemTap: function(e) {

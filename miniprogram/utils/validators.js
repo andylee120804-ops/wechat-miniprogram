@@ -94,8 +94,8 @@ function validateAmount(value) {
   if (isNaN(num)) {
     return { valid: false, message: '金额必须为数字' }
   }
-  if (num < 0) {
-    return { valid: false, message: '金额不能为负数' }
+  if (num <= 0) {
+    return { valid: false, message: '金额必须大于0' }
   }
   if (num > 9999999.99) {
     return { valid: false, message: '金额超出范围' }

@@ -1,8 +1,8 @@
 var app = getApp()
-var { formatDate, formatAmount, getCategoryName } = require('../../utils/helpers')
+var { formatDate, formatDateTime, formatAmount, getCategoryName } = require('../../utils/helpers')
 var { log, LOG_TYPES } = require('../../utils/logger')
 var { handleCloudError } = require('../../utils/error-handler')
-var { checkPermission, ACTIONS, hasPermission } = require('../../utils/permission')
+var { ACTIONS, hasPermission } = require('../../utils/permission')
 var { COLLECTIONS } = require('../../utils/db')
 var db = require('../../utils/db')
 
@@ -22,7 +22,11 @@ Page({
     canReimburse: false,
     isSubmitter: false,
     isApprover: false,
+    isReimburser: false,
+    defaultReimburserName: '',
     approvalLogs: [],
+    approvalStep: { badge: '', badgeBg: '', text: '', time: '' },
+    reimburseStep: { badge: '', badgeBg: '', text: '', time: '' },
     uploadingReceipt: false
   },
 
@@ -48,11 +52,11 @@ Page({
     if (this.data.id) this.loadPurchase(this.data.id)
   },
 
-  loadPurchase: function(id) {
+  loadPurchase: async function(id) {
     var that = this
     that.setData({ loading: true })
 
-    db.getDoc(COLLECTIONS.PURCHASE, id).then(function(data) {
+    db.getDoc(COLLECTIONS.PURCHASE, id).then(async function(data) {
       if (!data) {
         wx.showToast({ title: '记录不存在', icon: 'none' })
         setTimeout(function() { wx.navigateBack() }, 1500)
@@ -65,8 +69,40 @@ Page({
       var purchaseBy = data.purchaseBy || ''
       var approverId = data.approverId || ''
       var isSubmitter = purchaseBy === currentUserId
-      var canApprove = hasPermission('purchase', ACTIONS.APPROVE)
-      var isApprover = canApprove && approverId === currentUserId && !isSubmitter
+      var canApprovePerm = hasPermission('purchase', ACTIONS.APPROVE)
+      var isApprover = canApprovePerm && approverId === currentUserId && !isSubmitter
+      var canReimbursePerm = hasPermission('purchase', ACTIONS.REIMBURSE)
+
+      // Load approval settings (with cache, 5min TTL)
+      var isReimburser = false
+      var defaultReimburserName = ''
+      var cacheKey = '_approvalSettingsCache'
+      var cache = app.globalData[cacheKey]
+      var nowMs = Date.now()
+      var settings = null
+      if (cache && cache.data && (nowMs - cache.time < 5 * 60 * 1000)) {
+        settings = cache.data
+      } else {
+        try {
+          var settingsRes = await wx.cloud.callFunction({
+            name: 'sendMessage',
+            data: { action: 'getApprovalSettings', callerWechatId: userInfo.wechatId || '' }
+          })
+          if (settingsRes.result && settingsRes.result.success && settingsRes.result.data) {
+            settings = settingsRes.result.data
+            app.globalData[cacheKey] = { data: settings, time: nowMs }
+          }
+        } catch (e) {
+          console.warn('[purchase-detail] 获取审批设置失败:', e)
+        }
+      }
+      if (settings) {
+        isReimburser = canReimbursePerm && (settings.defaultReimburserId || '') === currentUserId
+        defaultReimburserName = settings.defaultReimburserName || ''
+      }
+
+      // Final canReimburse: must have permission AND be the designated reimbuser
+      var finalCanReimburse = canReimbursePerm && isReimburser
 
       var purchase = {
         ...data,
@@ -75,7 +111,7 @@ Page({
         categoryName: getCategoryName(data.category),
         formattedAmount: formatAmount(data.amount),
         formattedDate: formatDate(data.date),
-        formattedCreatedAt: formatDate(data.createdAt),
+        formattedCreatedAt: formatDateTime(data.createdAt),
         formattedApprovedAt: data.approvedAt ? formatDate(data.approvedAt) : '',
         formattedRejectedAt: data.rejectedAt ? formatDate(data.rejectedAt) : '',
         formattedReimbursedAt: data.reimbursedAt ? formatDate(data.reimbursedAt) : ''
@@ -83,17 +119,20 @@ Page({
 
       // Only submitters can edit pending or rejected records
       var canEdit = isSubmitter && (status === 'pending' || status === 'rejected')
-      // Only submitters can delete pending records
-      var canDelete = isSubmitter && status === 'pending'
+      // Submitters can delete pending or approved (not yet paid) records
+      var canDelete = isSubmitter && (status === 'pending' || status === 'approved')
 
       that.setData({
         purchase: purchase,
         loading: false,
         canEdit: canEdit,
         canDelete: canDelete,
-        canApprove: canApprove,
+        canApprove: canApprovePerm,
+        canReimburse: finalCanReimburse,
         isSubmitter: isSubmitter,
-        isApprover: isApprover
+        isApprover: isApprover,
+        isReimburser: isReimburser,
+        defaultReimburserName: defaultReimburserName
       })
 
       // Load approval logs
@@ -110,10 +149,54 @@ Page({
       var logs = (result.data || []).map(function(item) {
         return {
           ...item,
-          formattedTime: formatDate(item.createdAt)
+          formattedTime: formatDateTime(item.createdAt)
         }
       })
-      that.setData({ approvalLogs: logs })
+      // Find completed actions
+      var approved = logs.find(function(l) { return l.action === 'approved' })
+      var rejected = logs.find(function(l) { return l.action === 'rejected' })
+      var reimbursed = logs.find(function(l) { return l.action === 'reimbursed' })
+      var status = (that.data.purchase || {}).status || ''
+
+      // Step 2: approval step
+      var approvalStep = { badge: '', badgeBg: '', text: '', time: '' }
+      if (approved) {
+        approvalStep = {
+          badge: '通过', badgeBg: '#22C55E',
+          text: (approved.operatorName || '') + ' 审批通过',
+          time: approved.formattedTime
+        }
+      } else if (rejected) {
+        approvalStep = {
+          badge: '拒绝', badgeBg: '#EF4444',
+          text: (rejected.operatorName || '') + ' 拒绝',
+          time: rejected.formattedTime
+        }
+      } else if (status === 'pending') {
+        approvalStep = {
+          badge: '待审批', badgeBg: '#F59E0B',
+          text: '等待审批人处理',
+          time: ''
+        }
+      }
+
+      // Step 3: reimburse step
+      var reimburseStep = { badge: '', badgeBg: '', text: '', time: '' }
+      if (reimbursed) {
+        reimburseStep = {
+          badge: '付款', badgeBg: '#3B82F6',
+          text: (reimbursed.operatorName || '') + ' 确认付款',
+          time: reimbursed.formattedTime
+        }
+      } else if (status === 'approved') {
+        reimburseStep = {
+          badge: '待付款', badgeBg: '#8B5CF6',
+          text: '等待付款人确认付款',
+          time: ''
+        }
+      }
+
+      that.setData({ approvalLogs: logs, approvalStep: approvalStep, reimburseStep: reimburseStep })
     }).catch(function(err) {
       console.warn('加载审批日志失败:', err)
     })
@@ -251,9 +334,9 @@ Page({
     var purchase = that.data.purchase
     if (!purchase) return
 
-    // Self-approval guard
-    if (userInfo._id === purchase.purchaseBy) {
-      wx.showToast({ title: '不能审批自己的采购单', icon: 'none' })
+    // Verify current user is the designated approver (isApprover already excludes submitters)
+    if (!that.data.isApprover) {
+      wx.showToast({ title: '您不是指定审批人，无法操作', icon: 'none' })
       return
     }
 
@@ -274,14 +357,14 @@ Page({
     }
 
     var now = new Date()
-    db.updateDoc(COLLECTIONS.PURCHASE, that.data.id, {
-      status: 'approved',
-      approvedAt: now,
-      approverId: userInfo._id || '',
-      approverName: userInfo.name || ''
-    }).then(function() {
-      // Write approval log
-      return db.addDoc(COLLECTIONS.APPROVAL_LOG, {
+    Promise.all([
+      db.updateDoc(COLLECTIONS.PURCHASE, that.data.id, {
+        status: 'approved',
+        approvedAt: now,
+        approverId: userInfo._id || '',
+        approverName: userInfo.name || ''
+      }),
+      db.addDoc(COLLECTIONS.APPROVAL_LOG, {
         purchaseId: that.data.id,
         action: 'approved',
         operatorId: userInfo._id || '',
@@ -289,7 +372,7 @@ Page({
         remark: '',
         createdAt: now
       })
-    }).then(function() {
+    ]).then(function() {
       wx.hideLoading()
       log(LOG_TYPES.PURCHASE_UPDATE, '审批通过: ' + (purchase.item || ''), { id: that.data.id })
       wx.showToast({ title: '已通过', icon: 'success' })
@@ -310,6 +393,14 @@ Page({
 
   onRejectConfirm: async function() {
     var that = this
+
+    // Verify current user is the designated approver
+    if (!that.data.isApprover) {
+      wx.showToast({ title: '您不是指定审批人，无法操作', icon: 'none' })
+      that.setData({ showRejectModal: false })
+      return
+    }
+
     var reason = that.data.rejectionReason || ''
     if (!reason.trim()) {
       wx.showToast({ title: '请输入拒绝原因', icon: 'none' })
@@ -339,15 +430,15 @@ Page({
     }
 
     var now = new Date()
-    db.updateDoc(COLLECTIONS.PURCHASE, that.data.id, {
-      status: 'rejected',
-      rejectionReason: reason.trim(),
-      rejectedAt: now,
-      approverId: userInfo._id || '',
-      approverName: userInfo.name || ''
-    }).then(function() {
-      // Write rejection log
-      return db.addDoc(COLLECTIONS.APPROVAL_LOG, {
+    Promise.all([
+      db.updateDoc(COLLECTIONS.PURCHASE, that.data.id, {
+        status: 'rejected',
+        rejectionReason: reason.trim(),
+        rejectedAt: now,
+        approverId: userInfo._id || '',
+        approverName: userInfo.name || ''
+      }),
+      db.addDoc(COLLECTIONS.APPROVAL_LOG, {
         purchaseId: that.data.id,
         action: 'rejected',
         operatorId: userInfo._id || '',
@@ -355,7 +446,7 @@ Page({
         remark: reason.trim(),
         createdAt: now
       })
-    }).then(function() {
+    ]).then(function() {
       wx.hideLoading()
       log(LOG_TYPES.PURCHASE_UPDATE, '审批拒绝: ' + (purchase.item || ''), { id: that.data.id, reason: reason.trim() })
       wx.showToast({ title: '已拒绝', icon: 'success' })
@@ -376,12 +467,13 @@ Page({
     var purchase = that.data.purchase
     if (!purchase) return
 
-    if (!hasPermission('purchase', ACTIONS.REIMBURSE)) {
-      wx.showToast({ title: '无权限', icon: 'none' })
+    // Verify current user is the designated reimbuser (isReimburser already checks permission)
+    if (!that.data.isReimburser) {
+      wx.showToast({ title: '您不是指定付款人，无法操作', icon: 'none' })
       return
     }
 
-    wx.showLoading({ title: '确认报销中...' })
+    wx.showLoading({ title: '确认付款中...' })
 
     // Re-fetch to verify current status hasn't changed
     var currentDoc = await db.getDoc(COLLECTIONS.PURCHASE, that.data.id)
@@ -398,14 +490,14 @@ Page({
     }
 
     var now = new Date()
-    db.updateDoc(COLLECTIONS.PURCHASE, that.data.id, {
-      status: 'reimbursed',
-      reimbursedAt: now,
-      reimburserId: userInfo._id || '',
-      reimburserName: userInfo.name || ''
-    }).then(function() {
-      // Write reimbursement log
-      return db.addDoc(COLLECTIONS.APPROVAL_LOG, {
+    Promise.all([
+      db.updateDoc(COLLECTIONS.PURCHASE, that.data.id, {
+        status: 'reimbursed',
+        reimbursedAt: now,
+        reimburserId: userInfo._id || '',
+        reimburserName: userInfo.name || ''
+      }),
+      db.addDoc(COLLECTIONS.APPROVAL_LOG, {
         purchaseId: that.data.id,
         action: 'reimbursed',
         operatorId: userInfo._id || '',
@@ -413,14 +505,14 @@ Page({
         remark: '',
         createdAt: now
       })
-    }).then(function() {
+    ]).then(function() {
       wx.hideLoading()
-      log(LOG_TYPES.PURCHASE_UPDATE, '确认报销: ' + (purchase.item || ''), { id: that.data.id })
-      wx.showToast({ title: '已确认报销', icon: 'success' })
+      log(LOG_TYPES.PURCHASE_UPDATE, '确认付款: ' + (purchase.item || ''), { id: that.data.id })
+      wx.showToast({ title: '已确认付款', icon: 'success' })
       that.loadPurchase(that.data.id)
     }).catch(function(err) {
       wx.hideLoading()
-      handleCloudError(err, '确认报销')
+      handleCloudError(err, '确认付款')
     })
   },
 
@@ -442,7 +534,7 @@ Page({
     this.setData({ showDeleteModal: false })
 
     if (!this.data.canDelete) {
-      wx.showToast({ title: '仅可删除待审批记录', icon: 'none' })
+      wx.showToast({ title: '无删除权限', icon: 'none' })
       return
     }
 
@@ -456,6 +548,14 @@ Page({
           console.warn('清理云存储单据图片失败:', e)
         })
       }
+      // Clean up associated approval logs
+      db.queryAll(COLLECTIONS.APPROVAL_LOG, { purchaseId: that.data.id }).then(function(res) {
+        var logs = res.data || []
+        var deletePromises = logs.map(function(l) { return db.deleteDoc(COLLECTIONS.APPROVAL_LOG, l._id) })
+        return Promise.all(deletePromises)
+      }).catch(function(e) {
+        console.warn('清理审批日志失败:', e)
+      })
       wx.hideLoading()
       log(LOG_TYPES.PURCHASE_DELETE, '删除采购: ' + (that.data.purchase ? that.data.purchase.item : ''), { id: that.data.id })
       wx.showToast({ title: '已删除', icon: 'success' })

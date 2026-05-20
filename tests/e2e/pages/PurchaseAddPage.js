@@ -16,7 +16,7 @@ class PurchaseAddPage extends BasePage {
   }
 
   async getCategories() {
-    return this.getData('categories')
+    return this.getData('categoryOptions')
   }
 
   // --- Approval-related ---
@@ -59,7 +59,16 @@ class PurchaseAddPage extends BasePage {
   }
 
   async waitForLoad(timeout = 15000) {
-    return this.waitForData('loading', false, timeout)
+    // PurchaseAdd has no 'loading' field; wait for categoryOptions to populate instead
+    const start = Date.now()
+    while (Date.now() - start < timeout) {
+      const categories = await this.getData('categoryOptions')
+      if (Array.isArray(categories) && categories.length > 0) {
+        return true
+      }
+      await new Promise(r => setTimeout(r, 500))
+    }
+    return false
   }
 }
 

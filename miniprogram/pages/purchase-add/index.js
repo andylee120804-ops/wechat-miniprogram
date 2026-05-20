@@ -15,7 +15,7 @@ Page({
     id: '',
     item: '',
     amount: '',
-    category: 'meat',
+    category: 'banquet',
     date: '',
     remark: '',
     submitting: false,
@@ -31,16 +31,16 @@ Page({
     uploadingReceipt: false,
     pendingDeleteFileIDs: [],
     categoryOptions: [
-      { value: 'banquet', label: '宴会菜价' },
-      { value: 'meat', label: '肉类' },
-      { value: 'seafood', label: '海鲜' },
-      { value: 'vegetable', label: '蔬菜' },
-      { value: 'fruit', label: '水果' },
-      { value: 'drink', label: '饮品' },
-      { value: 'seasoning', label: '调味品' },
-      { value: 'supplies', label: '日用品' },
-      { value: 'equipment', label: '设备' },
-      { value: 'other', label: '其他' }
+      { value: 'banquet', label: '🍽 宴会菜价' },
+      { value: 'meat', label: '🥩 肉类' },
+      { value: 'seafood', label: '🦐 海鲜' },
+      { value: 'vegetable', label: '🥬 蔬菜' },
+      { value: 'fruit', label: '🍎 水果' },
+      { value: 'drink', label: '🍷 饮品' },
+      { value: 'seasoning', label: '🧂 调味品' },
+      { value: 'supplies', label: '🧹 日用品' },
+      { value: 'equipment', label: '🔧 设备' },
+      { value: 'other', label: '📦 其他' }
     ]
   },
 
@@ -67,14 +67,21 @@ Page({
     this.loadApprovalPreview()
   },
 
+  // --- Settings 缓存：避免重复查询 ---
+  async loadSettings(cached) {
+    if (cached) return cached
+    const res = await db.queryAll(COLLECTIONS.SETTINGS, {})
+    const settings = {}
+    ;(res.data || []).forEach(s => { if (!(s.key in settings)) settings[s.key] = s.value })
+    return settings
+  },
+
   async checkDefaultBanquet() {
     try {
-      const res = await db.queryAll(COLLECTIONS.SETTINGS, {})
-      const settings = {}
-      ;(res.data || []).forEach(s => { if (!(s.key in settings)) settings[s.key] = s.value })
+      const settings = await this.loadSettings()
       if (settings.serviceChargeEnabled && settings.serviceChargeEnabledDate) {
         this.setData({ category: 'banquet' })
-        this.loadAvailableReservations()
+        this.loadAvailableReservations(settings)
       }
     } catch (err) {
       console.warn('[purchase-add] 检查默认分类失败:', err)
@@ -84,9 +91,10 @@ Page({
   // 加载审批预览信息（默认审批人姓名）
   loadApprovalPreview: async function() {
     try {
+      var userInfo = app.globalData.userInfo || {}
       var res = await wx.cloud.callFunction({
         name: 'sendMessage',
-        data: { action: 'getApprovalSettings' }
+        data: { action: 'getApprovalSettings', callerWechatId: userInfo.wechatId || '' }
       })
       if (res.result && res.result.success && res.result.data) {
         var rules = res.result.data
@@ -97,11 +105,9 @@ Page({
     }
   },
 
-  async loadAvailableReservations() {
+  async loadAvailableReservations(cachedSettings) {
     try {
-      const settingsRes = await db.queryAll(COLLECTIONS.SETTINGS, {})
-      const settings = {}
-      ;(settingsRes.data || []).forEach(s => { settings[s.key] = s.value })
+      const settings = await this.loadSettings(cachedSettings)
       const enabledDate = settings.serviceChargeEnabledDate
       if (!enabledDate) {
         this.setData({ recentReservations: [], pickerItems: [], pickerIndex: -1 })
@@ -110,8 +116,9 @@ Page({
       const now = new Date()
       const todayStr = formatDate(now)
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000)
-      const startDate = enabledDate > formatDate(thirtyDaysAgo)
-        ? new Date(enabledDate + 'T00:00:00') : thirtyDaysAgo
+      // [Fix #1] 使用 Date 对象比较而非字符串比较，避免格式异常时结果不可预期
+      const enabledDateObj = new Date(enabledDate + 'T00:00:00')
+      const startDate = enabledDateObj > thirtyDaysAgo ? enabledDateObj : thirtyDaysAgo
       const endDate = new Date(todayStr + 'T23:59:59')
       const _db = db.getDb()
       const _ = _db.command
@@ -178,8 +185,25 @@ Page({
         category: data.category || 'meat',
         date: data.date || formatDate(new Date()),
         remark: data.remark || '',
-        receiptImages: data.receiptImages || []
+        receiptImages: data.receiptImages || [],
+        sourceReservationId: data.sourceReservationId || ''
       })
+
+      // 编辑模式：回填关联预约（与 income-add 保持一致）
+      if (data.category === 'banquet' && data.sourceReservationId) {
+        that.loadAvailableReservations().then(function() {
+          var idx = that.data.recentReservations.findIndex(function(r) {
+            return r._id === data.sourceReservationId
+          })
+          if (idx >= 0) {
+            that.setData({
+              selectedReservation: that.data.recentReservations[idx],
+              pickerIndex: idx,
+              reservationId: data.sourceReservationId
+            })
+          }
+        })
+      }
     }).catch(function(err) {
       wx.hideLoading()
       handleCloudError(err, '加载采购记录')
@@ -232,14 +256,20 @@ Page({
     var remaining = 3 - this.data.receiptImages.length
     if (remaining <= 0) return
 
-    wx.chooseMedia({
-      count: remaining,
-      mediaType: ['image'],
-      sourceType: ['album', 'camera'],
-      sizeType: ['compressed'],
+    wx.showActionSheet({
+      itemList: ['📷 拍照', '🖼 从相册选择'],
       success: function(res) {
-        var files = res.tempFiles || []
-        that.uploadReceiptFiles(files)
+        var sourceType = res.tapIndex === 0 ? ['camera'] : ['album']
+        wx.chooseMedia({
+          count: remaining,
+          mediaType: ['image'],
+          sourceType: sourceType,
+          sizeType: ['compressed'],
+          success: function(chooseRes) {
+            var files = chooseRes.tempFiles || []
+            that.uploadReceiptFiles(files)
+          }
+        })
       }
     })
   },
@@ -310,6 +340,7 @@ Page({
     })
   },
 
+  // [Fix #4] validate 增加 item 非空校验（宴会菜价场景豁免）
   validate: function() {
     const errors = {}
 
@@ -321,13 +352,123 @@ Page({
       errors.category = '请选择采购分类'
     }
 
+    // 宴会菜价可由预约自动填充品名，其他分类要求手动输入
+    if (!this.data.item.trim() && this.data.category !== 'banquet') {
+      errors.item = '请输入采购项目名称'
+    }
+
     const amountResult = validateAmount(this.data.amount)
     if (!amountResult.valid) errors.amount = amountResult.message
 
     this.setData({ errors: errors })
-    return Object.keys(errors).length === 0
+    var keys = Object.keys(errors)
+    if (keys.length > 0) {
+      wx.showToast({ title: errors[keys[0]], icon: 'none' })
+    }
+    return keys.length === 0
   },
 
+  // --- [Fix #2] 从 onSubmit 中拆分的子方法 ---
+
+  // 判断是否需要审批并填充 status/approver 字段
+  async determineApprovalStatus(data) {
+    try {
+      var userInfo = app.globalData.userInfo || {}
+      var rulesRes = await wx.cloud.callFunction({
+        name: 'sendMessage',
+        data: { action: 'getApprovalSettings', callerWechatId: userInfo.wechatId || '' }
+      })
+      if (rulesRes.result && rulesRes.result.success && rulesRes.result.data) {
+        var rules = rulesRes.result.data
+        var needApproval = false
+        if (rules.enabled !== false) {
+          if (rules.categories && rules.categories[data.category] === true) {
+            needApproval = true
+            var threshold = Number(rules.amountThreshold) || 0
+            if (threshold > 0 && data.amount <= threshold) {
+              needApproval = false
+            }
+          }
+        }
+        // If the submitter IS the designated approver, skip approval
+        if (needApproval && data.purchaseBy === rules.defaultApproverId) {
+          needApproval = false
+        }
+        // Always record designated approver name for display
+        data.approverName = rules.defaultApproverName || ''
+        data.approverId = rules.defaultApproverId || ''
+        if (needApproval) {
+          data.status = 'pending'
+        }
+      }
+    } catch (e) {
+      console.warn('[purchase-add] 获取审批设置失败，默认通过:', e)
+    }
+    return data
+  },
+
+  // 新增模式下用正式 purchaseId 重传图片（替代临时路径）
+  async reuploadReceiptImages(purchaseId, receiptImages) {
+    if (!receiptImages || receiptImages.length === 0) return receiptImages
+    var reuploadPromises = receiptImages.map(function(img, idx) {
+      return new Promise(function(resolve) {
+        wx.cloud.downloadFile({
+          fileID: img.fileID,
+          success: function(dlRes) {
+            var newCloudPath = 'purchase-receipts/' + purchaseId + '_' + Date.now() + '_' + idx + '.jpg'
+            wx.cloud.uploadFile({
+              cloudPath: newCloudPath,
+              filePath: dlRes.tempFilePath,
+              success: function(uploadRes) {
+                wx.cloud.deleteFile({ fileList: [img.fileID] }).catch(function() {})
+                resolve({
+                  fileID: uploadRes.fileID,
+                  uploadedAt: img.uploadedAt,
+                  uploadedBy: img.uploadedBy
+                })
+              },
+              fail: function() {
+                console.warn('[purchase-add] 重新上传图片时上传失败，保留原始文件')
+                resolve({
+                  fileID: img.fileID,
+                  uploadedAt: img.uploadedAt,
+                  uploadedBy: img.uploadedBy,
+                  _reuploadFailed: true
+                })
+              }
+            })
+          },
+          fail: function() {
+            console.warn('[purchase-add] 重新上传图片时下载失败，保留原始文件:', img.fileID)
+            resolve({
+              fileID: img.fileID,
+              uploadedAt: img.uploadedAt,
+              uploadedBy: img.uploadedBy,
+              _reuploadFailed: true
+            })
+          }
+        })
+      })
+    })
+    return Promise.all(reuploadPromises)
+  },
+
+  // 写入审批日志
+  async submitApprovalLog(purchaseId, userInfo, data) {
+    if (data.status !== 'pending') return
+    await db.addDoc(COLLECTIONS.APPROVAL_LOG, {
+      purchaseId: purchaseId,
+      action: 'submit',
+      operatorId: userInfo._id,
+      operatorName: userInfo.name || userInfo.nickName,
+      remark: '',
+      createdAt: db.getDb().serverDate()
+    }).catch(function(e) {
+      console.warn('[purchase-add] 写入审批日志失败:', e)
+    })
+  },
+
+  // --- 提交主入口 ---
   onSubmit: async function() {
     if (this.data.submitting) return
     if (!this.validate()) return
@@ -335,7 +476,7 @@ Page({
     const that = this
     const userInfo = app.globalData.userInfo || {}
 
-    const data = {
+    var data = {
       item: this.data.item.trim(),
       amount: Number(this.data.amount),
       category: this.data.category,
@@ -352,44 +493,32 @@ Page({
       delete data.purchaseByName
     }
 
-    // 审批规则判断：检查是否需要审批
+    // 审批规则判断
     data.status = 'approved'
     try {
-      var rulesRes = await wx.cloud.callFunction({
-        name: 'sendMessage',
-        data: { action: 'getApprovalSettings' }
-      })
-      if (rulesRes.result && rulesRes.result.success && rulesRes.result.data) {
-        var rules = rulesRes.result.data
-        var needApproval = false
-        if (rules.enabled !== false) {
-          // 检查分类是否在审批范围内
-          if (rules.categories && rules.categories[data.category] === true) {
-            needApproval = true
-          }
-          // 检查金额是否超过阈值
-          if (!needApproval && rules.amountThreshold && data.amount > Number(rules.amountThreshold)) {
-            needApproval = true
-          }
-        }
-        if (needApproval) {
-          data.status = 'pending'
-          data.approverId = rules.defaultApproverId || ''
-          data.approverName = rules.defaultApproverName || ''
-        }
-      }
+      data = await this.determineApprovalStatus(data)
     } catch (e) {
-      // 获取审批设置失败，默认通过
-      console.warn('[purchase-add] 获取审批设置失败，默认通过:', e)
+      console.error('[purchase-add] determineApprovalStatus error:', e)
+      wx.showToast({ title: '获取审批规则失败', icon: 'none' })
+      return
     }
 
     that.setData({ submitting: true })
     wx.showLoading({ title: that.data.isEdit ? '保存中...' : '添加中...' })
 
+    // Safety: auto-reset submitting after 30s to prevent permanent lock
+    setTimeout(function() {
+      if (that.data.submitting) {
+        that.setData({ submitting: false })
+        wx.hideLoading()
+      }
+    }, 30000)
+
     if (that.data.isEdit) {
       if (!checkPermission('purchase', ACTIONS.EDIT)) {
         that.setData({ submitting: false })
         wx.hideLoading()
+        wx.showToast({ title: '无权编辑采购，请联系管理员', icon: 'none', duration: 3000 })
         return
       }
       db.updateDoc(COLLECTIONS.PURCHASE, that.data.id, data).then(function() {
@@ -401,8 +530,9 @@ Page({
         }
         wx.hideLoading()
         log(LOG_TYPES.PURCHASE_UPDATE, '更新采购: ' + data.item, { id: that.data.id, amount: data.amount })
+        that.setData({ submitting: false })
         wx.showToast({ title: '保存成功', icon: 'success' })
-        setTimeout(function() { wx.navigateBack() }, 1500)
+        setTimeout(function() { wx.switchTab({ url: '/pages/purchase/index' }) }, 1500)
       }).catch(function(err) {
         that.setData({ submitting: false })
         wx.hideLoading()
@@ -412,68 +542,23 @@ Page({
       if (!checkPermission('purchase', ACTIONS.ADD)) {
         that.setData({ submitting: false })
         wx.hideLoading()
+        wx.showToast({ title: '无权操作新增采购，请联系管理员分配权限', icon: 'none', duration: 3000 })
         return
       }
-      db.addDoc(COLLECTIONS.PURCHASE, data).then(function(result) {
-        // Re-upload receipt images with proper cloudPath using purchaseId
-        var purchaseId = result._id
-        var receiptImages = that.data.receiptImages
-        if (receiptImages.length > 0) {
-          var reuploadPromises = receiptImages.map(function(img, idx) {
-            return new Promise(function(resolve) {
-              wx.cloud.downloadFile({
-                fileID: img.fileID,
-                success: function(dlRes) {
-                  var newCloudPath = 'purchase-receipts/' + purchaseId + '_' + Date.now() + '_' + idx + '.jpg'
-                  wx.cloud.uploadFile({
-                    cloudPath: newCloudPath,
-                    filePath: dlRes.tempFilePath,
-                    success: function(uploadRes) {
-                      wx.cloud.deleteFile({ fileList: [img.fileID] }).catch(function() {})
-                      resolve({
-                        fileID: uploadRes.fileID,
-                        uploadedAt: img.uploadedAt,
-                        uploadedBy: img.uploadedBy
-                      })
-                    },
-                    fail: function() {
-                      resolve(img)
-                    }
-                  })
-                },
-                fail: function() {
-                  resolve(img)
-                }
-              })
-            })
-          })
-
-          Promise.all(reuploadPromises).then(function(finalImages) {
-            db.updateDoc(COLLECTIONS.PURCHASE, purchaseId, { receiptImages: finalImages }).catch(function(e) {
-              console.warn('更新单据图片路径失败:', e)
-            })
-          })
-        }
+      // [Fix #5] 等待图片重传和审批日志完成后再提示成功
+      db.addDoc(COLLECTIONS.PURCHASE, data).then(async function(result) {
+        var finalImages = await that.reuploadReceiptImages(result._id, that.data.receiptImages)
+        await db.updateDoc(COLLECTIONS.PURCHASE, result._id, { receiptImages: finalImages }).catch(function(e) {
+          console.warn('更新单据图片路径失败:', e)
+        })
 
         wx.hideLoading()
         log(LOG_TYPES.PURCHASE_CREATE, '新增采购: ' + data.item, { amount: data.amount, category: data.category })
+        await that.submitApprovalLog(result._id, userInfo, data)
 
-        // 如果需要审批，写入审批日志
-        if (data.status === 'pending') {
-          db.addDoc(COLLECTIONS.APPROVAL_LOG, {
-            purchaseId: result._id,
-            action: 'submit',
-            operatorId: userInfo._id,
-            operatorName: userInfo.name || userInfo.nickName,
-            remark: '',
-            createdAt: db.getDb().serverDate()
-          }).catch(function(e) {
-            console.warn('[purchase-add] 写入审批日志失败:', e)
-          })
-        }
-
+        that.setData({ submitting: false })
         wx.showToast({ title: '添加成功', icon: 'success' })
-        setTimeout(function() { wx.navigateBack() }, 1500)
+        setTimeout(function() { wx.switchTab({ url: '/pages/purchase/index' }) }, 1500)
       }).catch(function(err) {
         that.setData({ submitting: false })
         wx.hideLoading()
@@ -509,6 +594,11 @@ Page({
   },
 
   onBack: function() {
-    wx.navigateBack()
+    var pages = getCurrentPages()
+    if (pages.length > 1) {
+      wx.navigateBack()
+    } else {
+      wx.switchTab({ url: '/pages/purchase/index' })
+    }
   }
 })

@@ -1,6 +1,6 @@
-<view class="income-add-page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh; padding-bottom: 140rpx;">
+<view class="page" style="background: {{theme.surfaceColor || '#1A1A2E'}};">
   <!-- Custom Navigation Bar -->
-  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor || '#1A1A2E'}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">
+  <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">
     <view class="nav-bar-content">
       <view class="nav-back" bindtap="onBack">
         <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
@@ -9,70 +9,86 @@
       <view class="nav-action"></view>
     </view>
   </view>
-  <view style="padding: 32rpx; padding-top: {{statusBarHeight + 44}}px;">
+
+  <view class="page-content px-lg pt-xl">
     <!-- Income Type -->
-    <theme-card theme="{{theme}}" padding="32rpx">
-      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 20rpx;">收入类型</text>
-      <view class="type-grid">
-        <view class="type-pill {{type === item.value ? 'active' : ''}}" wx:for="{{typeOptions}}" wx:key="value" data-value="{{item.value}}" bindtap="selectType" style="{{type === item.value ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.elevated || '#252540') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}">
-          <text style="font-size: 28rpx; font-weight: 600;">{{item.label}}</text>
+    <view style="background: {{theme.elevated || '#252540'}}; border-radius: 10rpx; padding: 14rpx 20rpx; margin-top: 16rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+      <view class="flex-row" style="align-items: center; margin-bottom: 10rpx;">
+        <text style="font-size: 28rpx; margin-right: 8rpx;">🏷️</text>
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">收入类型</text>
+      </view>
+      <view class="type-grid flex-row flex-wrap" style="gap: 10rpx;">
+        <view class="type-pill {{type === item.value ? 'active' : ''}}" wx:for="{{typeOptions}}" wx:key="value" data-value="{{item.value}}" bindtap="selectType"
+          style="{{type === item.value ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.surfaceColor || '#1A1A2E') + ';color:' + (theme.textSecondary || '#9A9AB0') + ';'}}; border-radius: 8rpx; padding: 8rpx 18rpx;">
+          <text style="font-size: 24rpx;">{{item.label}}</text>
         </view>
       </view>
-    </theme-card>
+    </view>
 
-    <!-- Date Picker -->
-    <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;">
-      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 20rpx;">日期</text>
-      <picker mode="date" value="{{date}}" bindchange="onDateChange">
-        <view class="date-display flex-row flex-between" style="background: {{theme.elevated || '#252540'}}; border-radius: 12rpx; padding: 20rpx 24rpx; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}};">
-          <text style="color: {{theme.textPrimary || '#F5F0E8'}};">{{date}}</text>
-          <text style="color: {{theme.textMuted || '#5C5C72'}};">▾</text>
+    <!-- Date & Reservation Row -->
+    <view style="border-radius: 10rpx; margin-top: 12rpx; gap: 12rpx;">
+      <view class="flex-row flex-between" style="background: {{theme.elevated || '#252540'}}; border-radius: 10rpx; padding: 14rpx 20rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+        <view class="flex-row" style="align-items: center;">
+          <text style="font-size: 28rpx; margin-right: 8rpx;">📅</text>
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">日期</text>
         </view>
-      </picker>
-    </theme-card>
-
-    <!-- Reservation Link -->
-    <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;">
-      <view class="toggle-row">
-        <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600;">关联预约</text>
-        <switch checked="{{!noReservation}}" bindchange="toggleNoReservation" color="{{theme.accentColor || '#C9A96E'}}" />
+        <picker mode="date" value="{{date}}" bindchange="onDateChange">
+          <view class="flex-row" style="align-items: center;">
+            <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx;">{{date}}</text>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; margin-left: 8rpx;">▾</text>
+          </view>
+        </picker>
       </view>
-
-      <block wx:if="{{!noReservation}}">
-        <view class="picker-wrap" wx:if="{{recentReservations.length > 0}}">
-          <picker mode="selector" range="{{pickerItems}}" bindchange="onReservationPickerChange">
-            <view class="picker-display" style="background: {{theme.elevated || '#252540'}}; border-radius: 12rpx; padding: 20rpx 24rpx; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}}; display: flex; justify-content: space-between; align-items: center;">
-              <text style="color: {{pickerIndex >= 0 ? theme.textPrimary || '#F0F0F5' : theme.textMuted || '#5C5C72'}}; font-size: 28rpx;">{{pickerIndex >= 0 ? pickerItems[pickerIndex] : '请选择预约'}}</text>
-              <text style="color: {{theme.textMuted || '#5C5C72'}}; margin-left: 8rpx;">▾</text>
+      <view class="flex-row flex-between" wx:if="{{!noReservation}}" style="background: {{theme.elevated || '#252540'}}; border-radius: 10rpx; padding: 14rpx 20rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+        <view class="flex-row" style="align-items: center; flex-shrink: 0;">
+          <text style="font-size: 28rpx; margin-right: 8rpx;">📋</text>
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">关联预约</text>
+        </view>
+        <block wx:if="{{recentReservations.length > 0}}">
+          <picker mode="selector" range="{{pickerItems}}" bindchange="onReservationPickerChange" style="flex:1">
+            <view class="flex-row" style="align-items: center; justify-content: flex-end;">
+              <text style="color: {{pickerIndex >= 0 ? theme.textPrimary || '#F5F0E8' : theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{pickerIndex >= 0 ? pickerItems[pickerIndex] : ''}}</text>
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 20rpx; margin-left: 4rpx; flex-shrink:0;">▾</text>
             </view>
           </picker>
-          <view wx:if="{{selectedReservation}}" class="selected-res-info" style="margin-top: 16rpx; padding: 16rpx 20rpx; background: rgba(201,169,110,0.08); border-radius: 12rpx; border: 1rpx solid {{theme.accentColor || '#C9A96E'}};">
-            <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 26rpx;">{{selectedReservation.customerName}} · {{selectedReservation.guestCount}}人 · ¥{{selectedReservation.standard}}/人</text>
-          </view>
-        </view>
-        <text wx:else style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; display: block; margin-top: 16rpx;">暂无可关联的预约</text>
-      </block>
-    </theme-card>
+        </block>
+        <text wx:else style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">暂无</text>
+      </view>
+    </view>
 
     <!-- Amount -->
-    <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;">
-      <theme-form-item theme="{{theme}}" label="金额">
-        <input class="amount-input" type="digit" placeholder="请输入金额" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{amount}}" bindinput="onAmountInput" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 36rpx; font-weight: 700; font-family: 'DIN Alternate', monospace; height: 48rpx;" />
-      </theme-form-item>
-    </theme-card>
+    <view style="background: {{theme.elevated || '#252540'}}; border-radius: 10rpx; padding: 20rpx; margin-top: 12rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+      <view class="flex-row" style="align-items: center; margin-bottom: 8rpx;">
+        <text style="font-size: 28rpx; margin-right: 8rpx;">💰</text>
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">金额</text>
+      </view>
+      <view style="display: flex; align-items: baseline;">
+        <text style="color: {{theme.amountPositive || '#4ADE80'}}; font-size: 36rpx; font-weight: 600; margin-right: 6rpx; flex-shrink: 0;">¥</text>
+        <input type="digit" placeholder="0.00" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 44rpx; font-weight: 600;"
+          value="{{amount}}" bindinput="onAmountInput"
+          style="color: {{theme.amountPositive || '#4ADE80'}}; text-align: left; width: 100%; font-size: 44rpx; font-weight: 600; height: 57rpx; display: block; box-sizing: border-box" />
+      </view>
+    </view>
 
     <!-- Remark -->
-    <theme-card theme="{{theme}}" padding="32rpx" style="margin-top: 24rpx;">
-      <theme-form-item theme="{{theme}}" label="备注">
-        <textarea class="remark-input" placeholder="请输入备注(选填)" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{remark}}" bindinput="onRemarkInput" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; min-height: 120rpx; width: 100%;" />
-      </theme-form-item>
-    </theme-card>
+    <view style="background: {{theme.elevated || '#252540'}}; border-radius: 10rpx; padding: 14rpx 20rpx; margin-top: 12rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+      <view class="flex-row" style="align-items: center; margin-bottom: 10rpx;">
+        <text style="font-size: 28rpx; margin-right: 8rpx;">📝</text>
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">备注</text>
+      </view>
+      <textarea placeholder="选填" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;"
+        value="{{remark}}" bindinput="onRemarkInput" maxlength="200"
+        style="color: {{theme.textPrimary || '#F5F0E8'}}; background: {{theme.surfaceColor || '#1A1A2E'}}; border-radius: 8rpx; padding: 16rpx; min-height: 100rpx; max-height: 100rpx; width: 100%; box-sizing: border-box;" />
+    </view>
+
+    <!-- Bottom Spacer for fixed bar -->
+    <view style="height: 200rpx;"></view>
   </view>
 
   <!-- Fixed Bottom Bar -->
-  <view class="bottom-bar safe-bottom">
+  <view class="bottom-bar">
     <view class="bottom-bar-inner single-btn">
-      <view class="bar-btn bar-btn-primary" bindtap="onSubmit" style="position: relative; left: -3rpx; top: -13rpx">{{isEdit ? '保存修改' : '记录收入'}}</view>
+      <view class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onSubmit">{{isEdit ? '保存修改' : '记录收入'}}</view>
     </view>
   </view>
 

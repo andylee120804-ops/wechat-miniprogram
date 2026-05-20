@@ -61,7 +61,7 @@ Page({
     // Feature group — boss and admin both get business features
     if (hasPermission('dashboard', ACTIONS.VIEW)) {
       featureGroup.push({ key: 'dashboard', icon: '📊', text: '经营报表' })
-      featureGroup.push({ key: 'customer', icon: '👤', text: '客户管理' })
+      featureGroup.push({ key: 'customer', icon: '💁', text: '客户管理' })
       featureGroup.push({ key: 'insights', icon: '🔍', text: '经营洞察' })
     }
     if (hasPermission('expense', ACTIONS.VIEW)) {
@@ -87,7 +87,7 @@ Page({
     // Build pending group (dynamic menu items)
     var pendingGroup = []
     if (hasTodoPerm) {
-      pendingGroup.push({ key: 'todo', icon: '📋', text: '我的待办事项' + (pendingTotal > 0 ? '（' + pendingTotal + '）' : '') })
+      pendingGroup.push({ key: 'todo', icon: '📋', text: '我的待办事项' + (this.data.pendingTotal > 0 ? '（' + this.data.pendingTotal + '）' : '') })
     }
     if (hasPurchaseAdd) {
       pendingGroup.push({ key: 'myPurchases', icon: '📦', text: '我的采购申请' })

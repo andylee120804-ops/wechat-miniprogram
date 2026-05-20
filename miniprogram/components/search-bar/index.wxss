@@ -2,19 +2,19 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 0 24rpx;
-  height: 80rpx;
+  padding: 0 20rpx;
+  height: 60rpx;
 }
 
 .search-icon {
-  font-size: 32rpx;
-  margin-right: 16rpx;
+  font-size: 28rpx;
+  margin-right: 12rpx;
 }
 
 .search-input {
   flex: 1;
-  height: 80rpx;
-  font-size: 28rpx;
+  height: 60rpx;
+  font-size: 23rpx;
 }
 
 .search-clear {

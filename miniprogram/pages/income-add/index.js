@@ -133,8 +133,26 @@ Page({
         status: 'confirmed'
       })
 
-      const allReservations = results.data || []
+      let allReservations = results.data || []
       const currentReservationId = that.data.reservationId
+
+      // 编辑模式：如果当前关联的预约不在列表中，单独查出来补上
+      let currentRes = null
+      if (currentReservationId && !allReservations.some(function(r) { return r._id === currentReservationId })) {
+        try {
+          currentRes = await db.getDoc(COLLECTIONS.RESERVATION, currentReservationId)
+          if (currentRes) {
+            // 补充 roomName 字段（数据库存的是 room: 'big'|'small'）
+            if (!currentRes.roomName) {
+              currentRes.roomName = currentRes.room === 'big' ? '大包厢' : '小包厢'
+            }
+            allReservations.unshift(currentRes)
+          }
+        } catch (e) {
+          console.warn('[IncomeAdd] 加载当前关联预约失败:', e)
+        }
+      }
+
       // Query income collection directly to find which reservations are already linked
       const allIds = allReservations.map(function(r) { return r._id })
       let linkedIds = new Set()
@@ -153,8 +171,12 @@ Page({
         return !linkedIds.has(r._id) || r._id === currentReservationId
       })
 
-      // Sort by date descending
-      available.sort(function(a, b) { return (b.date || 0) - (a.date || 0) })
+      // Sort by date descending (keep current reservation at top)
+      available.sort(function(a, b) {
+        if (a._id === currentReservationId) return -1
+        if (b._id === currentReservationId) return 1
+        return (b.date || 0) - (a.date || 0)
+      })
 
       // Build picker items
       const items = available.map(function(r) {
@@ -170,10 +192,9 @@ Page({
       let pickerIndex = -1
       if (currentReservationId) {
         pickerIndex = available.findIndex(function(r) { return r._id === currentReservationId })
-        if (pickerIndex >= 0 && that.data.selectedReservation) {
-          // Use the full reservation data from the list
-          that.setData({ selectedReservation: available[pickerIndex] })
-        }
+      }
+      if (pickerIndex >= 0 && !that.data.selectedReservation) {
+        that.setData({ selectedReservation: available[pickerIndex] })
       }
 
       that.setData({ recentReservations: available, pickerItems: items, pickerIndex })
@@ -183,7 +204,12 @@ Page({
   },
 
   onBack() {
-    wx.navigateBack()
+    const pages = getCurrentPages()
+    if (pages.length > 1) {
+      wx.navigateBack()
+    } else {
+      wx.switchTab({ url: '/pages/income/index' })
+    }
   },
 
   selectType(e) {

@@ -13,7 +13,9 @@ exports.main = async (event, context) => {
 
   try {
     // Verify caller identity: must be requesting own permissions or be boss/admin
-    const callerRes = await db.collection('staff').where({ _openid: OPENID }).get()
+    // Use boundOpenid (set during login) instead of _openid (system-generated)
+    // Only match active staff records
+    const callerRes = await db.collection('staff').where({ boundOpenid: OPENID, status: 'active' }).get()
     const caller = callerRes.data && callerRes.data[0]
     if (!caller) {
       return { success: false, message: '无法验证调用者身份' }

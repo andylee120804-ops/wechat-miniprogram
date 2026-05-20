@@ -28,7 +28,7 @@
       </view>
 
       <!-- Block 1: 今日预约 (Hero Section) -->
-      <view class="section-block section-today">
+      <view class="section-block section-today" style="position: relative; left: 0rpx; top: 14rpx">
         <view class="section-header">
           <text class="section-title" style="color: {{theme.accentColor || '#C9A96E'}};">今日预约</text>
           <text class="section-badge">{{lunchReservations.length + dinnerReservations.length}} 组</text>
@@ -126,7 +126,28 @@
           </view>
         </view>
         <view wx:if="{{monthlyFixedCost > 0}}" class="summary-row" style="margin-top: 12rpx;">
-          
+
+        </view>
+      </view>
+
+      <!-- Block 3.5: 待办 (有数据时显示) -->
+      <view wx:if="{{showTodo && (pendingApprovalCount > 0 || pendingReimburseCount > 0)}}" class="section-block section-todo" bindtap="onTodoTap">
+        <view class="section-header">
+          <text class="section-title" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">📋 待办</text>
+        </view>
+        <view class="todo-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 16rpx;">
+          <view class="todo-row" wx:if="{{pendingApprovalCount > 0}}" style="padding: 32rpx; display: flex; align-items: center; gap: 24rpx; border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.06)'}};">
+            <text style="font-size: 40rpx;">🟡</text>
+            <text style="flex:1; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 30rpx;">待审批</text>
+            <view style="background: rgba(251,191,36,0.15); padding: 4rpx 20rpx; border-radius: 99rpx;"><text style="color: #FBBF24; font-size: 24rpx; font-weight: 700;">{{pendingApprovalCount}}</text></view>
+            <text style="color: {{theme.textMuted || 'rgba(245,240,232,0.4)'}}; font-size: 40rpx;">›</text>
+          </view>
+          <view class="todo-row" wx:if="{{pendingReimburseCount > 0}}" style="padding: 32rpx; display: flex; align-items: center; gap: 24rpx;">
+            <text style="font-size: 40rpx;">💰</text>
+            <text style="flex:1; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 30rpx;">待付款</text>
+            <view style="background: rgba(74,222,128,0.15); padding: 4rpx 20rpx; border-radius: 99rpx;"><text style="color: #4ADE80; font-size: 24rpx; font-weight: 700;">{{pendingReimburseCount}}</text></view>
+            <text style="color: {{theme.textMuted || 'rgba(245,240,232,0.4)'}}; font-size: 40rpx;">›</text>
+          </view>
         </view>
       </view>
 
@@ -156,27 +177,6 @@
             </view>
             <text class="action-text">收入记录</text>
             <text class="action-sub">快速记账</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- Block 5: 待办 -->
-      <view wx:if="{{showTodo && (pendingApprovalCount > 0 || pendingReimburseCount > 0)}}" class="section-block section-todo" bindtap="onTodoTap">
-        <view class="section-header">
-          <text class="section-title" style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">📋 待办</text>
-        </view>
-        <view class="todo-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 16rpx;">
-          <view class="todo-row" wx:if="{{pendingApprovalCount > 0}}" style="padding: 32rpx; display: flex; align-items: center; gap: 24rpx; border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.06)'}};">
-            <text style="font-size: 40rpx;">🟡</text>
-            <text style="flex:1; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 30rpx;">待审批</text>
-            <view style="background: rgba(251,191,36,0.15); padding: 4rpx 20rpx; border-radius: 99rpx;"><text style="color: #FBBF24; font-size: 24rpx; font-weight: 700;">{{pendingApprovalCount}}</text></view>
-            <text style="color: {{theme.textMuted || 'rgba(245,240,232,0.4)'}}; font-size: 40rpx;">›</text>
-          </view>
-          <view class="todo-row" wx:if="{{pendingReimburseCount > 0}}" style="padding: 32rpx; display: flex; align-items: center; gap: 24rpx;">
-            <text style="font-size: 40rpx;">💰</text>
-            <text style="flex:1; color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 30rpx;">待报销</text>
-            <view style="background: rgba(74,222,128,0.15); padding: 4rpx 20rpx; border-radius: 99rpx;"><text style="color: #4ADE80; font-size: 24rpx; font-weight: 700;">{{pendingReimburseCount}}</text></view>
-            <text style="color: {{theme.textMuted || 'rgba(245,240,232,0.4)'}}; font-size: 40rpx;">›</text>
           </view>
         </view>
       </view>

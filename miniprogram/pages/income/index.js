@@ -27,6 +27,11 @@ Page({
       { id: 'other', name: '其他' }
     ],
     searchKeyword: '',
+    // Sort
+    sortField: 'createdAt', // 'date' = 收入日期, 'createdAt' = 创建日期
+    // Date filter
+    filterDate: '',
+    filterDateDisplay: '',
     // Pagination
     page: 1,
     pageSize: 20,
@@ -57,18 +62,35 @@ Page({
   async loadData() {
     this.setData({ loading: true, page: 1, incomes: [], filteredIncomes: [] })
     try {
-      const range = getMonthRange(this.data.monthOffset)
-      const res = await db.queryPage(COLLECTIONS.INCOME, {
-        date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
-      }, 1, this.data.pageSize, 'createdAt', 'desc')
+      const filterDate = this.data.filterDate
+      let query
 
-      const total = (res.data || []).reduce((s, i) => s + (i.amount || 0), 0)
+      if (filterDate) {
+        // Specific date filter — use exact date string match (same format as stored data)
+        query = { date: filterDate }
+      } else {
+        // Month filter
+        const range = getMonthRange(this.data.monthOffset)
+        query = {
+          date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
+        }
+      }
+
+      const res = await db.queryPage(COLLECTIONS.INCOME, query, 1, this.data.pageSize, this.data.sortField, 'desc')
+
+      // Query all records for accurate total amount (same pattern as purchase page)
+      const totalPromise = db.queryAll(COLLECTIONS.INCOME, query)
+
       const items = (res.data || []).map(i => ({
         ...i,
         typeText: getIncomeTypeText(i.type) || '其他',
         amountText: formatAmount(i.amount),
         dateText: formatDate(i.date)
       }))
+
+      const allData = (await totalPromise).data || []
+      const total = allData.reduce((s, i) => s + (i.amount || 0), 0)
+
       this.setData({
         loading: false,
         incomes: items,
@@ -88,11 +110,20 @@ Page({
     if (this.data.loadingMore || !this.data.hasMore) return
     const that = this
     that.setData({ loadingMore: true })
-    const range = getMonthRange(that.data.monthOffset)
 
-    db.queryPage(COLLECTIONS.INCOME, {
-      date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
-    }, that.data.page + 1, that.data.pageSize, 'createdAt', 'desc').then(function(res) {
+    const filterDate = that.data.filterDate
+    let query
+
+    if (filterDate) {
+      query = { date: filterDate }
+    } else {
+      const range = getMonthRange(that.data.monthOffset)
+      query = {
+        date: db.getDb().command.gte(range.start).and(db.getDb().command.lte(range.end))
+      }
+    }
+
+    db.queryPage(COLLECTIONS.INCOME, query, that.data.page + 1, that.data.pageSize, that.data.sortField, 'desc').then(function(res) {
       const newItems = (res.data || []).map(function(i) {
         return { ...i,
           typeText: getIncomeTypeText(i.type) || '其他',
@@ -119,7 +150,7 @@ Page({
   onPrevMonth() {
     const offset = this.data.monthOffset - 1
     const range = getMonthRange(offset)
-    this.setData({ monthOffset: offset, activeType: '', searchKeyword: '', currentMonth: range.label, monthStr: range.monthStr })
+    this.setData({ monthOffset: offset, activeType: '', searchKeyword: '', filterDate: '', filterDateDisplay: '', currentMonth: range.label, monthStr: range.monthStr })
     this.loadData()
   },
 
@@ -127,17 +158,40 @@ Page({
     if (this.data.monthOffset >= 0) return
     const offset = this.data.monthOffset + 1
     const range = getMonthRange(offset)
-    this.setData({ monthOffset: offset, activeType: '', searchKeyword: '', currentMonth: range.label, monthStr: range.monthStr })
+    this.setData({ monthOffset: offset, activeType: '', searchKeyword: '', filterDate: '', filterDateDisplay: '', currentMonth: range.label, monthStr: range.monthStr })
+    this.loadData()
+  },
+
+  onDateChange(e) {
+    const date = e.detail.value
+    if (date) {
+      const displayDate = date.replace(/-/g, '/')
+      this.setData({ filterDate: date, filterDateDisplay: displayDate, activeType: '', searchKeyword: '' })
+    } else {
+      const range = getMonthRange(this.data.monthOffset)
+      this.setData({ filterDate: '', filterDateDisplay: '', currentMonth: range.label })
+    }
+    this.loadData()
+  },
+
+  onClearDateFilter() {
+    const range = getMonthRange(this.data.monthOffset)
+    this.setData({ filterDate: '', filterDateDisplay: '', currentMonth: range.label })
     this.loadData()
   },
 
   onTypeChange(e) {
-    this.setData({ activeType: e.detail.value || '' })
+    this.setData({ activeType: e.detail.id || '' })
     this.applyFilter()
   },
 
   onSearch(e) {
     this.setData({ searchKeyword: e.detail.value || '' })
+    this.applyFilter()
+  },
+
+  onSearchClear() {
+    this.setData({ searchKeyword: '' })
     this.applyFilter()
   },
 
@@ -162,6 +216,12 @@ Page({
       return
     }
     wx.navigateTo({ url: '/pages/income-add/index' })
+  },
+
+  onSortToggle() {
+    const newField = this.data.sortField === 'date' ? 'createdAt' : 'date'
+    this.setData({ sortField: newField })
+    this.loadData()
   },
 
   onItemTap(e) {

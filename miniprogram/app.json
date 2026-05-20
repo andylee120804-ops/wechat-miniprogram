@@ -36,6 +36,7 @@
     "pages/admin/venue-settings/index",
     "pages/admin/approval-settings/index",
     "pages/min-amount/index",
+    "pages/my-purchases/index",
     "pages/reservation-share/index"
   ],
   "window": {

@@ -70,6 +70,10 @@ class PurchasePage extends BasePage {
   async getTotalAmount() {
     return this.getData('totalAmount')
   }
+
+  async waitForLoad(timeout = 15000) {
+    return this.waitForData('loading', false, timeout)
+  }
 }
 
 module.exports = PurchasePage

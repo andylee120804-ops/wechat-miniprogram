@@ -6,7 +6,7 @@
     {
       "name": "dailySync",
       "type": "timer",
-      "config": "0 0 23 * * * *"
+      "config": "0 5 0 * * * *"
     }
   ]
 }

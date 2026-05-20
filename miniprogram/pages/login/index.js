@@ -18,16 +18,31 @@ Page({
     this._waitForInitialLogin()
   },
 
-  async _waitForInitialLogin() {
+  _loginCheckTimer: null,
+
+  _waitForInitialLogin() {
     if (app._initialLoginChecked) {
       this._finishAutoLoginFlow()
       return
     }
-    const start = Date.now()
-    while (!app._initialLoginChecked && Date.now() - start < 5000) {
-      await new Promise(r => setTimeout(r, 100))
+    var that = this
+    var waitCount = 0
+    var MAX_WAIT = 50 // 50次 * 100ms = 5秒
+    this._loginCheckTimer = setInterval(function() {
+      waitCount++
+      if (app._initialLoginChecked || waitCount >= MAX_WAIT) {
+        clearInterval(that._loginCheckTimer)
+        that._loginCheckTimer = null
+        that._finishAutoLoginFlow()
+      }
+    }, 100)
+  },
+
+  onUnload() {
+    if (this._loginCheckTimer) {
+      clearInterval(this._loginCheckTimer)
+      this._loginCheckTimer = null
     }
-    this._finishAutoLoginFlow()
   },
 
   _finishAutoLoginFlow() {
@@ -83,9 +98,11 @@ Page({
         name: 'getPermissions',
         data: { staffId: result.data._id }
       })
+      console.log('[Login] 权限加载结果:', permRes.result)
 
       if (permRes.result && permRes.result.success && permRes.result.data) {
         app.globalData.permissions = permRes.result.data
+        console.log('[Login] 权限已设置:', app.globalData.permissions)
       }
 
       // Log login

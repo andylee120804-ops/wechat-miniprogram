@@ -59,7 +59,7 @@
               <view class="card-meta">
                 <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{item.guestCount}}人</text>
                 <text class="meta-divider" style="color: {{theme.divider || 'rgba(255,255,255,0.08)'}};">|</text>
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">¥{{item.standard}}/人</text>
+                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">{{item.dishPrice > 0 ? '菜价 ¥' : '¥'}}{{item.displayPrice}}{{item.dishPrice > 0 ? '' : '/人'}}</text>
               </view>
             </view>
           </view>
@@ -93,7 +93,7 @@
               <view class="card-meta">
                 <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{item.guestCount}}人</text>
                 <text class="meta-divider" style="color: {{theme.divider || 'rgba(255,255,255,0.08)'}};">|</text>
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">¥{{item.standard}}/人</text>
+                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">{{item.dishPrice > 0 ? '菜价 ¥' : '¥'}}{{item.displayPrice}}{{item.dishPrice > 0 ? '' : '/人'}}</text>
               </view>
             </view>
           </view>
@@ -127,7 +127,7 @@
               <view class="card-meta">
                 <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{item.guestCount}}人</text>
                 <text class="meta-divider" style="color: {{theme.divider || 'rgba(255,255,255,0.08)'}};">|</text>
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">¥{{item.standard}}/人</text>
+                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">{{item.dishPrice > 0 ? '菜价 ¥' : '¥'}}{{item.displayPrice}}{{item.dishPrice > 0 ? '' : '/人'}}</text>
               </view>
             </view>
           </view>
@@ -161,7 +161,7 @@
               <view class="card-meta">
                 <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{item.guestCount}}人</text>
                 <text class="meta-divider" style="color: {{theme.divider || 'rgba(255,255,255,0.08)'}};">|</text>
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">¥{{item.standard}}/人</text>
+                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">{{item.dishPrice > 0 ? '菜价 ¥' : '¥'}}{{item.displayPrice}}{{item.dishPrice > 0 ? '' : '/人'}}</text>
               </view>
             </view>
           </view>
@@ -195,7 +195,7 @@
               <view class="card-meta">
                 <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{item.guestCount}}人</text>
                 <text class="meta-divider" style="color: {{theme.divider || 'rgba(255,255,255,0.08)'}};">|</text>
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">¥{{item.standard}}/人</text>
+                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">{{item.dishPrice > 0 ? '菜价 ¥' : '¥'}}{{item.displayPrice}}{{item.dishPrice > 0 ? '' : '/人'}}</text>
               </view>
             </view>
           </view>

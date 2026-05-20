@@ -10,7 +10,7 @@
     </view>
   </view>
 
-  <view class="page-content px-lg pt-xl" wx:if="{{!loading && purchase}}">
+  <view class="page-content px-lg" style="padding-top: {{statusBarHeight + 44 + 16}}px;" wx:if="{{!loading && purchase}}">
     <!-- Amount Hero -->
     <view class="hero-section flex-col flex-center" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border-radius: 20rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
       <view class="p-xl flex-col flex-center">
@@ -50,13 +50,9 @@
           <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">拒绝原因</text>
           <text class="detail-value text-body" style="color: #F87171; max-width: 420rpx; text-align: right;">{{purchase.rejectionReason}}</text>
         </view>
-        <view class="detail-row flex-row flex-between py-md" wx:if="{{purchase.formattedApprovedAt}}" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
-          <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">审批时间</text>
-          <text class="detail-value text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">{{purchase.formattedApprovedAt}}</text>
-        </view>
-        <view class="detail-row flex-row flex-between py-md" wx:if="{{purchase.reimburserName}}" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
-          <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">报销人</text>
-          <text class="detail-value text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{purchase.reimburserName}}</text>
+        <view class="detail-row flex-row flex-between py-md" wx:if="{{defaultReimburserName}}" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
+          <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">付款人</text>
+          <text class="detail-value text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{defaultReimburserName}}</text>
         </view>
         <view class="detail-row flex-row flex-between py-md" wx:if="{{purchase.remark}}" style="border-bottom: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.08)'}};">
           <text class="detail-label text-bodySmall" style="color: {{theme.textSecondary || '#9A9AB0'}};">备注</text>
@@ -76,7 +72,7 @@
         <view class="receipt-header">
           <view class="receipt-header-right">
             <text class="receipt-count" style="color: {{theme.textMuted || '#5C5C72'}};">{{purchase.receiptImages.length || 0}}/3</text>
-            <text class="receipt-add-link" style="color: {{theme.accentColor || '#C9A96E'}};" bindtap="onAddReceiptImage" wx:if="{{(purchase.receiptImages || []).length < 3}}">+ 添加</text>
+            <text class="receipt-add-link" style="color: {{theme.accentColor || '#C9A96E'}};" bindtap="onAddReceiptImage" wx:if="{{purchase.receiptImages.length < 3}}">+ 添加</text>
           </view>
         </view>
         <view class="receipt-grid">
@@ -86,7 +82,7 @@
               <text>×</text>
             </view>
           </view>
-          <view class="receipt-add" wx:if="{{(purchase.receiptImages || []).length < 3}}"
+          <view class="receipt-add" wx:if="{{purchase.receiptImages.length < 3}}"
             style="background: rgba(201,169,110,0.1); border: 1.5rpx dashed rgba(201,169,110,0.4);"
             bindtap="onAddReceiptImage">
             <text class="receipt-add-icon" style="color: {{theme.accentColor || '#C9A96E'}};">+</text>
@@ -96,14 +92,39 @@
       </view>
     </view>
 
-    <!-- Approval Log Timeline -->
-    <view class="log-section mt-lg" wx:if="{{approvalLogs.length > 0}}">
+    <!-- Approval Log Timeline - 3-step flow: 创建→审批→付款 -->
+    <view class="log-section mt-lg">
       <text class="text-subtitle" style="display: block; color: {{theme.textSecondary || '#9A9AB0'}}; margin-bottom: 16rpx;">审批记录</text>
       <view class="log-list">
-        <view class="log-item" wx:for="{{approvalLogs}}" wx:key="_id">
-          <text class="log-time" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.formattedTime}}</text>
-          <text class="log-action" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.operatorName}} {{item.action === 'approved' ? '审批通过' : item.action === 'rejected' ? '拒绝' : '确认报销'}}</text>
-          <text class="log-remark" wx:if="{{item.remark}}" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{item.remark}}</text>
+        <!-- Step 1: 采购创建 -->
+        <view class="log-item" wx:if="{{purchase.purchaseByName}}">
+          <view class="log-step-badge" style="background: {{theme.accentColor || '#C9A96E'}};">
+            <text style="color: {{theme.textInverse || '#0F0F1A'}};">创建</text>
+          </view>
+          <view class="log-body">
+            <text class="log-action" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{purchase.purchaseByName}} 提交采购</text>
+            <text class="log-time" style="color: {{theme.textMuted || '#5C5C72'}};">{{purchase.formattedCreatedAt}}</text>
+          </view>
+        </view>
+        <!-- Step 2: 审批确认 -->
+        <view class="log-item" wx:if="{{approvalStep.badge}}">
+          <view class="log-step-badge" style="background: {{approvalStep.badgeBg}};">
+            <text style="color: #fff;">{{approvalStep.badge}}</text>
+          </view>
+          <view class="log-body">
+            <text class="log-action" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{approvalStep.text}}</text>
+            <text class="log-time" wx:if="{{approvalStep.time}}" style="color: {{theme.textMuted || '#5C5C72'}};">{{approvalStep.time}}</text>
+          </view>
+        </view>
+        <!-- Step 3: 付款 -->
+        <view class="log-item" wx:if="{{reimburseStep.badge}}">
+          <view class="log-step-badge" style="background: {{reimburseStep.badgeBg}};">
+            <text style="color: #fff;">{{reimburseStep.badge}}</text>
+          </view>
+          <view class="log-body">
+            <text class="log-action" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{reimburseStep.text}}</text>
+            <text class="log-time" wx:if="{{reimburseStep.time}}" style="color: {{theme.textMuted || '#5C5C72'}};">{{reimburseStep.time}}</text>
+          </view>
         </view>
       </view>
     </view>
@@ -119,8 +140,9 @@
 
   <!-- Fixed Bottom Action Bar -->
   <view class="bottom-bar" wx:if="{{!loading && purchase}}">
-    <!-- pending + isApprover → [拒绝] [通过] -->
-    <view class="bottom-bar-inner two-btns" wx:if="{{purchase.status === 'pending' && isApprover}}">
+    <!-- pending + isApprover → [编辑] [拒绝] [通过] -->
+    <view class="bottom-bar-inner three-btns" wx:if="{{purchase.status === 'pending' && isApprover}}">
+      <view wx:if="{{isSubmitter && canEdit}}" class="bar-btn bar-btn-outline" bindtap="onEdit">编辑</view>
       <view class="bar-btn bar-btn-danger" bindtap="onShowReject">拒绝</view>
       <view class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onApprove">通过</view>
     </view>
@@ -129,9 +151,10 @@
       <view wx:if="{{canDelete}}" class="bar-btn bar-btn-danger" bindtap="onDelete">删除</view>
       <view wx:if="{{canEdit}}" class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onEdit">编辑</view>
     </view>
-    <!-- approved + canReimburse → [确认报销] -->
-    <view class="bottom-bar-inner single-btn" wx:elif="{{purchase.status === 'approved' && canReimburse}}">
-      <view class="bar-btn bar-btn-primary" bindtap="onReimburse">确认报销</view>
+    <!-- approved + canReimburse → [删除] [确认付款] -->
+    <view class="bottom-bar-inner two-btns" wx:elif="{{purchase.status === 'approved' && canReimburse}}">
+      <view wx:if="{{canDelete}}" class="bar-btn bar-btn-danger" bindtap="onDelete">删除</view>
+      <view class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onReimburse">确认付款</view>
     </view>
     <!-- rejected + isSubmitter → [修改重提] -->
     <view class="bottom-bar-inner single-btn" wx:elif="{{purchase.status === 'rejected' && isSubmitter}}">

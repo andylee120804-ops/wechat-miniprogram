@@ -17,12 +17,12 @@
     </view>
 
     <view class="settings-section">
-      <view class="section-title" style="color: {{theme.accentColor || '#C9A96E'}};">需要审批的采购类目</view>
-      <view class="category-grid">
-        <view class="category-item {{categories[item] ? 'checked' : ''}}" wx:for="{{['meat','seafood','vegetable','fruit','drink','seasoning','supplies','equipment','banquet','other']}}" wx:key="*this"
+      <view class="section-title" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 24rpx;">需要审批的类目</view>
+      <view class="flex-row flex-wrap" style="gap: 10rpx;">
+        <view class="category-item {{categories[item] ? 'checked' : ''}}" wx:for="{{['banquet','meat','seafood','vegetable','fruit','drink','seasoning','supplies','equipment','other']}}" wx:key="*this"
           data-key="{{item}}" bindtap="onCategoryToggle"
-          style="background: {{categories[item] ? (theme.accentColor || '#C9A96E') : (theme.cardBg || 'rgba(26,26,46,0.85)')}}; border: 1rpx solid {{categories[item] ? (theme.accentColor || '#C9A96E') : (theme.borderColor || 'rgba(255,255,255,0.10)')}};">
-          <text style="color: {{categories[item] ? (theme.textInverse || '#0F0F1A') : (theme.textPrimary || '#F5F0E8')}}; font-size: 26rpx;">{{categoryLabels[item] || item}}</text>
+          style="background: {{categories[item] ? (theme.accentColor || '#C9A96E') : (theme.cardBg || 'rgba(26,26,46,0.85)')}}; border: 1rpx solid {{categories[item] ? (theme.accentColor || '#C9A96E') : (theme.borderColor || 'rgba(255,255,255,0.10)')}}; border-radius: 8rpx; padding: 6rpx 10rpx;">
+          <text style="color: {{categories[item] ? (theme.textInverse || '#0F0F1A') : (theme.textPrimary || '#F5F0E8')}}; font-size: 22rpx;">{{categoryLabels[item] || item}}</text>
         </view>
       </view>
     </view>
@@ -49,9 +49,9 @@
     </view>
 
     <view class="settings-section">
-      <view class="section-title" style="color: {{theme.accentColor || '#C9A96E'}};">默认报销人</view>
+      <view class="section-title" style="color: {{theme.accentColor || '#C9A96E'}};">默认付款人</view>
       <view class="setting-row" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
-        <text style="color: {{theme.textPrimary || '#F5F0E8'}};">报销确认人</text>
+        <text style="color: {{theme.textPrimary || '#F5F0E8'}};">付款确认人</text>
         <picker value="{{reimburserIndex}}" range="{{reimburserList}}" range-key="name" bindchange="onReimburserChange">
           <text style="color: {{reimburserIndex >= 0 ? (theme.textPrimary || '#F5F0E8') : (theme.textMuted || '#5C5C72')}};">{{reimburserIndex >= 0 ? reimburserList[reimburserIndex].name : '请选择'}}</text>
         </picker>

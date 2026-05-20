@@ -1,12 +1,11 @@
 /** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: 'node',
-  // Unit tests configuration
-  testMatch: ['**/tests/unit/**/*.test.js'],
+  testMatch: ['**/tests/unit/**/*.test.js', '**/tests/e2e/**/*.spec.js'],
   testPathIgnorePatterns: ['/node_modules/', '/\\.claude/'],
-  testTimeout: 30000,
+  testTimeout: 120000,
   verbose: true,
   forceExit: true,
   detectOpenHandles: true,
-  setupFilesAfterEnv: ['<rootDir>/tests/unit/setup.js']
+  modulePathIgnorePatterns: ['<rootDir>/.claude/worktrees'],
 }

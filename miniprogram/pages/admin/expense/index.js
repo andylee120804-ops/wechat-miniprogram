@@ -1,5 +1,6 @@
 const app = getApp()
 const { formatAmount, formatDate } = require('../../../utils/helpers')
+const { validateAmount } = require('../../../utils/validators')
 const { log, LOG_TYPES } = require('../../../utils/logger')
 const { handleCloudError } = require('../../../utils/error-handler')
 const { hasPermission, checkPermission, ACTIONS } = require('../../../utils/permission')
@@ -22,8 +23,13 @@ Page({
     cycle: 'monthly',
     description: '',
     splitHint: '',
+    submitting: false,
     startDate: '',
-    endDate: ''
+    endDate: '',
+    _monthlyBtnBg: '',
+    _monthlyBtnColor: '',
+    _yearlyBtnBg: '',
+    _yearlyBtnColor: ''
   },
 
   onShow() {
@@ -36,7 +42,19 @@ Page({
       theme: app.getThemePageData(),
       statusBarHeight: app.globalData.statusBarHeight || 44
     })
+    this._updateCycleStyles()
     this.loadData()
+  },
+
+  _updateCycleStyles() {
+    const t = this.data.theme
+    const isMonthly = this.data.cycle === 'monthly'
+    this.setData({
+      _monthlyBtnBg: isMonthly ? (t.accentColor || '#C9A96E') : (t.glassBg || 'rgba(255,255,255,0.06)'),
+      _monthlyBtnColor: isMonthly ? (t.textInverse || '#0F0F1A') : (t.textSecondary || '#9A9AB0'),
+      _yearlyBtnBg: !isMonthly ? (t.accentColor || '#C9A96E') : (t.glassBg || 'rgba(255,255,255,0.06)'),
+      _yearlyBtnColor: !isMonthly ? (t.textInverse || '#0F0F1A') : (t.textSecondary || '#9A9AB0')
+    })
   },
 
   async loadData() {
@@ -46,10 +64,14 @@ Page({
 
       const items = (res.data || []).map(item => {
         const monthlyAmount = Number(item.monthlyAmount || item.amount || 0)
+        const isYearly = item.cycle === 'yearly'
+        const theme = this.data.theme
         return Object.assign({}, item, {
           monthlyAmount,
           formattedMonthly: formatAmount(monthlyAmount),
-          formattedOriginal: formatAmount(item.amount || 0)
+          formattedOriginal: formatAmount(item.amount || 0),
+          _cycleColor: isYearly ? (theme.accentColor || '#C9A96E') : (theme.textMuted || '#5C5C72'),
+          _cycleBg: isYearly ? 'rgba(201,169,110,0.14)' : (theme.glassBg || 'rgba(255,255,255,0.06)')
         })
       })
 
@@ -81,6 +103,7 @@ Page({
       startDate: formatDate(new Date()),
       endDate: ''
     })
+    this._updateCycleStyles()
   },
 
   onItemTap(e) {
@@ -100,6 +123,7 @@ Page({
       startDate: item.startDate || formatDate(new Date()),
       endDate: item.endDate || ''
     })
+    this._updateCycleStyles()
   },
 
   onNameInput(e) {
@@ -118,6 +142,7 @@ Page({
   onCycleChange(e) {
     const cycle = e.currentTarget.dataset.cycle
     this.setData({ cycle, splitHint: this.calcSplitHint(this.data.amount, cycle) })
+    this._updateCycleStyles()
   },
 
   calcSplitHint(amount, cycle) {
@@ -128,20 +153,28 @@ Page({
     return ''
   },
 
+  // [Fix #1] 新增 submitting 防重；[Fix #4] 合并新增/编辑分支；[Fix #3] 使用 validateAmount
   onSave() {
+    if (this.data.submitting) return
     const { name, amount, cycle, description, startDate, endDate } = this.data
     if (!name.trim()) {
       wx.showToast({ title: '请输入项目名称', icon: 'none' })
       return
     }
-    const numAmount = parseFloat(amount)
-    if (!numAmount || numAmount <= 0) {
-      wx.showToast({ title: '请输入有效金额', icon: 'none' })
+    const amountResult = validateAmount(amount)
+    if (!amountResult.valid) {
+      wx.showToast({ title: amountResult.message, icon: 'none' })
+      return
+    }
+    const numAmount = Number(amount)
+    if (numAmount <= 0) {
+      wx.showToast({ title: '金额必须大于0', icon: 'none' })
       return
     }
 
     const monthlyAmount = cycle === 'yearly' ? numAmount / 12 : numAmount
 
+    this.setData({ submitting: true })
     wx.showLoading({ title: '保存中...' })
     const dbInst = db.getDb()
     const data = {
@@ -155,48 +188,39 @@ Page({
       updatedAt: dbInst.serverDate()
     }
 
-    if (this.data.isEdit && this.data.editId) {
-      db.updateDoc(COLLECTIONS.FIXED_EXPENSE, this.data.editId, data)
-        .then(() => {
-          wx.hideLoading()
-          log(LOG_TYPES.EXPENSE_UPDATE, '更新固定成本: ' + data.name + ' ¥' + numAmount + '/' + (cycle === 'yearly' ? '年' : '月'))
-          wx.showToast({ title: '保存成功', icon: 'success' })
-          this.setData({ showModal: false })
-          this.loadData()
-        })
-        .catch(err => {
-          wx.hideLoading()
-          handleCloudError(err, '更新固定成本')
-        })
-    } else {
-      data.createdAt = dbInst.serverDate()
-      data.active = true
-      db.addDoc(COLLECTIONS.FIXED_EXPENSE, data)
-        .then(() => {
-          wx.hideLoading()
-          log(LOG_TYPES.EXPENSE_CREATE, '新增固定成本: ' + data.name + ' ¥' + numAmount + '/' + (cycle === 'yearly' ? '年' : '月'))
-          wx.showToast({ title: '添加成功', icon: 'success' })
-          this.setData({ showModal: false })
-          this.loadData()
-        })
-        .catch(err => {
-          wx.hideLoading()
-          handleCloudError(err, '添加固定成本')
-        })
-    }
+    const promise = this.data.isEdit && this.data.editId
+      ? db.updateDoc(COLLECTIONS.FIXED_EXPENSE, this.data.editId, data)
+      : db.addDoc(COLLECTIONS.FIXED_EXPENSE, Object.assign({}, data, {
+          createdAt: dbInst.serverDate(), active: true
+        }))
+
+    promise.then(() => {
+      wx.hideLoading()
+      const action = this.data.isEdit ? '更新' : '新增'
+      const logType = this.data.isEdit ? LOG_TYPES.EXPENSE_UPDATE : LOG_TYPES.EXPENSE_CREATE
+      log(logType, action + '固定成本: ' + data.name + ' ¥' + numAmount + '/' + (cycle === 'yearly' ? '年' : '月'))
+      wx.showToast({ title: this.data.isEdit ? '保存成功' : '添加成功', icon: 'success' })
+      this.setData({ showModal: false, submitting: false })
+      this.loadData()
+    }).catch(err => {
+      this.setData({ submitting: false })
+      wx.hideLoading()
+      handleCloudError(err, (this.data.isEdit ? '更新' : '添加') + '固定成本')
+    })
   },
 
+  // [Fix #2] 权限检查前置到确认弹窗之前
   onDelete() {
+    if (!checkPermission('expense', ACTIONS.DELETE)) {
+      wx.showToast({ title: '无权限删除', icon: 'none' })
+      return
+    }
     wx.showModal({
       title: '确认删除',
       content: '确定要删除「' + this.data.name + '」吗？',
       confirmColor: '#F87171',
       success: (res) => {
         if (!res.confirm) return
-        if (!checkPermission('expense', ACTIONS.DELETE)) {
-          wx.showToast({ title: '无权限删除', icon: 'none' })
-          return
-        }
         wx.showLoading({ title: '删除中...' })
         db.updateDoc(COLLECTIONS.FIXED_EXPENSE, this.data.editId, { active: false })
           .then(() => {

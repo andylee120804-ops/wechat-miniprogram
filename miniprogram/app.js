@@ -169,6 +169,14 @@ App({
         if (res.result && res.result.success) {
           this.globalData.userInfo = res.result.data
           wx.setStorageSync('userInfo', res.result.data)
+          // 获取最新权限
+          const permRes = await wx.cloud.callFunction({
+            name: 'getPermissions',
+            data: { staffId: res.result.data._id }
+          })
+          if (permRes.result && permRes.result.success) {
+            this.globalData.permissions = permRes.result.data || []
+          }
         } else {
           this.logout()
           // verifySession failed, try autoLogin

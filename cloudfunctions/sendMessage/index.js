@@ -11,16 +11,17 @@ const ADMIN_ONLY_MODULES = ['staff', 'venueSettings', 'minAmount']
  * wechatId is more reliable since _openid may be shared across staff records.
  */
 async function findStaffByCaller(OPENID, wechatId) {
+  // Prefer wechatId lookup
   if (wechatId) {
     var staffRes = await db.collection('staff').where({ wechatId: wechatId }).get()
     if (staffRes.data && staffRes.data.length > 0) return staffRes.data[0]
   }
-  var staffRes = await db.collection('staff').where({ _openid: OPENID }).get()
+  // Fallback: use boundOpenid (set during login) instead of _openid (system-generated)
+  // Only match active staff records
+  var staffRes = await db.collection('staff')
+    .where({ boundOpenid: OPENID, status: 'active' })
+    .get()
   if (staffRes.data && staffRes.data.length > 0) {
-    if (wechatId) {
-      var match = staffRes.data.find(s => s.wechatId === wechatId)
-      if (match) return match
-    }
     return staffRes.data[0]
   }
   return null
@@ -50,6 +51,7 @@ async function hasPermission(staff, module, action) {
 
 exports.main = async (event, context) => {
   const { action } = event
+  console.log('[sendMessage] action:', action, 'event keys:', Object.keys(event))
 
   try {
     switch (action) {
@@ -74,11 +76,11 @@ exports.main = async (event, context) => {
       case 'updateApprovalSettings':
         return await updateApprovalSettings(event)
       default:
-        return { success: false, message: '未知操作' }
+        return { success: false, message: '未知操作: ' + action }
     }
   } catch (err) {
     console.error('sendMessage错误:', err)
-    return { success: false, message: '操作失败' }
+    return { success: false, message: '操作失败: ' + err.message }
   }
 }
 
@@ -275,6 +277,13 @@ async function resolveCreator(event) {
 }
 
 async function getSettings(event) {
+  // 校验调用者为有效员工
+  const { OPENID } = cloud.getWXContext()
+  const caller = await findStaffByCaller(OPENID, event.callerWechatId)
+  if (!caller) {
+    return { success: false, message: '无权限访问' }
+  }
+
   const result = await db.collection('settings').where({ key: 'venue_info' }).get()
   const data = result.data && result.data.length > 0 ? result.data[0] : {}
 
@@ -326,6 +335,13 @@ async function updateSettings(event) {
 }
 
 async function getApprovalSettings(event) {
+  // 校验调用者为有效员工
+  const { OPENID } = cloud.getWXContext()
+  const caller = await findStaffByCaller(OPENID, event.callerWechatId)
+  if (!caller) {
+    return { success: false, message: '无权限访问' }
+  }
+
   var result = await db.collection('settings').where({ key: 'approval_rules' }).get()
   var data = result.data && result.data.length > 0 ? result.data[0] : {}
 
@@ -351,9 +367,9 @@ async function updateApprovalSettings(event) {
     return { success: false, message: '缺少审批设置数据' }
   }
 
-  // Verify caller — must have purchase edit permission
+  // Verify caller — must be admin
   var staff = await findStaffByCaller(OPENID, callerWechatId)
-  if (!staff || !(await hasPermission(staff, 'purchase', 'edit'))) {
+  if (!staff || staff.role !== 'admin') {
     return { success: false, message: '无权限修改审批设置' }
   }
 
