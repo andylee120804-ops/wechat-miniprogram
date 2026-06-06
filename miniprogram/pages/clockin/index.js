@@ -12,6 +12,7 @@ Page({
     loading: true,
     selectedDate: '',
     isToday: true,
+    makeupMode: false,
     hasClockedIn: false,
     hasClockedOut: false,
     clockInTime: '',
@@ -36,6 +37,11 @@ Page({
   onShow() {
     const theme = app.getThemePageData()
     this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
+    // If in makeup mode with a past date, keep it; otherwise reset to today
+    if (!this.data.makeupMode) {
+      const today = formatDate(new Date())
+      this.setData({ selectedDate: today, isToday: true })
+    }
     this.checkStatusByDate(this.data.selectedDate)
     this.loadMonthlyRecords()
   },
@@ -46,6 +52,26 @@ Page({
     const isToday = date === today
     this.setData({ selectedDate: date, isToday }, () => {
       this.checkStatusByDate(date)
+    })
+  },
+
+  onEnterMakeupMode() {
+    wx.vibrateShort({ type: 'light' })
+    this.setData({ makeupMode: true })
+  },
+
+  onBackToToday() {
+    const today = formatDate(new Date())
+    this.setData({
+      makeupMode: false,
+      selectedDate: today,
+      isToday: true,
+      makeupClockInTime: '',
+      makeupClockOutTime: '',
+      makeupReason: '',
+      makeupCanSubmit: false
+    }, () => {
+      this.checkStatusByDate(today)
     })
   },
 

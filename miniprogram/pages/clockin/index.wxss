@@ -125,17 +125,6 @@
   margin-top: 24rpx;
 }
 
-/* Date picker row */
-.date-picker-row {
-  display: flex;
-  align-items: center;
-  margin-top: 16rpx;
-}
-
-.date-hint {
-  font-size: 24rpx;
-}
-
 /* Clock Button */
 .clock-btn-section {
   display: flex;
@@ -233,58 +222,127 @@
   letter-spacing: 1rpx;
 }
 
-/* Date Selector */
-.date-selector {
-  width: 100%;
+/* ========== Makeup Entry Card (Today Mode) ========== */
+.makeup-entry-wrap {
+  margin-top: 16rpx;
+}
+
+.makeup-entry-card {
+  border-radius: 20rpx;
+  padding: 28rpx 32rpx;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.makeup-entry-card:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.makeup-entry-left {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  flex: 1;
+}
+
+.makeup-entry-icon-wrap {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 20rpx;
+  background: rgba(251, 191, 36, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.makeup-entry-icon {
+  font-size: 36rpx;
+}
+
+.makeup-entry-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.makeup-entry-title {
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.makeup-entry-desc {
+  font-size: 24rpx;
+}
+
+.makeup-entry-arrow {
+  flex-shrink: 0;
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
   justify-content: center;
 }
 
-.date-display-card {
-  min-width: 320rpx;
-  width: auto;
+/* ========== Makeup Mode ========== */
+.makeup-mode-content {
+  padding: 0 0 32rpx;
 }
 
-.date-row {
+/* Date Picker Section */
+.makeup-date-section {
+  margin-top: 0;
+}
+
+.makeup-date-card {
+  overflow: hidden;
+}
+
+.makeup-date-header {
+  margin-bottom: 16rpx;
+}
+
+.makeup-date-label {
+  font-size: 24rpx;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+}
+
+.makeup-date-value-row {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: 12rpx;
+  padding: 20rpx 24rpx;
+  background: rgba(201, 169, 110, 0.08);
+  border-radius: 14rpx;
+  border: 1rpx solid rgba(201, 169, 110, 0.15);
 }
 
-.date-icon {
+.makeup-date-icon {
+  font-size: 32rpx;
+}
+
+.makeup-date-value {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.makeup-date-arrow {
   font-size: 28rpx;
 }
 
-.date-main-text {
-  display: inline;
-}
-
-.date-arrow {
-  margin-left: 4rpx;
-}
-
-.makeup-tag-row {
+.makeup-date-status {
   display: flex;
   align-items: center;
-  justify-content: center;
 }
 
-.makeup-hint {
-  font-size: 22rpx;
-}
-
-/* Make-up clock area */
-.makeup-clock-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.makeup-clock-btn {
-  background: linear-gradient(135deg, #C9A96E 0%, #E8D5A8 100%);
-  border-radius: 999rpx;
-  padding: 20rpx 60rpx;
-  box-shadow: 0 8rpx 24rpx rgba(201, 169, 110, 0.3);
+/* Makeup Form Section */
+.makeup-form-section {
+  margin-top: 24rpx;
 }
 
 .makeup-form-card {
@@ -292,52 +350,110 @@
 }
 
 .makeup-form-header {
-  padding-bottom: 20rpx;
+  display: flex;
+  align-items: center;
+  padding-bottom: 24rpx;
   border-bottom: 1rpx solid rgba(255,255,255,0.08);
 }
 
-.time-picker-row {
+.makeup-form-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6rpx 16rpx;
+  border-radius: 8rpx;
+}
+
+.makeup-form-date {
+  font-size: 24rpx;
+}
+
+/* Makeup Time Section */
+.makeup-time-section {
+  margin-top: 8rpx;
+}
+
+.makeup-time-row {
   display: flex;
-  flex-direction: row;
   gap: 16rpx;
 }
 
-.time-picker-item {
+.makeup-time-item {
   flex: 1;
+  min-width: 0;
 }
 
-.time-picker-label {
-  font-size: 24rpx;
-  margin-bottom: 8rpx;
+.makeup-time-item.editable {
+  /* editable time slot */
 }
 
-.time-picker-box {
+.makeup-time-label-row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 10rpx;
 }
 
-.time-picker-box {
+.makeup-time-label {
+  font-size: 24rpx;
+  font-weight: 500;
+}
+
+.makeup-time-filled-tag {
+  display: inline-flex;
+}
+
+.makeup-time-picker-box {
+  border-radius: 14rpx;
+  padding: 22rpx 24rpx;
+  display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  transition: border-color 0.2s ease;
 }
 
-.time-picker-text {
-  font-size: 40rpx;
+.makeup-time-picker-box:active {
+  opacity: 0.85;
+}
+
+.makeup-time-picker-text {
+  font-size: 36rpx;
   font-weight: 700;
-  text-align: center;
-  flex: none;
-  display: block;
-  width: 100%;
+}
+
+.makeup-time-filled-box {
+  border-radius: 14rpx;
+  padding: 22rpx 24rpx;
+  display: flex;
+  align-items: center;
 }
 
 .reason-input-wrap {
   margin-top: 0;
 }
 
-/* Record item makeup tag */
-.record-makeup-tag {
-  display: inline-flex;
+/* Makeup hint area */
+.makeup-hint-area {
+  margin-top: 24rpx;
 }
+
+.makeup-hint-card {
+  overflow: hidden;
+}
+
+/* Back to today button */
+.back-today-wrap {
+  margin-top: 16rpx;
+}
+
+.back-today-btn {
+  transition: opacity 0.2s ease;
+}
+
+.back-today-btn:active {
+  opacity: 0.7;
+}
+
+/* Location Card */
 .location-card {
   overflow: hidden;
 }
@@ -406,6 +522,11 @@
 
 .record-late {
   margin-top: 4rpx;
+}
+
+/* Record item makeup tag */
+.record-makeup-tag {
+  display: inline-flex;
 }
 
 /* Safe bottom */

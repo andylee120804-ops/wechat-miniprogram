@@ -5,64 +5,43 @@
       <view class="nav-back" bindtap="onBack">
         <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
       </view>
-      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">打卡</text>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{makeupMode ? '补打卡' : '打卡'}}</text>
       <view class="nav-action"></view>
     </view>
   </view>
 
-  <!-- Status Hero -->
-  <view class="status-hero" style="padding-top: {{statusBarHeight + 44}}px;">
-
-    <!-- Date Selector: Past = make-up clock, Today = normal -->
-    <view class="date-selector">
-      <view class="date-display-card" style="background: {{theme.elevated || '#252540'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 16rpx; padding: 20rpx 28rpx; position: relative; left: -3rpx; top: 48rpx; width: 523rpx; display: block; box-sizing: border-box">
-        <view class="date-row" style="width: 289rpx; display: flex; box-sizing: border-box; position: relative; left: 16rpx; top: 0rpx">
-          <text class="date-icon" style="position: relative; left: 76rpx; top: -4rpx">📅</text>
-          <picker mode="date" value="{{selectedDate}}" end="{{maxDate}}" bindchange="onDateChange" fields="day">
-            <text class="date-main-text" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 36rpx; font-weight: 700; position: relative; left: 144rpx; top: -1rpx">{{isToday ? '今天' : selectedDate}}</text>
-          </picker>
-          <text class="date-arrow" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">▾</text>
-        </view>
-        <!-- Make-up clock tag -->
-        <view wx:if="{{!isToday}}" class="makeup-tag-row mt-sm">
-          <view class="makeup-tag" style="background: rgba(251,191,36,0.15); border: 1rpx solid rgba(251,191,36,0.3); border-radius: 8rpx; padding: 4rpx 14rpx;">
-            <text style="color: #FBBF24; font-size: 22rpx; font-weight: 600;">📌 补打卡</text>
-          </view>
+  <!-- ========== TODAY MODE ========== -->
+  <block wx:if="{{!makeupMode}}">
+    <view class="status-hero" style="padding-top: {{statusBarHeight + 44}}px;">
+      <!-- Status Indicator -->
+      <view class="status-indicator-wrap">
+        <view class="status-indicator {{hasClockedIn ? 'active' : ''}} {{!hasClockedIn ? 'pulse' : ''}}"
+          style="background: {{hasClockedIn ? (theme.statusSuccessBg || 'rgba(74,222,128,0.12)') : 'transparent'}}; border: 4rpx solid {{hasClockedIn ? (theme.statusSuccess || '#4ADE80') : (theme.borderColor || 'rgba(255,255,255,0.10)')}};">
+          <view class="status-dot" wx:if="{{hasClockedIn}}" style="background: {{theme.statusSuccess || '#4ADE80'}};"></view>
         </view>
       </view>
-    </view>
 
-    <!-- Status Indicator -->
-    <view class="status-indicator-wrap mt-lg">
-      <view class="status-indicator {{hasClockedIn ? 'active' : ''}} {{!hasClockedIn && isToday ? 'pulse' : ''}}"
-        style="background: {{hasClockedIn ? (theme.statusSuccessBg || 'rgba(74,222,128,0.12)') : 'transparent'}}; border: 4rpx solid {{hasClockedIn ? (theme.statusSuccess || '#4ADE80') : (theme.borderColor || 'rgba(255,255,255,0.10)')}}; position: relative; left: 0rpx; top: 66rpx">
-        <view class="status-dot" wx:if="{{hasClockedIn}}" style="background: {{theme.statusSuccess || '#4ADE80'}};"></view>
+      <!-- Status Text -->
+      <text class="status-label text-title2 mt-sm" style="color: {{theme.textPrimary || '#F5F0E8'}};">
+        {{hasClockedIn ? (hasClockedOut ? '当日已完成打卡' : '已上班打卡') : '尚未打卡'}}
+      </text>
+
+      <!-- Time Display -->
+      <view class="time-row flex-row mt-md" wx:if="{{hasClockedIn}}">
+        <view class="time-block">
+          <text class="time-label text-caption" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">上班</text>
+          <text class="time-value font-mono text-title1" style="color: {{theme.statusSuccess || '#4ADE80'}};">{{clockInTimeStr}}</text>
+        </view>
+        <view class="time-divider" style="background: {{theme.divider || 'rgba(255,255,255,0.08)'}};"></view>
+        <view class="time-block">
+          <text class="time-label text-caption" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">下班</text>
+          <text class="time-value font-mono text-title1" style="color: {{hasClockedOut ? (theme.statusWarning || '#FBBF24') : (theme.textMuted || 'rgba(245,240,232,0.40)')}};">{{hasClockedOut ? clockOutTimeStr : '--:--'}}</text>
+        </view>
       </view>
     </view>
 
-    <!-- Status Text -->
-    <text class="status-label text-title2 mt-sm" style="color: {{theme.textPrimary || '#F5F0E8'}};">
-      {{hasClockedIn ? (hasClockedOut ? '当日已完成打卡' : '已上班打卡') : '尚未打卡'}}
-    </text>
-
-    <!-- Time Display -->
-    <view class="time-row flex-row mt-md" wx:if="{{hasClockedIn}}">
-      <view class="time-block">
-        <text class="time-label text-caption" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">上班</text>
-        <text class="time-value font-mono text-title1" style="color: {{theme.statusSuccess || '#4ADE80'}};">{{clockInTimeStr}}</text>
-      </view>
-      <view class="time-divider" style="background: {{theme.divider || 'rgba(255,255,255,0.08)'}};"></view>
-      <view class="time-block">
-        <text class="time-label text-caption" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">下班</text>
-        <text class="time-value font-mono text-title1" style="color: {{hasClockedOut ? (theme.statusWarning || '#FBBF24') : (theme.textMuted || 'rgba(245,240,232,0.40)')}};">{{hasClockedOut ? clockOutTimeStr : '--:--'}}</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- Clock Button -->
-  <view class="clock-btn-section mt-xl">
-    <!-- Only show clock button for today -->
-    <block wx:if="{{isToday}}">
+    <!-- Clock Button -->
+    <view class="clock-btn-section mt-xl">
       <view class="clock-ring {{hasClockedIn ? (hasClockedOut ? 'ring-done' : 'ring-pause') : 'ring-ready'}}">
         <view class="clock-btn press-scale" bindtap="onClockTap">
           <view class="clock-btn-inner">
@@ -76,76 +55,152 @@
       <text class="clock-hint mt-md" style="color: {{theme.textMuted || '#5C5C72'}};">
         {{hasClockedIn ? (hasClockedOut ? '当日考勤已完成' : '再点击一次下班打卡') : '点击上方按钮签到'}}
       </text>
-    </block>
-    <!-- Make-up clock mode for past dates -->
-    <block wx:else>
-      <view class="makeup-form-card mx-xl mt-lg" style="background: {{theme.elevated || '#252540'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx; padding: 32rpx;">
-        <!-- Header -->
-        <view class="makeup-form-header flex-row flex-center-y mb-lg">
-          <text style="font-size: 40rpx; margin-right: 16rpx;">📋</text>
-          <view>
-            <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 32rpx; font-weight: 600; display: block;">补打卡</text>
-            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{selectedDate}}</text>
+    </view>
+
+    <!-- Makeup Clock Entry Card -->
+    <view class="makeup-entry-wrap mx-xl mt-xl" bindtap="onEnterMakeupMode">
+      <view class="makeup-entry-card" style="background: {{theme.elevated || '#252540'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+        <view class="makeup-entry-left">
+          <view class="makeup-entry-icon-wrap">
+            <text class="makeup-entry-icon">📋</text>
+          </view>
+          <view class="makeup-entry-text">
+            <text class="makeup-entry-title" style="color: {{theme.textPrimary || '#F0F0F5'}};">补打卡</text>
+            <text class="makeup-entry-desc" style="color: {{theme.textMuted || '#5C5C72'}};">漏打卡？选择日期补录考勤</text>
           </view>
         </view>
-
-        <!-- Time Pickers Row -->
-        <view class="time-picker-row mb-md">
-          <view class="time-picker-item flex-1" wx:if="{{!hasClockedIn}}">
-            <text class="time-picker-label" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 8rpx;">上班时间</text>
-            <picker mode="time" value="{{makeupClockInTime}}" bindchange="onMakeUpClockInTimeChange">
-              <view class="time-picker-box" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx 32rpx;">
-                <text class="time-picker-text" style="color: {{theme.accentColor || '#C9A96E'}};">{{makeupClockInTime || '选择时间'}}</text>
-              </view>
-            </picker>
-          </view>
-          <view wx:elif="{{hasClockedIn}}" class="flex-1">
-            <text class="time-picker-label" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 8rpx;">上班时间</text>
-            <view class="time-picker-box" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx 32rpx;">
-              <text class="time-picker-text" style="color: {{theme.accentColor || '#C9A96E'}};">{{clockInTimeStr}}</text>
-            </view>
-          </view>
-          <view style="width: 24rpx;"></view>
-          <view class="time-picker-item flex-1" wx:if="{{!hasClockedOut}}">
-            <text class="time-picker-label" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 8rpx;">下班时间</text>
-            <picker mode="time" value="{{makeupClockOutTime}}" bindchange="onMakeUpClockOutTimeChange">
-              <view class="time-picker-box" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx 32rpx;">
-                <text class="time-picker-text" style="color: {{theme.accentColor || '#C9A96E'}};">{{makeupClockOutTime || '选择时间'}}</text>
-              </view>
-            </picker>
-          </view>
-          <view wx:elif="{{hasClockedOut}}" class="flex-1">
-            <text class="time-picker-label" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 8rpx;">下班时间</text>
-            <view class="time-picker-box" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 24rpx 32rpx;">
-              <text class="time-picker-text" style="color: {{theme.accentColor || '#C9A96E'}};">{{clockOutTimeStr}}</text>
-            </view>
-          </view>
-        </view>
-
-        <!-- Reason Input -->
-        <view class="reason-input-wrap mb-lg">
-          <text class="reason-label" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 8rpx;">补卡原因 <text style="color: #EF4444;">*</text></text>
-          <textarea class="reason-textarea" placeholder="请输入补卡原因..." placeholderStyle="color: {{theme.textMuted || '#5C5C72'}};" value="{{makeupReason}}" bindinput="onMakeupReasonInput" maxlength="100" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 20rpx; color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; width: 100%; box-sizing: border-box; min-height: 120rpx; line-height: 1.6;" />
-          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; display: block; text-align: right; margin-top: 6rpx;">{{makeupReason.length || 0}}/100</text>
-        </view>
-
-        <!-- Submit Button -->
-        <view class="makeup-submit-btn" bindtap="onMakeupSubmit" style="background: {{makeupCanSubmit ? 'linear-gradient(135deg, #C9A96E, #E8D5A8)' : 'rgba(255,255,255,0.08)'}}; border-radius: 999rpx; padding: 24rpx; display: flex; align-items: center; justify-content: center; box-shadow: {{makeupCanSubmit ? '0 8rpx 24rpx rgba(201,169,110,0.3)' : 'none'}};">
-          <text style="color: {{makeupCanSubmit ? '#0F0F1A' : '#5C5C72'}}; font-size: 32rpx; font-weight: 700; letter-spacing: 4rpx;">提 交</text>
+        <view class="makeup-entry-arrow">
+          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 32rpx;">›</text>
         </view>
       </view>
-    </block>
-  </view>
-
-  <!-- Location Card -->
-  <view class="location-card mx-xl mt-lg" wx:if="{{locationText}}" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 16rpx; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};">
-    <view class="location-inner flex-row p-md">
-      <text class="location-icon" style="color: {{theme.accentColor || '#C9A96E'}};">📍</text>
-      <text class="location-text text-bodySmall flex-1" style="color: {{theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{locationText}}</text>
     </view>
-  </view>
 
-  <!-- Monthly Records -->
+    <!-- Location Card -->
+    <view class="location-card mx-xl mt-lg" wx:if="{{locationText}}" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 16rpx; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};">
+      <view class="location-inner flex-row p-md">
+        <text class="location-icon" style="color: {{theme.accentColor || '#C9A96E'}};">📍</text>
+        <text class="location-text text-bodySmall flex-1" style="color: {{theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{locationText}}</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- ========== MAKEUP MODE ========== -->
+  <block wx:else>
+    <view class="makeup-mode-content" style="padding-top: {{statusBarHeight + 44 + 24}}px;">
+
+      <!-- Date Picker Section -->
+      <view class="makeup-date-section mx-xl">
+        <view class="makeup-date-card" style="background: {{theme.elevated || '#252540'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx; padding: 32rpx;">
+          <view class="makeup-date-header">
+            <text class="makeup-date-label" style="color: {{theme.textMuted || '#5C5C72'}};">选择补卡日期</text>
+          </view>
+          <picker mode="date" value="{{selectedDate}}" end="{{maxDate}}" bindchange="onDateChange" fields="day">
+            <view class="makeup-date-value-row">
+              <text class="makeup-date-icon">📅</text>
+              <text class="makeup-date-value" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{isToday ? '请选择过去的日期' : selectedDate}}</text>
+              <text class="makeup-date-arrow" style="color: {{theme.accentColor || '#C9A96E'}};">▾</text>
+            </view>
+          </picker>
+          <!-- Status hint for selected date -->
+          <view wx:if="{{!isToday && hasClockedIn && hasClockedOut}}" class="makeup-date-status mt-sm">
+            <text style="color: {{theme.statusSuccess || '#4ADE80'}}; font-size: 24rpx;">✓ 该日已完成打卡</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- Makeup Form -->
+      <view wx:if="{{!isToday}}" class="makeup-form-section mx-xl mt-lg">
+        <view class="makeup-form-card" style="background: {{theme.elevated || '#252540'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx; padding: 32rpx; overflow: hidden;">
+          <!-- Form Header -->
+          <view class="makeup-form-header">
+            <view class="makeup-form-badge" style="background: rgba(251,191,36,0.15); border: 1rpx solid rgba(251,191,36,0.3);">
+              <text style="color: #FBBF24; font-size: 22rpx; font-weight: 600;">📌 补打卡</text>
+            </view>
+            <text class="makeup-form-date" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; margin-left: 12rpx;">{{selectedDate}}</text>
+          </view>
+
+          <!-- Time Pickers -->
+          <view class="makeup-time-section mt-lg">
+            <view class="makeup-time-row">
+              <view class="makeup-time-item {{!hasClockedIn ? 'editable' : 'filled'}}" wx:if="{{!hasClockedIn || hasClockedIn}}">
+                <view class="makeup-time-label-row">
+                  <text class="makeup-time-label" style="color: {{theme.textMuted || '#5C5C72'}};">上班时间</text>
+                  <view wx:if="{{hasClockedIn}}" class="makeup-time-filled-tag" style="background: rgba(74,222,128,0.12); border-radius: 6rpx; padding: 2rpx 10rpx;">
+                    <text style="color: #4ADE80; font-size: 18rpx;">已打卡</text>
+                  </view>
+                </view>
+                <block wx:if="{{!hasClockedIn}}">
+                  <picker mode="time" value="{{makeupClockInTime}}" bindchange="onMakeUpClockInTimeChange">
+                    <view class="makeup-time-picker-box" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+                      <text class="makeup-time-picker-text" style="color: {{makeupClockInTime ? (theme.accentColor || '#C9A96E') : (theme.textMuted || '#5C5C72')}};">{{makeupClockInTime || '点击选择'}}</text>
+                      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">▸</text>
+                    </view>
+                  </picker>
+                </block>
+                <block wx:else>
+                  <view class="makeup-time-filled-box" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid rgba(74,222,128,0.2);">
+                    <text class="makeup-time-picker-text" style="color: {{theme.statusSuccess || '#4ADE80'}};">{{clockInTimeStr}}</text>
+                  </view>
+                </block>
+              </view>
+
+              <view class="makeup-time-item {{!hasClockedOut ? 'editable' : 'filled'}}">
+                <view class="makeup-time-label-row">
+                  <text class="makeup-time-label" style="color: {{theme.textMuted || '#5C5C72'}};">下班时间</text>
+                  <view wx:if="{{hasClockedOut}}" class="makeup-time-filled-tag" style="background: rgba(251,191,36,0.12); border-radius: 6rpx; padding: 2rpx 10rpx;">
+                    <text style="color: #FBBF24; font-size: 18rpx;">已打卡</text>
+                  </view>
+                </view>
+                <block wx:if="{{!hasClockedOut}}">
+                  <picker mode="time" value="{{makeupClockOutTime}}" bindchange="onMakeUpClockOutTimeChange">
+                    <view class="makeup-time-picker-box" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+                      <text class="makeup-time-picker-text" style="color: {{makeupClockOutTime ? (theme.accentColor || '#C9A96E') : (theme.textMuted || '#5C5C72')}};">{{makeupClockOutTime || '点击选择'}}</text>
+                      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">▸</text>
+                    </view>
+                  </picker>
+                </block>
+                <block wx:else>
+                  <view class="makeup-time-filled-box" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid rgba(251,191,36,0.2);">
+                    <text class="makeup-time-picker-text" style="color: {{theme.statusWarning || '#FBBF24'}};">{{clockOutTimeStr}}</text>
+                  </view>
+                </block>
+              </view>
+            </view>
+          </view>
+
+          <!-- Reason Input -->
+          <view class="reason-input-wrap mt-lg">
+            <text class="reason-label" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 8rpx;">补卡原因 <text style="color: #EF4444;">*</text></text>
+            <textarea class="reason-textarea" placeholder="请输入补卡原因..." placeholderStyle="color: {{theme.textMuted || '#5C5C72'}};" value="{{makeupReason}}" bindinput="onMakeupReasonInput" maxlength="100" style="background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 12rpx; padding: 20rpx; color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; width: 100%; box-sizing: border-box; min-height: 120rpx; line-height: 1.6;" />
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; display: block; text-align: right; margin-top: 6rpx;">{{makeupReason.length || 0}}/100</text>
+          </view>
+
+          <!-- Submit Button -->
+          <view class="makeup-submit-btn mt-lg" bindtap="onMakeupSubmit" style="background: {{makeupCanSubmit ? 'linear-gradient(135deg, #C9A96E, #E8D5A8)' : 'rgba(255,255,255,0.08)'}}; border-radius: 999rpx; padding: 24rpx; display: flex; align-items: center; justify-content: center; box-shadow: {{makeupCanSubmit ? '0 8rpx 24rpx rgba(201,169,110,0.3)' : 'none'}};">
+            <text style="color: {{makeupCanSubmit ? '#0F0F1A' : '#5C5C72'}}; font-size: 32rpx; font-weight: 700; letter-spacing: 4rpx;">提 交</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- Hint when still today -->
+      <view wx:if="{{isToday}}" class="makeup-hint-area mx-xl mt-lg">
+        <view class="makeup-hint-card" style="background: {{theme.elevated || '#252540'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 20rpx; padding: 48rpx 32rpx; text-align: center;">
+          <text style="font-size: 48rpx; display: block; margin-bottom: 16rpx;">👆</text>
+          <text style="color: {{theme.textSecondary || 'rgba(245,240,232,0.65)'}}; font-size: 28rpx; display: block;">请先在上方选择需要补卡的日期</text>
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-top: 8rpx;">只能选择今天之前的日期</text>
+        </view>
+      </view>
+
+      <!-- Back to Today -->
+      <view class="back-today-wrap mx-xl mt-lg">
+        <view class="back-today-btn" bindtap="onBackToToday" style="border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 999rpx; padding: 20rpx; display: flex; align-items: center; justify-content: center;">
+          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx; font-weight: 600;">← 返回今日打卡</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- Monthly Records (shared) -->
   <view class="records-section px-xl mt-xl">
     <text class="section-title text-title3" style="color: {{theme.textPrimary || '#F5F0E8'}};">本月记录</text>
 
