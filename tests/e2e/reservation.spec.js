@@ -51,8 +51,13 @@ describe('Reservation Page - Boss Role', () => {
     await reservationPage.waitForData('loading', false, 15000)
 
     const grouped = await reservationPage.getGroupedReservations()
-    expect(grouped).toBeDefined()
-    expect(typeof grouped).toBe('object')
+    expect(Array.isArray(grouped)).toBe(true)
+    // Each group should have key, label, items, color, textColor
+    grouped.forEach((g) => {
+      expect(typeof g.key).toBe('string')
+      expect(typeof g.label).toBe('string')
+      expect(Array.isArray(g.items)).toBe(true)
+    })
   })
 
   test('should load theme data with correct keys', async () => {
