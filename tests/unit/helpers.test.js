@@ -246,6 +246,19 @@ describe('helpers', () => {
       // Returns input value when not in map
       expect(helpers.getRoomName('medium')).toBe('medium')
     })
+
+    it('should return name from reservationConfig cache when available', () => {
+      // Prime the cache via reservationConfig
+      var config = require('../../miniprogram/utils/reservationConfig')
+      var origFn = config._getRoomsCache
+      config._getRoomsCache = function() {
+        return [{ id: 'vip', name: 'VIP厅' }, { id: 'big', name: '大包厢VIP' }]
+      }
+      expect(helpers.getRoomName('vip')).toBe('VIP厅')
+      // Cache takes priority over hardcoded map
+      expect(helpers.getRoomName('big')).toBe('大包厢VIP')
+      config._getRoomsCache = origFn
+    })
   })
 
   describe('getExclusiveTypeName', () => {

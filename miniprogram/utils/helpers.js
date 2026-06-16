@@ -51,9 +51,18 @@ function getWeekRange(offset) {
   monday.setDate(now.getDate() - dayOfWeek + 1 + offset * 7)
   monday.setHours(0, 0, 0, 0)
 
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  sunday.setHours(23, 59, 59, 999)
+  // For current week (offset=0), end date is today (prorate to today)
+  // For past weeks, end date is Sunday of that week
+  let end
+  if (offset === 0) {
+    end = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    end.setHours(23, 59, 59, 999)
+  } else {
+    const sunday = new Date(monday)
+    sunday.setDate(monday.getDate() + 6)
+    end = sunday
+    end.setHours(23, 59, 59, 999)
+  }
 
   const weekInfo = getWeekNumber(monday)
   const weekNum = weekInfo.week
@@ -62,7 +71,7 @@ function getWeekRange(offset) {
 
   return {
     start: formatDate(monday),
-    end: formatDate(sunday),
+    end: formatDate(end),
     label: label,
     weekNum: weekNum,
     year: year
@@ -82,8 +91,17 @@ function getMonthRange(offset) {
   const targetDate = new Date(year, month, 1)
   const start = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
   start.setHours(0, 0, 0, 0)
-  const end = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0)
-  end.setHours(23, 59, 59, 999)
+
+  // For current month (offset=0), end date is today (prorate salary to today)
+  // For past months, end date is last day of that month
+  let end
+  if (offset === 0) {
+    end = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    end.setHours(23, 59, 59, 999)
+  } else {
+    end = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0)
+    end.setHours(23, 59, 59, 999)
+  }
 
   const monthStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`
   const label = `${targetDate.getFullYear()}年${targetDate.getMonth() + 1}月`
@@ -213,11 +231,24 @@ function getExpenseCategoryName(category) {
 
 /**
  * Get room display name
+ * Checks reservationConfig cache first, falls back to hardcoded map
  */
 function getRoomName(room) {
-  const roomMap = {
+  // Try config cache first (synchronous — only populated after loadRooms)
+  try {
+    var config = require('./reservationConfig')
+    var cachedRooms = config._getRoomsCache && config._getRoomsCache()
+    if (cachedRooms) {
+      var found = cachedRooms.find(function(r) { return r.id === room })
+      if (found) return found.name
+    }
+  } catch (e) { /* fallback below */ }
+
+  // Fallback to hardcoded map — covers pre-config scenarios and old room ids
+  var roomMap = {
     big: '大包厢',
-    small: '小包厢'
+    small: '小包厢',
+    chess: '棋牌室'
   }
   return roomMap[room] || room || '未知'
 }
@@ -327,6 +358,36 @@ function getApprovalStatusColor(status) {
   return map[status] || '#9CA3AF'
 }
 
+// ==================== Change Tracking ====================
+
+/**
+ * 对比新旧数据，生成变更记录
+ * @param {Object} oldData - 旧数据
+ * @param {Object} newData - 新数据
+ * @param {Object} trackedFields - { fieldKey: '中文名' }
+ * @param {Object} [amountFields] - { fieldKey: true } 标记为金额的字段
+ * @param {Object} [valueMaps] - { fieldKey: { rawValue: '显示值' } } 枚举值映射
+ * @returns {Object|null} { changes: { 中文名: { from, to, isAmount } } } 或 null
+ */
+function buildChanges(oldData, newData, trackedFields, amountFields, valueMaps) {
+  var changes = {}
+  amountFields = amountFields || {}
+  valueMaps = valueMaps || {}
+  Object.keys(trackedFields).forEach(function(f) {
+    var oldVal = oldData[f] !== undefined ? oldData[f] : ''
+    var newVal = newData[f] !== undefined ? newData[f] : ''
+    // 应用枚举值映射
+    if (valueMaps[f]) {
+      oldVal = valueMaps[f][oldVal] || oldVal
+      newVal = valueMaps[f][newVal] || newVal
+    }
+    if (String(oldVal) !== String(newVal)) {
+      changes[trackedFields[f]] = { from: oldVal, to: newVal, isAmount: !!amountFields[f] }
+    }
+  })
+  return Object.keys(changes).length > 0 ? { changes: changes } : null
+}
+
 // ==================== Exports ====================
 
 module.exports = {
@@ -348,5 +409,6 @@ module.exports = {
   calcWorkDuration,
   isLate,
   getApprovalStatusName,
-  getApprovalStatusColor
+  getApprovalStatusColor,
+  buildChanges
 }
