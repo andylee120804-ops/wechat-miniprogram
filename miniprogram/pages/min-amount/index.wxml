@@ -340,11 +340,14 @@
 
   <!-- ════════════════ Hidden Rooms Picker Modal ════════════════ -->
   <theme-modal theme="{{theme}}" visible="{{showHiddenPicker}}" title="选择隐藏的房间" showFooter="{{false}}" bind:close="onCloseHiddenPicker">
-    <view wx:for="{{rooms}}" wx:key="id" class="hidden-room-row">
+    <view wx:for="{{enabledRooms}}" wx:key="id" class="hidden-room-row">
       <text style="color: {{theme.textPrimary || '#F5F0E8'}}; flex: 1;">{{item.name}}</text>
       <switch checked="{{formFields.find(f => f.id === _pickerFieldId).hiddenInRooms.indexOf(item.id) >= 0}}"
         data-roomid="{{item.id}}" bindchange="toggleHiddenRoom"
         color="{{theme.accentColor || '#C9A96E'}}" />
+    </view>
+    <view wx:if="{{enabledRooms.length === 0}}" style="padding: 40rpx; text-align: center; color: {{theme.textMuted || '#5C5C72'}};">
+      暂无启用的房间
     </view>
     <view class="editor-actions" style="margin-top: 24rpx;">
       <view class="editor-btn editor-btn-primary" bindtap="onCloseHiddenPicker"

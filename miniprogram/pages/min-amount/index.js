@@ -20,6 +20,7 @@ Page({
 
     // ── Tab 0: Room management ──
     rooms: [],
+    enabledRooms: [],
     showRoomEditor: false,
     editingRoom: null,
     editorRoom: {
@@ -191,6 +192,7 @@ Page({
       var doc = (res.data && res.data[0]) || null
       this.setData({
         rooms: rooms,
+        enabledRooms: rooms.filter(function(r) { return r.enabled }),
         _roomsDocId: doc ? doc._id : null,
         _roomsVersion: doc ? (doc._version || 0) : 0
       })
@@ -286,6 +288,21 @@ Page({
     var room = this.data.editorRoom
     if (!room.name.trim()) {
       wx.showToast({ title: '请输入房间名称', icon: 'none' })
+      return
+    }
+
+    // Validate: defaultStandard should be in standards (if both are set)
+    var ds = Number(room.defaultStandard) || 0
+    if (ds > 0 && room.standards && room.standards.length > 0 && room.standards.indexOf(ds) < 0) {
+      wx.showModal({
+        title: '默认餐标无效',
+        content: '默认餐标必须是餐标选项中的一项，是否将默认餐标改为 ¥' + room.standards[0] + '？',
+        success: function(res) {
+          if (res.confirm) {
+            this.setData({ 'editorRoom.defaultStandard': room.standards[0] })
+          }
+        }.bind(this)
+      })
       return
     }
 

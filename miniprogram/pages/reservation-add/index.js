@@ -134,6 +134,29 @@ Page({
         roomConfig.exclusiveTypes[0] || 'none'
     }
 
+    // Auto-select defaultStandard if it's a valid option in the new room.
+    // Skip when isPartner (partner standard takes precedence) or in edit mode
+    // with an existing standard already chosen.
+    if (!this.data.isPartner) {
+      var ds = Number(roomConfig.defaultStandard) || 0
+      if (ds > 0 && roomConfig.standards.indexOf(ds) >= 0) {
+        // Only auto-select if user hasn't already picked a different valid standard
+        var currentInOptions = roomConfig.standards.indexOf(this.data.standard) >= 0
+        if (!this.data.standardPicked || !currentInOptions) {
+          updates.standard = ds
+          updates.standardPicked = true
+        }
+      } else if (roomConfig.standards.length === 0) {
+        // No standards available — clear any selection
+        updates.standard = 0
+        updates.standardPicked = false
+      } else if (!roomConfig.standards.includes(this.data.standard)) {
+        // Current standard not in new room's options — clear
+        updates.standard = 0
+        updates.standardPicked = false
+      }
+    }
+
     this.setData(updates)
   },
 
