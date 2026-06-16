@@ -169,6 +169,16 @@
   height: env(safe-area-inset-bottom);
 }
 
+/* Select field */
+.select-field {
+  width: 100%;
+}
+
+.select-field .pill-selector {
+  margin-top: 8rpx;
+  gap: 10rpx;
+}
+
 /* Boss Picker Modal */
 .boss-picker-list {
   padding: 0 32rpx 32rpx;
@@ -181,4 +191,9 @@
 .boss-picker-name {
   font-size: 34rpx;
   font-weight: 500;
+}
+
+/* mt-sm utility */
+.mt-sm {
+  margin-top: 12rpx;
 }

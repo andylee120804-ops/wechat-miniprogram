@@ -60,6 +60,13 @@
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">备注</text>
           <text class="detail-value" style="color: {{theme.textPrimary || '#F0F0F5'}}; flex: 1; text-align: right;">{{reservation.remark}}</text>
         </view>
+        <!-- Custom fields -->
+        <block wx:if="{{customFieldItems.length > 0}}">
+          <view class="detail-row" wx:for="{{customFieldItems}}" wx:key="label">
+            <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.label}}</text>
+            <text class="detail-value" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{item.value}}</text>
+          </view>
+        </block>
         <view class="detail-row">
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">创建人</text>
           <text class="detail-value" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{reservation.createdByName}}</text>

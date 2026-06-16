@@ -33,169 +33,33 @@
 
   <!-- Reservation List -->
   <view class="list-section" wx:elif="{{reservations.length > 0}}">
-    <!-- Noon Exclusive Group -->
-    <block wx:if="{{groupedReservations.noon.length > 0}}">
-      <view class="room-group">
-        <view class="room-pill" style="background: {{theme.tagCompletedBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.tagCompletedText || '#C9A96E'}};">
-          午包场
+    <block wx:for="{{groupedReservationsDynamic}}" wx:key="key">
+      <view wx:if="{{item.items.length > 0}}" class="room-group">
+        <view class="room-pill" style="background: {{item.color}}; color: {{item.textColor}};">
+          {{item.label}}
         </view>
         <view class="reservation-cards">
           <view
-            class="reservation-card {{item.status === 'cancelled' ? 'cancelled' : ''}}"
-            wx:for="{{groupedReservations.noon}}"
+            class="reservation-card {{inner.status === 'cancelled' ? 'cancelled' : ''}}"
+            wx:for="{{item.items}}"
+            wx:for-item="inner"
             wx:key="_id"
-            data-id="{{item._id}}"
+            data-id="{{inner._id}}"
             bindtap="onReservationTap"
             style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};"
           >
             <view class="card-top">
-              <view class="time-pill" style="background: {{item.status === 'cancelled' ? 'rgba(150,150,170,0.3)' : theme.accentColor || '#C9A96E'}}; color: {{item.status === 'cancelled' ? '#9A9AB0' : theme.textInverse || '#0F0F1A'}};">
-                {{item.time}}
+              <view class="time-pill" style="background: {{inner.status === 'cancelled' ? 'rgba(150,150,170,0.3)' : theme.accentColor || '#C9A96E'}}; color: {{inner.status === 'cancelled' ? '#9A9AB0' : theme.textInverse || '#0F0F1A'}};">
+                {{inner.time}}
               </view>
-              <theme-badge theme="{{theme}}" status="{{item.status}}" type="status" text="{{item.statusText}}" size="sm" />
+              <theme-badge theme="{{theme}}" status="{{inner.status}}" type="status" text="{{inner.statusText}}" size="sm" />
             </view>
             <view class="card-info">
-              <text class="customer-name" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textPrimary || '#F5F0E8'}}; {{item.status === 'cancelled' ? 'text-decoration: line-through;' : ''}}">{{item.customerName}}</text>
+              <text class="customer-name" style="color: {{inner.status === 'cancelled' ? '#5C5C72' : theme.textPrimary || '#F5F0E8'}}; {{inner.status === 'cancelled' ? 'text-decoration: line-through;' : ''}}">{{inner.customerName}}</text>
               <view class="card-meta">
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{item.guestCount}}人</text>
+                <text class="meta-item" style="color: {{inner.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{inner.guestCount}}人</text>
                 <text class="meta-divider" style="color: {{theme.divider || 'rgba(255,255,255,0.08)'}};">|</text>
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">{{item.dishPrice > 0 ? '菜价 ¥' : '¥'}}{{item.displayPrice}}{{item.dishPrice > 0 ? '' : '/人'}}</text>
-              </view>
-            </view>
-          </view>
-        </view>
-      </view>
-    </block>
-
-    <!-- Night Exclusive Group -->
-    <block wx:if="{{groupedReservations.night.length > 0}}">
-      <view class="room-group">
-        <view class="room-pill" style="background: {{theme.tagCompletedBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.tagCompletedText || '#C9A96E'}};">
-          晚包场
-        </view>
-        <view class="reservation-cards">
-          <view
-            class="reservation-card {{item.status === 'cancelled' ? 'cancelled' : ''}}"
-            wx:for="{{groupedReservations.night}}"
-            wx:key="_id"
-            data-id="{{item._id}}"
-            bindtap="onReservationTap"
-            style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};"
-          >
-            <view class="card-top">
-              <view class="time-pill" style="background: {{item.status === 'cancelled' ? 'rgba(150,150,170,0.3)' : theme.accentColor || '#C9A96E'}}; color: {{item.status === 'cancelled' ? '#9A9AB0' : theme.textInverse || '#0F0F1A'}};">
-                {{item.time}}
-              </view>
-              <theme-badge theme="{{theme}}" status="{{item.status}}" type="status" text="{{item.statusText}}" size="sm" />
-            </view>
-            <view class="card-info">
-              <text class="customer-name" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textPrimary || '#F5F0E8'}}; {{item.status === 'cancelled' ? 'text-decoration: line-through;' : ''}}">{{item.customerName}}</text>
-              <view class="card-meta">
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{item.guestCount}}人</text>
-                <text class="meta-divider" style="color: {{theme.divider || 'rgba(255,255,255,0.08)'}};">|</text>
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">{{item.dishPrice > 0 ? '菜价 ¥' : '¥'}}{{item.displayPrice}}{{item.dishPrice > 0 ? '' : '/人'}}</text>
-              </view>
-            </view>
-          </view>
-        </view>
-      </view>
-    </block>
-
-    <!-- Full Exclusive Group -->
-    <block wx:if="{{groupedReservations.full.length > 0}}">
-      <view class="room-group">
-        <view class="room-pill" style="background: {{theme.tagCompletedBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.tagCompletedText || '#C9A96E'}};">
-          包场全天
-        </view>
-        <view class="reservation-cards">
-          <view
-            class="reservation-card {{item.status === 'cancelled' ? 'cancelled' : ''}}"
-            wx:for="{{groupedReservations.full}}"
-            wx:key="_id"
-            data-id="{{item._id}}"
-            bindtap="onReservationTap"
-            style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};"
-          >
-            <view class="card-top">
-              <view class="time-pill" style="background: {{item.status === 'cancelled' ? 'rgba(150,150,170,0.3)' : theme.accentColor || '#C9A96E'}}; color: {{item.status === 'cancelled' ? '#9A9AB0' : theme.textInverse || '#0F0F1A'}};">
-                {{item.time}}
-              </view>
-              <theme-badge theme="{{theme}}" status="{{item.status}}" type="status" text="{{item.statusText}}" size="sm" />
-            </view>
-            <view class="card-info">
-              <text class="customer-name" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textPrimary || '#F5F0E8'}}; {{item.status === 'cancelled' ? 'text-decoration: line-through;' : ''}}">{{item.customerName}}</text>
-              <view class="card-meta">
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{item.guestCount}}人</text>
-                <text class="meta-divider" style="color: {{theme.divider || 'rgba(255,255,255,0.08)'}};">|</text>
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">{{item.dishPrice > 0 ? '菜价 ¥' : '¥'}}{{item.displayPrice}}{{item.dishPrice > 0 ? '' : '/人'}}</text>
-              </view>
-            </view>
-          </view>
-        </view>
-      </view>
-    </block>
-
-    <!-- Big Room Group -->
-    <block wx:if="{{groupedReservations.big.length > 0}}">
-      <view class="room-group">
-        <view class="room-pill" style="background: {{theme.tagReservedBg || 'rgba(96,165,250,0.15)'}}; color: {{theme.tagReservedText || '#60A5FA'}};">
-          大包厢
-        </view>
-        <view class="reservation-cards">
-          <view
-            class="reservation-card {{item.status === 'cancelled' ? 'cancelled' : ''}}"
-            wx:for="{{groupedReservations.big}}"
-            wx:key="_id"
-            data-id="{{item._id}}"
-            bindtap="onReservationTap"
-            style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};"
-          >
-            <view class="card-top">
-              <view class="time-pill" style="background: {{item.status === 'cancelled' ? 'rgba(150,150,170,0.3)' : theme.accentColor || '#C9A96E'}}; color: {{item.status === 'cancelled' ? '#9A9AB0' : theme.textInverse || '#0F0F1A'}};">
-                {{item.time}}
-              </view>
-              <theme-badge theme="{{theme}}" status="{{item.status}}" type="status" text="{{item.statusText}}" size="sm" />
-            </view>
-            <view class="card-info">
-              <text class="customer-name" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textPrimary || '#F5F0E8'}}; {{item.status === 'cancelled' ? 'text-decoration: line-through;' : ''}}">{{item.customerName}}</text>
-              <view class="card-meta">
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{item.guestCount}}人</text>
-                <text class="meta-divider" style="color: {{theme.divider || 'rgba(255,255,255,0.08)'}};">|</text>
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">{{item.dishPrice > 0 ? '菜价 ¥' : '¥'}}{{item.displayPrice}}{{item.dishPrice > 0 ? '' : '/人'}}</text>
-              </view>
-            </view>
-          </view>
-        </view>
-      </view>
-    </block>
-
-    <!-- Small Room Group -->
-    <block wx:if="{{groupedReservations.small.length > 0}}">
-      <view class="room-group">
-        <view class="room-pill" style="background: {{theme.tagConfirmedBg || 'rgba(74,222,128,0.15)'}}; color: {{theme.tagConfirmedText || '#4ADE80'}};">
-          小包厢
-        </view>
-        <view class="reservation-cards">
-          <view
-            class="reservation-card {{item.status === 'cancelled' ? 'cancelled' : ''}}"
-            wx:for="{{groupedReservations.small}}"
-            wx:key="_id"
-            data-id="{{item._id}}"
-            bindtap="onReservationTap"
-            style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};"
-          >
-            <view class="card-top">
-              <view class="time-pill" style="background: {{item.status === 'cancelled' ? 'rgba(150,150,170,0.3)' : theme.accentColor || '#C9A96E'}}; color: {{item.status === 'cancelled' ? '#9A9AB0' : theme.textInverse || '#0F0F1A'}};">
-                {{item.time}}
-              </view>
-              <theme-badge theme="{{theme}}" status="{{item.status}}" type="status" text="{{item.statusText}}" size="sm" />
-            </view>
-            <view class="card-info">
-              <text class="customer-name" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textPrimary || '#F5F0E8'}}; {{item.status === 'cancelled' ? 'text-decoration: line-through;' : ''}}">{{item.customerName}}</text>
-              <view class="card-meta">
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{item.guestCount}}人</text>
-                <text class="meta-divider" style="color: {{theme.divider || 'rgba(255,255,255,0.08)'}};">|</text>
-                <text class="meta-item" style="color: {{item.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">{{item.dishPrice > 0 ? '菜价 ¥' : '¥'}}{{item.displayPrice}}{{item.dishPrice > 0 ? '' : '/人'}}</text>
+                <text class="meta-item" style="color: {{inner.status === 'cancelled' ? '#5C5C72' : theme.accentColor || '#C9A96E'}};">{{inner.dishPrice > 0 ? '菜价 ¥' : '¥'}}{{inner.displayPrice}}{{inner.dishPrice > 0 ? '' : '/人'}}</text>
               </view>
             </view>
           </view>
@@ -210,8 +74,9 @@
   </view>
 
   <!-- FAB Button -->
-  <view class="fab" bindtap="onAddReservation" style="background: {{theme.gradientFab || 'linear-gradient(135deg, #C9A96E, #D4B87A)'}}; box-shadow: {{theme.shadowLg || '0 16rpx 48rpx rgba(0,0,0,0.36)'}};">
-    <text class="fab-icon">+</text>
+  <view class="fab press-scale" bindtap="onAddReservation"
+    style="background: {{theme.gradientFab || 'linear-gradient(145deg, #E8D5A8 0%, #C9A96E 40%, #A68B4B 100%)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28), 0 4rpx 16rpx rgba(201,169,110,0.20)'}};">
+    <text class="fab-icon" style="color: {{theme.textInverse || '#0F0F1A'}};">＋</text>
   </view>
 
   <!-- Bottom Spacer for tab bar -->

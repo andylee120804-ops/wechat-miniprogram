@@ -9,8 +9,9 @@
       <view class="nav-action"></view>
     </view>
   </view>
+
   <scroll-view scroll-y class="form-scroll" style="padding-top: {{statusBarHeight + 44}}px;">
-    <!-- Section 1: Date & Time -->
+    <!-- Section: Date & Time -->
     <theme-card theme="{{theme}}">
       <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">日期与时间</view>
 
@@ -25,164 +26,163 @@
       <view class="form-item-custom">
         <text class="form-label" style="color: {{theme.textSecondary || 'rgba(245,240,232,0.65)'}};">时段</text>
         <view class="pill-selector">
-          <view
+          <view wx:for="{{timeOptions}}" wx:key="*this"
             class="pill {{time === item ? 'pill-active' : ''}}"
-            wx:for="{{timeOptions}}"
-            wx:key="*this"
-            data-value="{{item}}"
-            bindtap="selectTime"
+            data-value="{{item}}" bindtap="selectTime"
             style="{{time === item ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
-          >
-            {{item}}
-          </view>
+          >{{item}}</view>
         </view>
       </view>
     </theme-card>
 
-    <!-- Section 2: Room -->
+    <!-- Section: Room (dynamic from config) -->
     <theme-card theme="{{theme}}">
       <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">包厢</view>
-
       <view class="pill-selector">
-        <view
-          class="pill {{room === item.value ? 'pill-active' : ''}}"
-          wx:for="{{roomOptions}}"
-          wx:key="value"
-          data-value="{{item.value}}"
-          bindtap="selectRoom"
-          style="{{room === item.value ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
-        >
-          {{item.label}}
-        </view>
+        <view wx:for="{{roomOptions}}" wx:key="id"
+          class="pill {{room === item.id ? 'pill-active' : ''}}"
+          data-value="{{item.id}}" bindtap="selectRoom"
+          style="{{room === item.id ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
+        >{{item.name}}</view>
       </view>
       <text class="error-text" wx:if="{{errors.room}}" style="color: {{theme.statusDanger || '#F87171'}};">{{errors.room}}</text>
     </theme-card>
 
-    <!-- Section 3: Exclusive -->
-    <theme-card theme="{{theme}}">
+    <!-- Section: Exclusive (dynamic from currentRoomConfig.exclusiveTypes) -->
+    <theme-card theme="{{theme}}" wx:if="{{exclusiveOptions.length > 1 || (exclusiveOptions.length === 1 && exclusiveOptions[0] !== 'none')}}">
       <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">包场</view>
-
       <view class="pill-selector">
-        <view class="pill {{exclusiveType === 'none' ? 'pill-active' : ''}}"
-              data-value="none" bindtap="selectExclusive"
-              style="{{exclusiveType === 'none' ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}">不包场</view>
-        <view class="pill {{exclusiveType === 'noon' ? 'pill-active' : ''}}"
-              data-value="noon" bindtap="selectExclusive"
-              style="{{exclusiveType === 'noon' ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}">午包场</view>
-        <view class="pill {{exclusiveType === 'night' ? 'pill-active' : ''}}"
-              data-value="night" bindtap="selectExclusive"
-              style="{{exclusiveType === 'night' ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}">晚包场</view>
-        <view class="pill {{exclusiveType === 'full' ? 'pill-active' : ''}}"
-              data-value="full" bindtap="selectExclusive"
-              style="{{exclusiveType === 'full' ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}">包场全天</view>
+        <view wx:for="{{exclusiveOptions}}" wx:key="*this"
+          class="pill {{exclusiveType === item ? 'pill-active' : ''}}"
+          data-value="{{item}}" bindtap="selectExclusive"
+          style="{{exclusiveType === item ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
+        >{{item === 'none' ? '不包场' : item === 'noon' ? '午包场' : item === 'night' ? '晚包场' : '包场全天'}}</view>
       </view>
     </theme-card>
 
-    <!-- Section 4: Standard -->
-    <theme-card theme="{{theme}}">
+    <!-- Section: Standard (dynamic from currentRoomConfig.standards) -->
+    <theme-card theme="{{theme}}" wx:if="{{standardOptions.length > 0}}">
       <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">餐标<text wx:if="{{!allowNoStandard}}" style="color: #FF6B6B; margin-left: 4rpx;">*</text></view>
-
       <view class="pill-selector standard-selector">
-        <view class="pill {{isPartner ? 'pill-active' : ''}}"
-              bindtap="togglePartner"
-              style="{{isPartner ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}">股东</view>
-        <view
+        <view class="pill {{isPartner ? 'pill-active' : ''}}" bindtap="togglePartner"
+          style="{{isPartner ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}">股东</view>
+        <view wx:for="{{standardOptions}}" wx:key="*this"
           class="pill {{standard === item ? 'pill-active' : ''}}"
-          wx:for="{{standardOptions}}"
-          wx:key="*this"
-          data-value="{{item}}"
-          bindtap="selectStandard"
+          data-value="{{item}}" bindtap="selectStandard"
           style="{{standard === item ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
-        >
-          ¥{{item}}/人
-        </view>
+        >¥{{item}}/人</view>
       </view>
-      <text wx:if="{{!standard && !isPartner && allowNoStandard}}" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-top: 12rpx;">未选择餐标</text>
-      <view wx:if="{{errors.standard}}" style="background: rgba(255,107,107,0.15); border: 2rpx solid #FF6B6B; border-radius: 12rpx; padding: 16rpx 20rpx; margin-top: 16rpx;">
+      <view wx:if="{{errors.standard}}" class="mt-sm" style="background: rgba(255,107,107,0.15); border: 2rpx solid #FF6B6B; border-radius: 12rpx; padding: 16rpx 20rpx;">
         <text style="color: #FF6B6B; font-size: 26rpx; font-weight: 500;">{{errors.standard}}</text>
       </view>
     </theme-card>
 
-    <!-- Section 4: Customer Info -->
+    <!-- Section: Customer Info (dynamic form fields) -->
     <theme-card theme="{{theme}}">
       <view class="section-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">客户信息</view>
 
-      <!-- 客户姓名: 股东模式下选择老板，非股东手动输入 -->
-      <theme-form-item theme="{{theme}}" label="客户姓名" required="{{!isPartner}}" error="{{errors.customerName || ''}}">
-        <view class="form-input-wrap">
-          <block wx:if="{{isPartner && bossList.length > 0}}">
-            <view class="form-input view-mode" bindtap="onBossPickerTap" style="color: {{selectedBossIndex >= 0 ? (theme.textPrimary || '#F5F0E8') : (theme.textMuted || 'rgba(245,240,232,0.40)')}};">
-              {{selectedBossIndex >= 0 ? bossList[selectedBossIndex].name : '请选择股东'}}
+      <block wx:for="{{formFields}}" wx:key="id">
+        <!-- customerName: partner mode uses boss picker -->
+        <block wx:if="{{item.id === 'customerName'}}">
+          <theme-form-item theme="{{theme}}" label="{{item.label}}" required="{{!isPartner}}" error="{{errors.customerName || ''}}">
+            <view class="form-input-wrap">
+              <block wx:if="{{isPartner && bossList.length > 0}}">
+                <view class="form-input view-mode" bindtap="onBossPickerTap" style="color: {{selectedBossIndex >= 0 ? (theme.textPrimary || '#F5F0E8') : (theme.textMuted || 'rgba(245,240,232,0.40)')}};">
+                  {{selectedBossIndex >= 0 ? bossList[selectedBossIndex].name : '请选择股东'}}
+                </view>
+              </block>
+              <block wx:else>
+                <input class="form-input" value="{{formData.customerName}}" data-fieldid="customerName" bindinput="onFieldInput"
+                  placeholder="请输入客户姓名"
+                  placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}}; font-size: 28rpx;"
+                  style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+              </block>
             </view>
-          </block>
-          <block wx:else>
-            <input
-              class="form-input"
-              value="{{customerName}}"
-              bindinput="onCustomerNameInput"
-              placeholder="请输入客户姓名"
+          </theme-form-item>
+        </block>
+
+        <!-- dishPrice: conditional required -->
+        <block wx:elif="{{item.id === 'dishPrice'}}">
+          <theme-form-item theme="{{theme}}" label="{{item.label}}" required="{{_dishPriceRequired}}">
+            <input class="form-input" type="digit" value="{{formData.dishPrice}}" data-fieldid="dishPrice" bindinput="onFieldInput"
+              placeholder="{{_dishPriceRequired ? '请输入菜价总额' : '请输入菜价总额（选填）'}}"
               placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}}; font-size: 28rpx;"
-              style="color: {{theme.textPrimary || '#F5F0E8'}};"
-            />
-          </block>
-        </view>
-      </theme-form-item>
+              style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+            <view wx:if="{{errors.dishPrice}}" class="mt-sm" style="background: rgba(255,107,107,0.15); border: 2rpx solid #FF6B6B; border-radius: 12rpx; padding: 16rpx 20rpx;">
+              <text style="color: #FF6B6B; font-size: 26rpx; font-weight: 500;">{{errors.dishPrice}}</text>
+            </view>
+          </theme-form-item>
+        </block>
 
-      <!-- 人数（现在在手机号前面） -->
-      <theme-form-item theme="{{theme}}" label="人数" required="{{true}}" error="{{errors.guestCount || ''}}">
-        <input
-          class="form-input"
-          type="number"
-          value="{{guestCount}}"
-          bindinput="onGuestCountInput"
-          placeholder="请输入用餐人数"
-          placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};"
-          style="color: {{theme.textPrimary || '#F5F0E8'}};"
-        />
-      </theme-form-item>
+        <!-- guestCount: number with special validation -->
+        <block wx:elif="{{item.id === 'guestCount'}}">
+          <theme-form-item theme="{{theme}}" label="{{item.label}}" required="{{item.required}}" error="{{errors.guestCount || ''}}">
+            <input class="form-input" type="number" value="{{formData.guestCount}}" data-fieldid="guestCount" bindinput="onFieldInput"
+              placeholder="请输入用餐人数"
+              placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};"
+              style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+          </theme-form-item>
+        </block>
 
-      <!-- 预定菜价 -->
-      <theme-form-item theme="{{theme}}" label="预定菜价" required="{{_dishPriceRequired}}">
-        <input
-          class="form-input"
-          type="digit"
-          value="{{dishPrice}}"
-          bindinput="onDishPriceInput"
-          placeholder="{{_dishPriceRequired ? '请输入菜价总额' : '请输入菜价总额（选填）'}}"
-          placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}}; font-size: 28rpx;"
-          style="color: {{theme.textPrimary || '#F5F0E8'}};"
-        />
-      </theme-form-item>
-      <view wx:if="{{errors.dishPrice}}" class="mt-sm" style="background: rgba(255,107,107,0.15); border: 2rpx solid #FF6B6B; border-radius: 12rpx; padding: 16rpx 20rpx;">
-        <text style="color: #FF6B6B; font-size: 26rpx; font-weight: 500;">{{errors.dishPrice}}</text>
-      </view>
+        <!-- phone: number with format validation -->
+        <block wx:elif="{{item.id === 'phone'}}">
+          <theme-form-item theme="{{theme}}" label="{{item.label}}" required="{{item.required}}" error="{{errors.phone || ''}}">
+            <input class="form-input" type="number" maxlength="11" value="{{formData.phone}}" data-fieldid="phone" bindinput="onFieldInput"
+              placeholder="请输入手机号"
+              placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};"
+              style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+          </theme-form-item>
+        </block>
 
-      <!-- 手机号（现在在人数后面） -->
-      <theme-form-item theme="{{theme}}" label="手机号" required="{{false}}" error="{{errors.phone || ''}}">
-        <input
-          class="form-input"
-          type="number"
-          maxlength="11"
-          value="{{phone}}"
-          bindinput="onPhoneInput"
-          placeholder="请输入手机号"
-          placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};"
-          style="color: {{theme.textPrimary || '#F5F0E8'}};"
-        />
-      </theme-form-item>
+        <!-- remark: textarea -->
+        <block wx:elif="{{item.type === 'textarea'}}">
+          <theme-form-item theme="{{theme}}" label="{{item.label}}" required="{{item.required}}">
+            <textarea class="form-textarea" value="{{formData[item.id]}}" data-fieldid="{{item.id}}" bindinput="onFieldInput"
+              placeholder="{{item.label}}（选填）"
+              placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};"
+              style="color: {{theme.textPrimary || '#F5F0E8'}};" auto-height maxlength="200" />
+          </theme-form-item>
+        </block>
 
-      <theme-form-item theme="{{theme}}" label="备注">
-        <textarea
-          class="form-textarea"
-          value="{{remark}}"
-          bindinput="onRemarkInput"
-          placeholder="备注信息（选填）"
-          placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};"
-          style="color: {{theme.textPrimary || '#F5F0E8'}};"
-          auto-height
-          maxlength="200"
-        />
-      </theme-form-item>
+        <!-- select: multi-select pills + input for new option -->
+        <block wx:elif="{{item.type === 'select'}}">
+          <theme-form-item theme="{{theme}}" label="{{item.label}}" required="{{item.required}}" error="{{errors[item.id] || ''}}">
+            <view class="select-field">
+              <view class="pill-selector" wx:if="{{item.options && item.options.length > 0}}">
+                <view wx:for="{{item.options}}" wx:for-item="opt" wx:key="*this"
+                  class="pill {{(formData[item.id] || '').split(',').indexOf(opt) >= 0 ? 'pill-active' : ''}}"
+                  data-fieldid="{{item.id}}" data-option="{{opt}}" bindtap="onSelectOptionToggle"
+                  style="{{(formData[item.id] || '').split(',').indexOf(opt) >= 0 ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
+                >{{opt}}</view>
+              </view>
+              <input class="form-input" data-fieldid="{{item.id}}" bindconfirm="onSelectOptionAdd"
+                placeholder="输入新选项后回车"
+                placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}}; font-size: 24rpx;"
+                style="color: {{theme.textPrimary || '#F5F0E8'}}; margin-top: 12rpx; font-size: 24rpx;" />
+            </view>
+          </theme-form-item>
+        </block>
+
+        <!-- number (generic custom) -->
+        <block wx:elif="{{item.type === 'number'}}">
+          <theme-form-item theme="{{theme}}" label="{{item.label}}" required="{{item.required}}" error="{{errors[item.id] || ''}}">
+            <input class="form-input" type="digit" value="{{formData[item.id]}}" data-fieldid="{{item.id}}" bindinput="onFieldInput"
+              placeholder="请输入{{item.label}}"
+              placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};"
+              style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+          </theme-form-item>
+        </block>
+
+        <!-- text (generic custom) -->
+        <block wx:else>
+          <theme-form-item theme="{{theme}}" label="{{item.label}}" required="{{item.required}}" error="{{errors[item.id] || ''}}">
+            <input class="form-input" value="{{formData[item.id]}}" data-fieldid="{{item.id}}" bindinput="onFieldInput"
+              placeholder="请输入{{item.label}}"
+              placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}}; font-size: 28rpx;"
+              style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+          </theme-form-item>
+        </block>
+      </block>
     </theme-card>
 
     <!-- Spacer for bottom bar -->
@@ -199,36 +199,18 @@
   </view>
 
   <!-- Boss Picker Modal -->
-  <theme-modal
-    theme="{{theme}}"
-    visible="{{showBossPicker}}"
-    title="选择股东"
-    showFooter="{{false}}"
-    bind:close="onBossPickerClose"
-  >
+  <theme-modal theme="{{theme}}" visible="{{showBossPicker}}" title="选择股东" showFooter="{{false}}" bind:close="onBossPickerClose">
     <view class="boss-picker-list">
-      <view
-        wx:for="{{bossList}}"
-        wx:key="index"
-        class="boss-picker-item"
-        data-index="{{index}}"
-        bindtap="onBossSelect"
-        style="color: {{theme.textPrimary || '#F5F0E8'}}; border-bottom: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.06)'}};"
-      >
+      <view wx:for="{{bossList}}" wx:key="index" class="boss-picker-item"
+        data-index="{{index}}" bindtap="onBossSelect"
+        style="color: {{theme.textPrimary || '#F5F0E8'}}; border-bottom: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.06)'}};">
         <text class="boss-picker-name">{{item.name}}</text>
       </view>
     </view>
   </theme-modal>
 
   <!-- Delete Confirmation Modal -->
-  <theme-modal
-    theme="{{theme}}"
-    visible="{{showDeleteModal}}"
-    title="确认删除"
-    confirmText="删除"
-    bind:close="onCloseDeleteModal"
-    bind:confirm="onConfirmDelete"
-  >
+  <theme-modal theme="{{theme}}" visible="{{showDeleteModal}}" title="确认删除" confirmText="删除" bind:close="onCloseDeleteModal" bind:confirm="onConfirmDelete">
     <text style="color: {{theme.textSecondary || 'rgba(245,240,232,0.65)'}};">删除后将无法恢复，确认删除该预约吗？</text>
   </theme-modal>
 </view>

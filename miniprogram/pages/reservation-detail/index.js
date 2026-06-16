@@ -10,6 +10,7 @@ Page({
     theme: {},
     statusBarHeight: 44,
     id: '',
+    from: '',
     reservation: null,
     loading: true,
     showCancelModal: false,
@@ -26,7 +27,7 @@ Page({
   onLoad(options) {
     const app = getApp()
     const theme = app.getThemePageData()
-    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, id: options.id })
+    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, id: options.id, from: options.from || '' })
   },
 
   onShow() {
@@ -59,8 +60,21 @@ Page({
         exclusiveType: et
       }
 
+      // Resolve customFields labels from formConfig
+      var customFieldItems = []
+      try {
+        var config = require('../../utils/reservationConfig')
+        var formConfig = await config.loadFormConfig()
+        var cf = res.customFields || {}
+        customFieldItems = Object.keys(cf).map(function(key) {
+          var fd = formConfig.fields.find(function(f) { return f.id === key })
+          return { label: fd ? fd.label : key, value: cf[key] }
+        }).filter(function(item) { return item.value !== undefined && item.value !== '' && item.value !== 0 })
+      } catch (e) { /* ignore config load failures */ }
+
       this.setData({
-        reservation,
+        reservation: reservation,
+        customFieldItems: customFieldItems,
         loading: false
       })
     } catch (err) {
@@ -114,6 +128,22 @@ Page({
         showCancelModal: false,
         showShareModal: false
       })
+      return
+    }
+
+    // 如果从AI聊天页进入，返回AI聊天页
+    if (this.data.from === 'ai-chat') {
+      const pages = getCurrentPages()
+      const aiChatIndex = pages.findIndex(p => p.route === 'pages/ai-chat/index')
+      if (aiChatIndex >= 0) {
+        const delta = pages.length - 1 - aiChatIndex
+        if (delta > 0) {
+          wx.navigateBack({ delta })
+          return
+        }
+      }
+      // AI聊天页不在栈中，直接跳转
+      wx.redirectTo({ url: '/pages/ai-chat/index' })
       return
     }
 
