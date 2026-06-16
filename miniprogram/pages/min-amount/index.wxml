@@ -342,7 +342,7 @@
   <theme-modal theme="{{theme}}" visible="{{showHiddenPicker}}" title="选择隐藏的房间" showFooter="{{false}}" bind:close="onCloseHiddenPicker">
     <view wx:for="{{enabledRooms}}" wx:key="id" class="hidden-room-row">
       <text style="color: {{theme.textPrimary || '#F5F0E8'}}; flex: 1;">{{item.name}}</text>
-      <switch checked="{{formFields.find(f => f.id === _pickerFieldId).hiddenInRooms.indexOf(item.id) >= 0}}"
+      <switch checked="{{pickerHiddenRooms[item.id]}}"
         data-roomid="{{item.id}}" bindchange="toggleHiddenRoom"
         color="{{theme.accentColor || '#C9A96E'}}" />
     </view>

@@ -167,22 +167,6 @@ Page({
     return result
   },
 
-  groupByRoom(reservations) {
-    var groups = { noon: [], night: [], full: [], big: [], small: [], chess: [] }
-    reservations.forEach(function(r) {
-      var et = r.exclusiveType || (r.isExclusive ? 'full' : 'none')
-      if (et !== 'none') {
-        if (!groups[et]) groups[et] = []
-        groups[et].push(r)
-      } else {
-        var key = r.room || 'big'
-        if (groups[key]) groups[key].push(r)
-        else groups.big.push(r)
-      }
-    })
-    return groups
-  },
-
   onDayTap(e) {
     const date = e.detail.date
     if (!date) return

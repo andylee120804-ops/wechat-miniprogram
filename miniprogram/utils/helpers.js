@@ -235,14 +235,20 @@ function getExpenseCategoryName(category) {
  */
 function getRoomName(room) {
   // Try config cache first (synchronous — only populated after loadRooms)
+  // Only catch require errors; let any cache logic errors surface for debugging.
+  var config = null
   try {
-    var config = require('./reservationConfig')
-    var cachedRooms = config._getRoomsCache && config._getRoomsCache()
+    config = require('./reservationConfig')
+  } catch (e) {
+    // Module not loadable — fall through to hardcoded map below
+  }
+  if (config && config._getRoomsCache) {
+    var cachedRooms = config._getRoomsCache()
     if (cachedRooms) {
       var found = cachedRooms.find(function(r) { return r.id === room })
       if (found) return found.name
     }
-  } catch (e) { /* fallback below */ }
+  }
 
   // Fallback to hardcoded map — covers pre-config scenarios and old room ids
   var roomMap = {

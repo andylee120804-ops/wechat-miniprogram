@@ -33,6 +33,7 @@ Page({
     formFields: [],
     showHiddenPicker: false,
     _pickerFieldId: null,
+    pickerHiddenRooms: {},   // { roomId: true } — populated when picker opens
     _newFieldName: '',
     _newFieldType: 'text',
     _newFieldTypeIndex: 0,
@@ -470,19 +471,44 @@ Page({
 
   onOpenHiddenPicker(e) {
     var fieldId = e.currentTarget.dataset.id
-    this.setData({ showHiddenPicker: true, _pickerFieldId: fieldId })
+    var field = this.data.formFields.find(function(f) { return f.id === fieldId })
+    var hiddenMap = {}
+    if (field && field.hiddenInRooms) {
+      field.hiddenInRooms.forEach(function(rid) { hiddenMap[rid] = true })
+    }
+    this.setData({
+      showHiddenPicker: true,
+      _pickerFieldId: fieldId,
+      pickerHiddenRooms: hiddenMap
+    })
   },
 
   toggleHiddenRoom(e) {
     var roomId = e.currentTarget.dataset.roomid
+    var fieldId = this.data._pickerFieldId
     var fields = this.data.formFields.slice()
-    var field = fields.find(function(f) { return f.id === this.data._pickerFieldId }.bind(this))
-    if (!field) return
-    if (!field.hiddenInRooms) field.hiddenInRooms = []
-    var idx = field.hiddenInRooms.indexOf(roomId)
-    if (idx >= 0) field.hiddenInRooms.splice(idx, 1)
-    else field.hiddenInRooms.push(roomId)
-    this.setData({ formFields: fields })
+    var fieldIdx = fields.findIndex(function(f) { return f.id === fieldId })
+    if (fieldIdx < 0) return
+
+    // Build new hiddenInRooms array immutably
+    var oldHidden = fields[fieldIdx].hiddenInRooms || []
+    var newHidden
+    var idx = oldHidden.indexOf(roomId)
+    if (idx >= 0) {
+      newHidden = oldHidden.slice(0, idx).concat(oldHidden.slice(idx + 1))
+    } else {
+      newHidden = oldHidden.concat([roomId])
+    }
+
+    // Replace field with a new object (don't mutate)
+    fields[fieldIdx] = Object.assign({}, fields[fieldIdx], { hiddenInRooms: newHidden })
+
+    // Update picker map
+    var hiddenMap = Object.assign({}, this.data.pickerHiddenRooms)
+    if (idx >= 0) delete hiddenMap[roomId]
+    else hiddenMap[roomId] = true
+
+    this.setData({ formFields: fields, pickerHiddenRooms: hiddenMap })
   },
 
   onCloseHiddenPicker() {
