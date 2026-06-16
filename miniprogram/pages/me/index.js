@@ -23,7 +23,7 @@ Page({
 
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ active: 4 })
+      this.getTabBar().setActiveByPage('/pages/me/index')
     }
     const theme = app.getThemePageData()
     const userInfo = app.globalData.userInfo || null
@@ -43,6 +43,7 @@ Page({
     const managementGroup = []
     const featureGroup = []
     const settingsGroup = []
+    const userInfo = app.globalData.userInfo || {}
 
     // Staff management — hasPermission now correctly blocks boss
     if (hasPermission('staff', ACTIONS.VIEW)) {
@@ -68,13 +69,12 @@ Page({
       managementGroup.push({ key: 'fixedExpense', icon: '🏠', text: '固定成本' })
     }
     // Approval settings — admin only
-    const userInfo = app.globalData.userInfo || {}
     if (userInfo.role === 'admin') {
       managementGroup.push({ key: 'approvalSettings', icon: '✅', text: '采购审批设置' })
     }
     // Admin-only settings
     if (hasPermission('minAmount', ACTIONS.VIEW)) {
-      managementGroup.push({ key: 'minAmount', icon: '💰', text: '收费设置' })
+      managementGroup.push({ key: 'minAmount', icon: '⚙️', text: '预约管理设置' })
     }
     if (hasPermission('venueSettings', ACTIONS.VIEW)) {
       settingsGroup.push({ key: 'venueSettings', icon: '🏠', text: '食堂设置' })
@@ -87,7 +87,7 @@ Page({
     // Build pending group (dynamic menu items)
     var pendingGroup = []
     if (hasTodoPerm) {
-      pendingGroup.push({ key: 'todo', icon: '📋', text: '我的待办事项' + (this.data.pendingTotal > 0 ? '（' + this.data.pendingTotal + '）' : '') })
+      pendingGroup.push({ key: 'todo', icon: '📋', text: '我的待办事项', count: this.data.pendingTotal || 0 })
     }
     if (hasPurchaseAdd) {
       pendingGroup.push({ key: 'myPurchases', icon: '📦', text: '我的采购申请' })
@@ -127,6 +127,8 @@ Page({
         pendingReimburseCount: reimbursedRes.total || 0,
         pendingTotal: total
       })
+      // Rebuild menu to update badge count
+      this.buildMenuGroups()
     } catch (e) {
       console.warn('[me] 加载待办数量失败:', e)
     }

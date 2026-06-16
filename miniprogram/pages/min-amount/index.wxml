@@ -5,117 +5,350 @@
       <view class="nav-back" bindtap="onBack">
         <text class="nav-back-icon" style="color: {{theme.textPrimary || '#F5F0E8'}}">❮</text>
       </view>
-      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}}">收费设置</text>
+      <text class="nav-title" style="color: {{theme.textPrimary || '#F5F0E8'}}">预约管理设置</text>
       <view class="nav-action"></view>
     </view>
   </view>
 
   <view class="page-content" style="padding-top: {{statusBarHeight + 44}}px;">
-    <!-- Room Min Amount -->
-    <view class="section-wrapper" style="padding: 32rpx 32rpx 0;">
-      <theme-card theme="{{theme}}" padding="32rpx">
-        <view class="card-header" style="display: flex; align-items: center; margin-bottom: 28rpx;">
-          <view style="width: 8rpx; height: 32rpx; background: {{theme.accentColor || '#C9A96E'}}; border-radius: 4rpx; margin-right: 16rpx;"></view>
-          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600;">包厢最低消费</text>
-        </view>
-
-        <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx;">
-          <view style="flex: 1;">
-            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">包厢（大/小）</text>
-            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">按包厢设置</text>
-          </view>
-          <input type="number" value="{{min_room}}" bindinput="onRoomInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
-          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
-        </view>
-      </theme-card>
+    <!-- Tab Bar -->
+    <view class="tab-bar">
+      <view class="tab-item {{activeTab === 0 ? 'tab-active' : ''}}" data-tab="0" bindtap="switchTab">
+        🏠 房间管理
+      </view>
+      <view class="tab-item {{activeTab === 1 ? 'tab-active' : ''}}" data-tab="1" bindtap="switchTab">
+        📋 表单配置
+      </view>
+      <view class="tab-item {{activeTab === 2 ? 'tab-active' : ''}}" data-tab="2" bindtap="switchTab">
+        💰 收费设置
+      </view>
     </view>
 
-    <!-- Exclusive Min Amount -->
-    <view class="section-wrapper" style="padding: 24rpx 32rpx 0;">
-      <theme-card theme="{{theme}}" padding="32rpx">
-        <view class="card-header" style="display: flex; align-items: center; margin-bottom: 28rpx;">
-          <view style="width: 8rpx; height: 32rpx; background: {{theme.amountPositive || '#4ADE80'}}; border-radius: 4rpx; margin-right: 16rpx;"></view>
-          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600;">包场最低消费</text>
-        </view>
+    <!-- ════════════════ Tab 0: Room Management ════════════════ -->
+    <view wx:if="{{activeTab === 0}}" class="tab-content">
+      <!-- Restore defaults -->
+      <view class="restore-btn" bindtap="onRestoreDefaults"
+        style="color: {{theme.accentColor || '#C9A96E'}};">恢复默认配置</view>
 
-        <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx;">
-          <view style="flex: 1;">
-            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">午包场</text>
-            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">中午时段</text>
+      <!-- Room cards -->
+      <view wx:for="{{rooms}}" wx:key="id"
+        class="room-card {{!item.enabled ? 'room-disabled' : ''}}"
+        data-id="{{item.id}}" bindtap="onEditRoom"
+        style="background: {{theme.cardBg || 'rgba(255,255,255,0.06)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}};">
+        <view class="room-card-header">
+          <text class="room-card-name" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.name}}</text>
+          <view class="room-card-badges">
+            <text wx:if="{{!item.enabled}}" class="room-badge badge-disabled">已停用</text>
+            <text wx:else class="room-badge badge-enabled">启用</text>
+            <text class="room-more" style="color: {{theme.textMuted || '#5C5C72'}};">⋮</text>
           </view>
-          <input type="number" value="{{min_noon}}" bindinput="onNoonInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
-          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
         </view>
+        <view class="room-card-tags">
+          <text wx:if="{{item.exclusiveTypes.length > 0}}" class="room-tag" style="background: rgba(201,169,110,0.12); color: {{theme.accentColor || '#C9A96E'}};">包场: {{item.exclusiveTypes.length}}种</text>
+          <text class="room-tag" style="background: rgba(255,255,255,0.06); color: {{theme.textSecondary || '#9A9AB0'}};">时段: {{item.timeSlots.join('/') }}</text>
+          <text wx:if="{{item.standards.length > 0}}" class="room-tag" style="background: rgba(74,222,128,0.1); color: #4ADE80;">餐标: ¥{{item.standards.join('/') }}/人</text>
+          <text wx:if="{{item.standards.length === 0}}" class="room-tag" style="background: rgba(255,255,255,0.06); color: {{theme.textMuted || '#5C5C72'}};">无餐标</text>
+        </view>
+      </view>
 
-        <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx;">
-          <view style="flex: 1;">
-            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">晚包场</text>
-            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">晚上时段</text>
-          </view>
-          <input type="number" value="{{min_night}}" bindinput="onNightInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
-          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
-        </view>
-
-        <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx;">
-          <view style="flex: 1;">
-            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">包场全天</text>
-            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">全日包场</text>
-          </view>
-          <input type="number" value="{{min_full}}" bindinput="onFullInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
-          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
-        </view>
-      </theme-card>
+      <!-- Add room -->
+      <view class="add-room-btn" bindtap="onAddRoom"
+        style="border-color: {{theme.border || 'rgba(255,255,255,0.10)'}}; color: {{theme.textMuted || '#5C5C72'}};">＋ 添加房间</view>
     </view>
 
-    <!-- Service Charge Mode -->
-    <view class="section-wrapper" style="padding: 24rpx 32rpx 0;">
-      <theme-card theme="{{theme}}" padding="32rpx">
-        <view class="card-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 28rpx;">
-          <view style="display: flex; align-items: center;">
+    <!-- ════════════════ Tab 1: Form Config ════════════════ -->
+    <view wx:elif="{{activeTab === 1}}" class="tab-content">
+      <!-- Field list -->
+      <view wx:for="{{formFields}}" wx:key="id" class="field-row"
+        style="background: {{theme.cardBg || 'rgba(255,255,255,0.06)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}};">
+        <view class="field-main">
+          <view class="field-info">
+            <text class="field-label" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.label}}</text>
+            <view class="field-badges">
+              <text wx:if="{{item.builtin}}" class="field-badge badge-system">系统</text>
+              <text wx:else class="field-badge badge-custom">自定义</text>
+              <text class="field-badge badge-type" style="background: rgba(96,165,250,0.1); color: #60A5FA;">{{item.type}}</text>
+            </view>
+          </view>
+          <view class="field-actions">
+            <!-- Visible toggle -->
+            <view class="toggle-group">
+              <text class="toggle-label" style="color: {{theme.textMuted || '#5C5C72'}};">显示</text>
+              <switch checked="{{item.visible}}" data-index="{{index}}" bindchange="toggleFieldVisible"
+                color="{{theme.accentColor || '#C9A96E'}}" />
+            </view>
+            <!-- Required toggle -->
+            <view class="toggle-group">
+              <text class="toggle-label" style="color: {{theme.textMuted || '#5C5C72'}};">必填</text>
+              <switch checked="{{item.required}}" data-index="{{index}}" bindchange="toggleFieldRequired"
+                color="{{theme.accentColor || '#C9A96E'}}" />
+            </view>
+            <!-- Delete (custom only) -->
+            <view wx:if="{{!item.builtin}}" class="field-delete" data-index="{{index}}" bindtap="removeCustomField">✕</view>
+          </view>
+        </view>
+
+        <!-- Select options -->
+        <view wx:if="{{item.type === 'select' && item.options}}" class="field-options">
+          <view wx:for="{{item.options}}" wx:for-item="opt" wx:for-index="optIdx" wx:key="*this"
+            class="option-pill pill-removable"
+            style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}};"
+            data-fieldidx="{{index}}" data-optidx="{{optIdx}}" bindtap="removeSelectOption">
+            {{opt}} ✕
+          </view>
+          <input class="option-input" placeholder="输入选项后回车"
+            data-fieldidx="{{index}}" bindconfirm="onAddSelectOption"
+            placeholder-style="color: {{theme.textMuted || '#5C5C72'}};"
+            style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+        </view>
+
+        <!-- Hidden in rooms -->
+        <view class="field-hidden">
+          <text class="hidden-label" style="color: {{theme.textMuted || '#5C5C72'}};">隐藏于:</text>
+          <view wx:if="{{item.hiddenInRooms.length > 0}}" class="hidden-pills">
+            <view wx:for="{{item.hiddenInRooms}}" wx:for-item="roomId" wx:key="*this" class="hidden-pill"
+              style="background: rgba(248,113,113,0.1); color: #F87171;"
+              data-id="{{item.id}}" bindtap="onOpenHiddenPicker">
+              {{roomId}}
+            </view>
+          </view>
+          <view wx:else class="hidden-add" data-id="{{item.id}}" bindtap="onOpenHiddenPicker"
+            style="color: {{theme.accentColor || '#C9A96E'}};">设置</view>
+        </view>
+      </view>
+
+      <!-- Add field -->
+      <view class="add-field-row" style="background: {{theme.cardBg || 'rgba(255,255,255,0.06)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}};">
+        <view class="add-field-form">
+          <input class="add-field-input" placeholder="字段名称" value="{{_newFieldName}}"
+            bindinput="onNewFieldNameInput"
+            placeholder-style="color: {{theme.textMuted || '#5C5C72'}};"
+            style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+          <picker mode="selector" range="{{['text','number','textarea','select']}}" value="{{_newFieldTypeIndex}}"
+            bindchange="onNewFieldTypeChange">
+            <view class="type-picker" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{_newFieldType || 'text'}} ▾</view>
+          </picker>
+          <view class="add-field-btn" bindtap="onAddFieldTap" style="color: {{theme.accentColor || '#C9A96E'}};">添加</view>
+        </view>
+      </view>
+
+      <!-- Save -->
+      <view style="padding: 32rpx 0;">
+        <view class="bar-btn bar-btn-primary" bindtap="onSaveFormConfig"
+          style="background: linear-gradient(135deg, {{theme.accentColor || '#C9A96E'}}, {{theme.accentLight || '#E8D5A8'}}); border-radius: 999rpx; padding: 24rpx; text-align: center;">
+          <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 30rpx; font-weight: 700;">保存表单配置</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ════════════════ Tab 2: Billing Settings (original) ════════════════ -->
+    <view wx:elif="{{activeTab === 2}}" class="tab-content">
+      <!-- Room Min Amount -->
+      <view class="section-wrapper" style="padding: 32rpx 32rpx 0;">
+        <theme-card theme="{{theme}}" padding="32rpx">
+          <view class="card-header" style="display: flex; align-items: center; margin-bottom: 28rpx;">
             <view style="width: 8rpx; height: 32rpx; background: {{theme.accentColor || '#C9A96E'}}; border-radius: 4rpx; margin-right: 16rpx;"></view>
-            <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600;">服务费模式</text>
+            <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600;">包厢最低消费</text>
           </view>
-          <switch checked="{{serviceChargeEnabled}}" bindchange="onServiceChargeSwitch" color="{{theme.accentColor || '#C9A96E'}}" />
-        </view>
 
-        <view wx:if="{{serviceChargeEnabled && serviceChargeEnabledDate}}" style="padding: 12rpx 20rpx; background: rgba(201,169,110,0.08); border-radius: 10rpx; margin-bottom: 20rpx;">
-          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 24rpx;">生效日期：{{serviceChargeEnabledDate}} 起的预约使用新计算方式</text>
-        </view>
-
-        <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; {{!serviceChargeEnabled ? 'opacity: 0.4;' : ''}}">
-          <view style="flex: 1;">
-            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">中午服务费</text>
-            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">中午时段追加</text>
+          <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx;">
+            <view style="flex: 1;">
+              <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">包厢（大/小）</text>
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">按包厢设置</text>
+            </view>
+            <input type="number" value="{{min_room}}" bindinput="onRoomInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
           </view>
-          <input type="number" value="{{serviceChargeNoon}}" bindinput="onServiceChargeNoonInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" disabled="{{!serviceChargeEnabled}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
-          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
-        </view>
+        </theme-card>
+      </view>
 
-        <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx; {{!serviceChargeEnabled ? 'opacity: 0.4;' : ''}}">
-          <view style="flex: 1;">
-            <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">晚上服务费</text>
-            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">晚上时段追加</text>
+      <!-- Exclusive Min Amount -->
+      <view class="section-wrapper" style="padding: 24rpx 32rpx 0;">
+        <theme-card theme="{{theme}}" padding="32rpx">
+          <view class="card-header" style="display: flex; align-items: center; margin-bottom: 28rpx;">
+            <view style="width: 8rpx; height: 32rpx; background: {{theme.amountPositive || '#4ADE80'}}; border-radius: 4rpx; margin-right: 16rpx;"></view>
+            <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600;">包场最低消费</text>
           </view>
-          <input type="number" value="{{serviceChargeNight}}" bindinput="onServiceChargeNightInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" disabled="{{!serviceChargeEnabled}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
-          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
+
+          <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx;">
+            <view style="flex: 1;">
+              <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">午包场</text>
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">中午时段</text>
+            </view>
+            <input type="number" value="{{min_noon}}" bindinput="onNoonInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
+          </view>
+
+          <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx;">
+            <view style="flex: 1;">
+              <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">晚包场</text>
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">晚上时段</text>
+            </view>
+            <input type="number" value="{{min_night}}" bindinput="onNightInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
+          </view>
+
+          <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx;">
+            <view style="flex: 1;">
+              <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">包场全天</text>
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">全日包场</text>
+            </view>
+            <input type="number" value="{{min_full}}" bindinput="onFullInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
+          </view>
+        </theme-card>
+      </view>
+
+      <!-- Service Charge Mode -->
+      <view class="section-wrapper" style="padding: 24rpx 32rpx 0;">
+        <theme-card theme="{{theme}}" padding="32rpx">
+          <view class="card-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 28rpx;">
+            <view style="display: flex; align-items: center;">
+              <view style="width: 8rpx; height: 32rpx; background: {{theme.accentColor || '#C9A96E'}}; border-radius: 4rpx; margin-right: 16rpx;"></view>
+              <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 30rpx; font-weight: 600;">服务费模式</text>
+            </view>
+            <switch checked="{{serviceChargeEnabled}}" bindchange="onServiceChargeSwitch" color="{{theme.accentColor || '#C9A96E'}}" />
+          </view>
+
+          <view wx:if="{{serviceChargeEnabled && serviceChargeEnabledDate}}" style="padding: 12rpx 20rpx; background: rgba(201,169,110,0.08); border-radius: 10rpx; margin-bottom: 20rpx;">
+            <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 24rpx;">生效日期：{{serviceChargeEnabledDate}} 起的预约使用新计算方式</text>
+          </view>
+
+          <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; {{!serviceChargeEnabled ? 'opacity: 0.4;' : ''}}">
+            <view style="flex: 1;">
+              <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">中午服务费</text>
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">中午时段追加</text>
+            </view>
+            <input type="number" value="{{serviceChargeNoon}}" bindinput="onServiceChargeNoonInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" disabled="{{!serviceChargeEnabled}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
+          </view>
+
+          <view class="form-item" style="display: flex; align-items: center; background: {{theme.surface || '#1A1A2E'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}}; border-radius: 16rpx; padding: 24rpx; {{!serviceChargeEnabled ? 'opacity: 0.4;' : ''}}">
+            <view style="flex: 1;">
+              <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; display: block; margin-bottom: 4rpx;">晚上服务费</text>
+              <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">晚上时段追加</text>
+            </view>
+            <input type="number" value="{{serviceChargeNight}}" bindinput="onServiceChargeNightInput" placeholder="0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}" disabled="{{!serviceChargeEnabled}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 36rpx; font-weight: 700; text-align: right; width: 140rpx;" />
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx; margin-left: 8rpx;">元</text>
+          </view>
+        </theme-card>
+      </view>
+
+      <!-- Helper text -->
+      <view style="padding: 24rpx 32rpx;">
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; line-height: 1.5;">
+          最低消费：收入录入时自动校验，输入 0 表示不限制。服务费模式：启用后，生效日期起的预约按「菜价+服务费」计算收入。
+        </text>
+      </view>
+
+      <!-- Save billing -->
+      <view style="padding: 0 0 32rpx;">
+        <view class="bar-btn bar-btn-primary" bindtap="onSave"
+          style="background: linear-gradient(135deg, {{theme.accentColor || '#C9A96E'}}, {{theme.accentLight || '#E8D5A8'}}); border-radius: 999rpx; padding: 24rpx; margin: 0 32rpx; text-align: center;">
+          <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 30rpx; font-weight: 700;">保存设置</text>
         </view>
-      </theme-card>
-    </view>
-
-    <!-- Helper text -->
-    <view style="padding: 24rpx 32rpx;">
-      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; line-height: 1.5;">
-        最低消费：收入录入时自动校验，输入 0 表示不限制。服务费模式：启用后，生效日期起的预约按「菜价+服务费」计算收入。
-      </text>
-    </view>
-  </view>
-
-  <!-- Bottom Save Bar -->
-  <view class="bottom-bar">
-    <view class="bottom-bar-inner single-btn">
-      <view class="bar-btn bar-btn-primary" bindtap="onSave" style="background: linear-gradient(135deg, {{theme.accentColor || '#C9A96E'}}, {{theme.accentLight || '#E8D5A8'}}); border-radius: 999rpx; padding: 24rpx; text-align: center;">
-        <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 30rpx; font-weight: 700;">保存设置</text>
       </view>
     </view>
   </view>
+
+  <!-- ════════════════ Room Editor Modal ════════════════ -->
+  <theme-modal theme="{{theme}}" visible="{{showRoomEditor}}" title="{{editingRoom ? '编辑房间' : '添加房间'}}" showFooter="{{false}}" bind:close="onCloseRoomEditor">
+    <scroll-view scroll-y style="max-height: 70vh;">
+      <!-- Name -->
+      <view class="editor-field">
+        <text class="editor-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">房间名称</text>
+        <input class="editor-input" value="{{editorRoom.name}}" bindinput="onRoomNameInput" placeholder="输入房间名称"
+          style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+      </view>
+
+      <!-- Enabled & Order -->
+      <view class="editor-row">
+        <view class="editor-field editor-field-half">
+          <text class="editor-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">启用</text>
+          <switch checked="{{editorRoom.enabled}}" bindchange="onRoomEnabledSwitch" color="#C9A96E" />
+        </view>
+        <view class="editor-field editor-field-half">
+          <text class="editor-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">排序</text>
+          <input class="editor-input" type="number" value="{{editorRoom.order}}" bindinput="onRoomOrderInput"
+            style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+        </view>
+      </view>
+
+      <!-- Exclusive Types -->
+      <view class="editor-field">
+        <text class="editor-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">包场模式</text>
+        <view class="pill-selector">
+          <view wx:for="{{['none','noon','night','full']}}" wx:key="*this"
+            class="pill {{editorRoom.exclusiveTypes.indexOf(item) >= 0 ? 'pill-active' : ''}}"
+            data-value="{{item}}" bindtap="toggleExclusiveType"
+            style="{{editorRoom.exclusiveTypes.indexOf(item) >= 0 ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
+          >{{item === 'none' ? '不包场' : item === 'noon' ? '午包场' : item === 'night' ? '晚包场' : '全天'}}</view>
+        </view>
+      </view>
+
+      <!-- Time Slots -->
+      <view class="editor-field">
+        <text class="editor-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">时段</text>
+        <view class="pill-selector">
+          <view wx:for="{{editorRoom.timeSlots}}" wx:key="*this"
+            class="pill pill-active"
+            data-value="{{item}}" bindtap="toggleTimeSlot"
+            style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}};"
+          >{{item}}</view>
+        </view>
+        <input class="editor-input" placeholder="输入新时段后回车" bindconfirm="onAddTimeSlot"
+          style="color: {{theme.textPrimary || '#F5F0E8'}}; margin-top: 12rpx;" />
+      </view>
+
+      <!-- Standards -->
+      <view class="editor-field">
+        <text class="editor-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">餐标选项（元/人）</text>
+        <view class="pill-selector">
+          <view wx:for="{{editorRoom.standards}}" wx:key="*this"
+            class="pill pill-active pill-removable"
+            data-index="{{index}}" bindtap="removeStandard"
+            style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}};"
+          >¥{{item}} ✕</view>
+        </view>
+        <input class="editor-input" type="number" placeholder="添加餐标后回车" bindconfirm="onAddStandard"
+          style="color: {{theme.textPrimary || '#F5F0E8'}}; margin-top: 12rpx;" />
+      </view>
+
+      <!-- Partner & Default Standard -->
+      <view class="editor-row">
+        <view class="editor-field editor-field-half">
+          <text class="editor-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">股东餐标</text>
+          <input class="editor-input" type="number" value="{{editorRoom.partnerStandard}}" bindinput="onPartnerStandardInput"
+            style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+        </view>
+        <view class="editor-field editor-field-half">
+          <text class="editor-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">默认餐标</text>
+          <input class="editor-input" type="number" value="{{editorRoom.defaultStandard}}" bindinput="onDefaultStandardInput"
+            style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+        </view>
+      </view>
+
+      <!-- Save -->
+      <view class="editor-actions">
+        <view class="editor-btn editor-btn-danger" bindtap="onCloseRoomEditor"
+          style="border-color: rgba(248,113,113,0.3); color: #F87171;">取消</view>
+        <view class="editor-btn editor-btn-primary" bindtap="onSaveRoom"
+          style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}};">保存</view>
+      </view>
+    </scroll-view>
+  </theme-modal>
+
+  <!-- ════════════════ Hidden Rooms Picker Modal ════════════════ -->
+  <theme-modal theme="{{theme}}" visible="{{showHiddenPicker}}" title="选择隐藏的房间" showFooter="{{false}}" bind:close="onCloseHiddenPicker">
+    <view wx:for="{{rooms}}" wx:key="id" class="hidden-room-row">
+      <text style="color: {{theme.textPrimary || '#F5F0E8'}}; flex: 1;">{{item.name}}</text>
+      <switch checked="{{formFields.find(f => f.id === _pickerFieldId).hiddenInRooms.indexOf(item.id) >= 0}}"
+        data-roomid="{{item.id}}" bindchange="toggleHiddenRoom"
+        color="{{theme.accentColor || '#C9A96E'}}" />
+    </view>
+    <view class="editor-actions" style="margin-top: 24rpx;">
+      <view class="editor-btn editor-btn-primary" bindtap="onCloseHiddenPicker"
+        style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}}; flex: 1; text-align: center; padding: 20rpx;">完成</view>
+    </view>
+  </theme-modal>
 </view>
