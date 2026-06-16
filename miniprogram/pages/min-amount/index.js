@@ -56,6 +56,7 @@ Page({
     this.loadSettings()
     this.loadRooms()
     this.loadFormConfigFields()
+    this.ensureConfigInitialized()
   },
 
   checkPermission() {
