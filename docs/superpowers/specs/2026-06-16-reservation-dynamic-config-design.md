@@ -128,7 +128,7 @@
 
 **字段说明：**
 - `fields` — 统一字段池。`builtin: true` 不可删除（只能隐藏），`builtin: false` 可增删
-- `type` — 字段类型: `text`(文本输入) / `number`(数字输入) / `textarea`(多行文本) / `select`(下拉选择，需配合 `options` 字段)
+- `type` — 字段类型。MVP 支持: `text`(文本输入) / `number`(数字输入) / `textarea`(多行文本)。`select`(下拉选择) 预留但不实现
 - `overrides` — 按房间覆盖，只能引用全局 fields 中已有的字段 id，不能添加全局不存在的字段
 - 自定义字段的 `id` 格式: `custom_N` 自动生成，或管理员输入的英文 key
 
@@ -328,7 +328,7 @@ onSubmit:
 
 ## 8. 不在范围内
 
-- 自定义字段的「选择」类型的具体选项编辑（MVP 先支持文本/数字/多行文本）
+- 自定义字段的「选择」(select) 类型及其选项编辑（MVP 仅支持 text/number/textarea，select 类型预留字段定义但 UI 不开放）
 - 自定义字段的排序（默认追加在末尾，后续可加拖拽排序）
 - 房间的图片/图标配置
 - 多语言支持
