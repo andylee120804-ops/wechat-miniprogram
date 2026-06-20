@@ -1,4 +1,8 @@
-const { formatDate, getExclusiveTypeName } = require('../../utils/helpers')
+var _h = require('../../utils/helpers')
+var formatDate = _h.formatDate
+var getExclusiveTypeName = _h.getExclusiveTypeName
+var getChinaToday = _h.getChinaToday
+var createChinaDate = _h.createChinaDate
 const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { log, LOG_TYPES } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
@@ -6,7 +10,7 @@ const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 const reservationConfig = require('../../utils/reservationConfig')
 const { createSettingsCache } = require('./helpers/settings-cache')
-const { syncBanquetPurchase, syncIncome, deleteBanquetPurchase } = require('./helpers/sync')
+const { syncBanquetPurchase, deleteBanquetPurchase } = require('./helpers/sync')
 const { checkReservationConflict } = require('./helpers/conflict-check')
 const { validateReservationForm } = require('./helpers/validation')
 
@@ -43,6 +47,7 @@ Page({
     formConfigFields: [],
     formFields: [],
     formData: {},
+    customerPresets: [],
     _dishPriceRequired: false
   },
 
@@ -53,7 +58,7 @@ Page({
 
     const app = getApp()
     const theme = app.getThemePageData()
-    const today = formatDate(new Date())
+    const today = getChinaToday()
     this.setData({
       theme: theme,
       statusBarHeight: app.globalData.statusBarHeight || 44,
@@ -113,10 +118,62 @@ Page({
         this.applyRoomConfig(firstRoom)
       }
       this.loadBossList()
+      this.loadCustomerPresets()
     } catch (err) {
       console.warn('加载预约配置失败:', err)
       this.loadBossList()
+      this.loadCustomerPresets()
     }
+  },
+
+  async loadCustomerPresets() {
+    try {
+      const settingsRes = await db.queryAll(COLLECTIONS.SETTINGS, { key: 'reservation_customer_presets' })
+      const doc = (settingsRes.data && settingsRes.data[0]) || null
+      const configuredPresets = (doc && Array.isArray(doc.value)) ? doc.value : []
+      this.setData({ customerPresets: configuredPresets })
+
+      const app = getApp()
+      const userInfo = app.globalData.userInfo || {}
+      const res = await wx.cloud.callFunction({
+        name: 'sendMessage',
+        data: {
+          action: 'getCustomerNameSuggestions',
+          callerWechatId: userInfo.wechatId || ''
+        }
+      })
+      if (res.result && res.result.success && Array.isArray(res.result.data)) {
+        this.setData({ customerPresets: configuredPresets.concat(res.result.data) })
+      }
+    } catch (err) {
+      if (err.errCode !== -502005) {
+        console.warn('加载客户预设失败:', err)
+      }
+    }
+  },
+
+  onPickPresetCustomer(e) {
+    const name = e.currentTarget.dataset.name
+    if (!name) return
+    wx.vibrateShort({ type: 'light' })
+    this.setData({
+      formData: Object.assign({}, this.data.formData, { customerName: name })
+    })
+    this.clearError('customerName')
+  },
+
+  refreshCustomerNameTop() {
+    const app = getApp()
+    const userInfo = app.globalData.userInfo || {}
+    wx.cloud.callFunction({
+      name: 'sendMessage',
+      data: {
+        action: 'refreshCustomerNameTop',
+        callerWechatId: userInfo.wechatId || ''
+      }
+    }).catch(function(err) {
+      console.warn('刷新客户标签缓存失败:', err)
+    })
   },
 
   applyRoomConfig(roomConfig) {
@@ -124,9 +181,16 @@ Page({
       this.data.formConfigFields, roomConfig.id
     )
 
+    // Normalize exclusiveTypes to canonical order so pill labels render
+    // consistently regardless of the toggle history saved in DB.
+    const EXCLUSIVE_ORDER = ['none', 'noon', 'night', 'full']
+    const normalizedExclusive = EXCLUSIVE_ORDER.filter(function(t) {
+      return roomConfig.exclusiveTypes && roomConfig.exclusiveTypes.indexOf(t) >= 0
+    })
+
     const updates = {
       timeOptions: roomConfig.timeSlots,
-      exclusiveOptions: roomConfig.exclusiveTypes,
+      exclusiveOptions: normalizedExclusive,
       standardOptions: roomConfig.standards,
       partnerStandard: roomConfig.partnerStandard,
       defaultStandard: roomConfig.defaultStandard,
@@ -239,7 +303,7 @@ Page({
 
   onDateChange(e) {
     const selected = e.detail.value
-    const today = formatDate(new Date())
+    const today = getChinaToday()
     if (selected < today) {
       wx.showToast({ title: '不能选择过去的日期', icon: 'none' })
       return
@@ -442,11 +506,7 @@ Page({
   },
 
   isPastDate(dateStr) {
-    const today = new Date()
-    const todayStr = today.getFullYear() + '-' +
-      String(today.getMonth() + 1).padStart(2, '0') + '-' +
-      String(today.getDate()).padStart(2, '0')
-    return dateStr < todayStr
+    return dateStr < getChinaToday()
   },
 
   // ── Validation & submit ─────────────────────────────────────────
@@ -564,7 +624,7 @@ Page({
     })
 
     const et = this.data.exclusiveType
-    docData.date = new Date(this.data.date + 'T00:00:00')
+    docData.date = createChinaDate(this.data.date)
     docData.time = this.data.time
     docData.exclusiveType = et
     docData.isPartner = this.data.isPartner
@@ -584,27 +644,40 @@ Page({
   async _createReservation(docData) {
     const app = getApp()
     const userInfo = app.globalData.userInfo || {}
+    const appUser = app.globalData.userInfo || {}
     docData.status = 'confirmed'
     docData.createdBy = userInfo._id || ''
     docData.createdByName = userInfo.name || userInfo.nickName || ''
 
     const result = await db.addDoc(COLLECTIONS.RESERVATION, docData)
+    // 创建成功后，调用云函数写入变动日志（仅写日志，不影响预约记录的 _openid）
+    try {
+      await wx.cloud.callFunction({
+        name: 'sendMessage',
+        data: {
+          action: 'logReservationCreated',
+          reservationId: result._id,
+          docData: docData,
+          callerWechatId: appUser.wechatId || ''
+        }
+      })
+    } catch (e) {
+      console.warn('写入预约变动日志失败:', e)
+    }
+    this.refreshCustomerNameTop()
     const dateStr = formatDate(docData.date)
-    const isToday = dateStr === formatDate(new Date())
+    const isToday = dateStr === getChinaToday()
 
     if (isToday && await this.shouldSync(dateStr)) {
       const settings = await this._settingsCache.get()
       const autoPurchaseEnabled = await this.isAutoPurchaseEnabled()
       if (autoPurchaseEnabled) {
+        // syncBanquetPurchase now also generates income from the purchase + service charge
         await syncBanquetPurchase({
           docData: docData, reservationId: result._id, isCreate: true,
           roomConfig: this.data.currentRoomConfig, settings: settings, userInfo: userInfo
         })
       }
-      await syncIncome({
-        docData: docData, reservationId: result._id, isCreate: true,
-        roomConfig: this.data.currentRoomConfig, settings: settings, userInfo: userInfo
-      })
     }
     log(LOG_TYPES.RESERVATION_CREATE, '创建预约: ' + docData.customerName, { id: result._id })
   },
@@ -612,8 +685,21 @@ Page({
   async _updateReservation(docData) {
     const app = getApp()
     const userInfo = app.globalData.userInfo || {}
-    const oldData = await db.getDoc(COLLECTIONS.RESERVATION, this.data.id)
-    await db.updateDoc(COLLECTIONS.RESERVATION, this.data.id, docData)
+    const appUser = getApp().globalData.userInfo || {}
+    const updateRes = await wx.cloud.callFunction({
+      name: 'sendMessage',
+      data: {
+        action: 'updateReservationAmountWithChange',
+        reservationId: this.data.id,
+        docData: docData,
+        callerWechatId: appUser.wechatId || ''
+      }
+    })
+    if (!updateRes.result || !updateRes.result.success) {
+      throw new Error((updateRes.result && updateRes.result.message) || '更新预约失败')
+    }
+    this.refreshCustomerNameTop()
+    const oldData = updateRes.result.before
 
     const dateStr = formatDate(docData.date)
     if (await this.shouldSync(dateStr)) {
@@ -628,20 +714,17 @@ Page({
         if (this.isPastDate(dateStr)) {
           await this.showSyncConfirmDialog()
         }
-        const isTodayOrPast = dateStr <= formatDate(new Date())
+        const isTodayOrPast = dateStr <= getChinaToday()
         if (isTodayOrPast) {
           const settings = await this._settingsCache.get()
           const autoPurchaseEnabled = await this.isAutoPurchaseEnabled()
           if (autoPurchaseEnabled) {
+            // syncBanquetPurchase now also generates income from the purchase + service charge
             await syncBanquetPurchase({
               docData: docData, reservationId: this.data.id, isCreate: false,
               roomConfig: this.data.currentRoomConfig, settings: settings, userInfo: userInfo
             })
           }
-          await syncIncome({
-            docData: docData, reservationId: this.data.id, isCreate: false,
-            roomConfig: this.data.currentRoomConfig, settings: settings, userInfo: userInfo
-          })
         }
       }
     }
@@ -695,8 +778,19 @@ Page({
     this.setData({ showDeleteModal: false })
     try {
       wx.showLoading({ title: '删除中' })
-      await deleteBanquetPurchase(this.data.id)
-      await db.deleteDoc(COLLECTIONS.RESERVATION, this.data.id)
+      const app = getApp()
+      const userInfo = app.globalData.userInfo || {}
+      const deleteRes = await wx.cloud.callFunction({
+        name: 'sendMessage',
+        data: {
+          action: 'deleteReservationWithChange',
+          reservationId: this.data.id,
+          callerWechatId: userInfo.wechatId || ''
+        }
+      })
+      if (!deleteRes.result || !deleteRes.result.success) {
+        throw new Error((deleteRes.result && deleteRes.result.message) || '删除预约失败')
+      }
       log(LOG_TYPES.RESERVATION_DELETE, '删除预约: ' + this.data.customerName, { id: this.data.id })
       wx.hideLoading()
       wx.showToast({ title: '已删除', icon: 'success' })

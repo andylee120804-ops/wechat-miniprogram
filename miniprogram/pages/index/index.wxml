@@ -21,7 +21,8 @@
       <view class="announcement-marquee" bindtap="onAnnouncementTap" bindtouchstart="onMarqueeTouchStart" bindtouchend="onMarqueeTouchEnd">
         <view class="marquee-icon">{{announcementEmoji}}</view>
         <view class="marquee-content">
-          <view wx:if="{{announcements.length > 0 && !marqueeReset}}" class="marquee-text-wrap" style="animation: marquee-scroll 15s ease-out both;">{{currentAnnouncement.title}}</view>
+          <!-- 通过 a/b 交替 class 来强制动画从 0% 开始；避免用 wx:if 卸载/挂载这种 60ms 双 setData，渲染层会合并导致动画从中途重启 -->
+          <view wx:if="{{announcements.length > 0}}" class="marquee-text-wrap {{currentAnnouncementIndex % 2 === 0 ? 'marquee-anim-a' : 'marquee-anim-b'}}">{{currentAnnouncement.title}}</view>
           <view wx:elif="{{announcements.length === 0}}" class="marquee-text-wrap" style="color: {{theme.textMuted || '#5C5C72'}};">暂无公告</view>
         </view>
         <view class="marquee-arrow">›</view>
@@ -91,14 +92,17 @@
 
         <block wx:if="{{tomorrowReservations.length > 0}}">
           <view wx:for="{{tomorrowPreview}}" wx:key="index" class="tomorrow-item" bindtap="onReservationTap" data-id="{{item._id}}">
-            <view>
-              <view class="tomorrow-time" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.time === '中午' ? '午餐' : '晚餐'}}</view>
-              <view class="tomorrow-customer" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{item.customerName}}</view>
+            <view class="tomorrow-row">
+              <view class="tomorrow-left">
+                <view class="tomorrow-time" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.time === '中午' ? '午餐' : '晚餐'}}</view>
+                <view class="tomorrow-customer" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{item.customerName}}</view>
+              </view>
+              <view class="tomorrow-right">
+                <view class="tomorrow-room">{{item.roomName || (item.room === 'big' ? '大包厢' : '小包厢')}}</view>
+                <view class="tomorrow-price" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.dishPrice > 0 ? '菜价¥' + item.dishPrice : '¥' + (item.standard || 300) + '/人'}}</view>
+              </view>
             </view>
-            <view class="tomorrow-right">
-              <view class="tomorrow-room">{{item.roomName || (item.room === 'big' ? '大包厢' : '小包厢')}}</view>
-              <view class="tomorrow-price" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.dishPrice > 0 ? '菜价¥' + item.dishPrice : '¥' + (item.standard || 300) + '/人'}}</view>
-            </view>
+            <view wx:if="{{item.remark}}" class="tomorrow-remark" style="color: {{theme.textMuted || '#5C5C72'}};">📝 {{item.remark}}</view>
           </view>
           <view wx:if="{{tomorrowReservations.length > 3}}" class="tomorrow-more">
             还有 {{tomorrowReservations.length - 3}} 组...
@@ -185,6 +189,33 @@
 
     <!-- Bottom spacing -->
     <view class="tab-bar-safe-bottom"></view>
+
+    <!-- Floating AI Button -->
+    <view wx:if="{{showAIEntry}}" class="fab-ai" bindtap="onOpenAI" hover-class="fab-ai-hover">
+      <view class="fab-ai-sparkle">
+        <view class="sparkle-dot s1"></view>
+        <view class="sparkle-dot s2"></view>
+        <view class="sparkle-dot s3"></view>
+      </view>
+      <view class="fab-ai-core">
+        <view class="core-ring"></view>
+        <view class="core-inner"></view>
+      </view>
+    </view>
+
+    <!-- 预约变动提醒弹窗 -->
+    <theme-modal visible="{{changeReminderVisible}}" title="{{changeReminderTitle}}" confirmText="查看详情" cancelText="我知道了" theme="{{theme}}" bind:close="onChangeReminderClose" bind:confirm="onChangeReminderConfirm">
+      <view class="change-reminder-list">
+        <view wx:for="{{changeReminderItems}}" wx:key="index" class="change-reminder-item" bindtap="onChangeReminderItemTap" data-index="{{index}}" hover-class="change-reminder-item-hover">
+          <text class="change-reminder-index">{{index + 1}}</text>
+          <text class="change-reminder-summary" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{item.summary}}</text>
+          <text class="change-reminder-arrow" style="color: {{theme.textMuted || '#5C5C72'}};">›</text>
+        </view>
+        <view wx:if="{{changeReminderMore > 0}}" class="change-reminder-more" style="color: {{theme.textMuted || '#5C5C72'}};">
+          还有 {{changeReminderMore}} 条变动未显示
+        </view>
+      </view>
+    </theme-modal>
 
   </block>
 </view>

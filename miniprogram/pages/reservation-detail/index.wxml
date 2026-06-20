@@ -161,11 +161,11 @@
   </block>
 
   <!-- Action Bar - fixed at bottom, independent of content -->
-  <view class="bottom-bar" wx:if="{{!loading && reservation && reservation.status !== 'cancelled'}}">
+  <view class="bottom-bar" wx:if="{{!loading && reservation && reservation.status !== 'cancelled' && (canEdit || canCancel || canShare)}}">
     <view class="bottom-bar-inner" style="justify-content: space-between;">
-      <view class="bar-btn bar-btn-danger" style="flex: 1; border-radius: 14rpx;" bindtap="onCancel">取消预定</view>
-      <view class="bar-btn bar-btn-primary" style="flex: 1; border-radius: 14rpx; margin: 0 12rpx;" bindtap="onEdit">编辑</view>
-      <view class="bar-btn" style="flex: 1; background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}}; font-weight: 700; border-radius: 14rpx;" bindtap="onShareToGuest">分享给客人</view>
+      <view wx:if="{{canCancel}}" class="bar-btn bar-btn-danger" style="flex: 1; border-radius: 14rpx;" bindtap="onCancel">取消预定</view>
+      <view wx:if="{{canEdit}}" class="bar-btn bar-btn-primary" style="flex: 1; border-radius: 14rpx; margin: 0 12rpx;" bindtap="onEdit">编辑</view>
+      <view wx:if="{{canShare}}" class="bar-btn" style="flex: 1; background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}}; font-weight: 700; border-radius: 14rpx;" bindtap="onShareToGuest">分享给客人</view>
     </view>
   </view>
 

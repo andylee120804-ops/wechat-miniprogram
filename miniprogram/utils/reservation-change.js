@@ -17,6 +17,7 @@ function filterUnreadImportantChanges(changes, userId, today) {
   return (changes || [])
     .filter(function(change) {
       return change && change.important === true &&
+        change.operatorId !== userId &&
         change.reservationDate >= todayStr && change.reservationDate <= tomorrow &&
         isUnreadForUser(change, userId)
     })
@@ -33,19 +34,44 @@ function getReservationChangeReminderTitle(changes, today) {
   const todayChanges = allChanges.filter(function(c) { return c && c.reservationDate === todayStr })
   const tomorrowChanges = allChanges.filter(function(c) { return c && c.reservationDate === tomorrowStr })
 
-  // 根据变动类型生成精确标题
+  // 判断今天各类型变动
+  const hasTodayCreated = todayChanges.some(function(c) { return c.changeType === 'created' })
   const hasTodayCancel = todayChanges.some(function(c) { return c.changeType === 'cancelled' })
-  const hasTodayOther = todayChanges.some(function(c) { return c.changeType !== 'cancelled' })
+  const hasTodayOther = todayChanges.some(function(c) { return c.changeType !== 'cancelled' && c.changeType !== 'created' })
+
+  // 判断明天各类型变动
+  const hasTomorrowCreated = tomorrowChanges.some(function(c) { return c.changeType === 'created' })
   const hasTomorrowCancel = tomorrowChanges.some(function(c) { return c.changeType === 'cancelled' })
-  const hasTomorrowOther = tomorrowChanges.some(function(c) { return c.changeType !== 'cancelled' })
+  const hasTomorrowOther = tomorrowChanges.some(function(c) { return c.changeType !== 'cancelled' && c.changeType !== 'created' })
 
-  if (hasTodayOther && hasTodayCancel) return '今天预约变动'
-  if (hasTodayCancel && !hasTodayOther) return '今天预约取消'
-  if (hasTodayOther && !hasTodayCancel) return '今天预约变动'
+  const hasTodayAny = todayChanges.length > 0
+  const hasTomorrowAny = tomorrowChanges.length > 0
 
-  if (hasTomorrowOther && hasTomorrowCancel) return '明天预约变动'
-  if (hasTomorrowCancel && !hasTomorrowOther) return '明天预约取消'
-  if (hasTomorrowOther && !hasTomorrowCancel) return '明天预约变动'
+  // 今天和明天都有变动时，判断能否合并显示
+  if (hasTodayAny && hasTomorrowAny) {
+    // 同类型变动合并
+    if (hasTodayCreated && hasTomorrowCreated && !hasTodayCancel && !hasTomorrowCancel && !hasTodayOther && !hasTomorrowOther) return '今天/明天新增预约'
+    if (hasTodayCancel && hasTomorrowCancel && !hasTodayCreated && !hasTomorrowCreated && !hasTodayOther && !hasTomorrowOther) return '今天/明天预约取消'
+    if (hasTodayOther && hasTomorrowOther && !hasTodayCreated && !hasTomorrowCreated && !hasTodayCancel && !hasTomorrowCancel) return '今天/明天预约变动'
+    // 类型不完全一致，用通用标题
+    return '今天/明天预约变动'
+  }
+
+  // 只有今天
+  if (hasTodayAny) {
+    if (hasTodayCreated && !hasTodayCancel && !hasTodayOther) return '今天新增预约'
+    if (hasTodayCancel && !hasTodayCreated && !hasTodayOther) return '今天预约取消'
+    if (hasTodayOther && !hasTodayCreated && !hasTodayCancel) return '今天预约变动'
+    return '今天预约变动'
+  }
+
+  // 只有明天
+  if (hasTomorrowAny) {
+    if (hasTomorrowCreated && !hasTomorrowCancel && !hasTomorrowOther) return '明天新增预约'
+    if (hasTomorrowCancel && !hasTomorrowCreated && !hasTomorrowOther) return '明天预约取消'
+    if (hasTomorrowOther && !hasTomorrowCreated && !hasTomorrowCancel) return '明天预约变动'
+    return '明天预约变动'
+  }
 
   return '预约变动'
 }
@@ -70,6 +96,28 @@ function buildCancelledChange(reservation, operator) {
     summary: reservationDate + ' ' + (reservation.time || '') + ' ' + roomName + ' ' + customerName + ' 预约已取消',
     before: { status: reservation.status || 'confirmed' },
     after: { status: 'cancelled' },
+    reservationDate: reservationDate,
+    reservationTime: reservation.time || '',
+    customerName: customerName,
+    roomName: roomName,
+    operatorId: operator._id || '',
+    operatorName: operator.name || operator.nickName || '',
+    important: true,
+    ackUsers: []
+  }
+}
+
+function buildCreatedChange(reservation, operator) {
+  const reservationDate = formatDate(reservation.date)
+  const customerName = getCustomerName(reservation)
+  const roomName = getRoomName(reservation)
+  return {
+    reservationId: reservation._id || reservation.id || '',
+    changeType: 'created',
+    title: '新增预约',
+    summary: reservationDate + ' ' + (reservation.time || '') + ' ' + roomName + ' ' + customerName + ' 新增预约',
+    before: {},
+    after: { status: 'confirmed' },
     reservationDate: reservationDate,
     reservationTime: reservation.time || '',
     customerName: customerName,
@@ -155,6 +203,7 @@ module.exports = {
   filterUnreadImportantChanges,
   getReservationChangeReminderTitle,
   buildCancelledChange,
+  buildCreatedChange,
   buildAmountChangedChange,
   queryUnreadImportantChanges,
   markChangesRead

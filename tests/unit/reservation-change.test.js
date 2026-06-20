@@ -17,14 +17,15 @@ global.getApp = jest.fn(() => mockApp)
 const reservationChange = require('../../miniprogram/utils/reservation-change')
 
 describe('reservation-change filtering', () => {
-  test('keeps unread important changes for today and tomorrow (including cancelled)', () => {
+  test('keeps unread important changes for today and tomorrow (including cancelled), excluding operator own changes', () => {
     const changes = [
-      { _id: '1', important: true, reservationDate: '2026-06-19', ackUsers: [], changeType: 'amount_changed', summary: 'today', createdAt: '2026-06-19 10:00' },
-      { _id: '2', important: true, reservationDate: '2026-06-20', ackUsers: [], changeType: 'amount_changed', summary: 'tomorrow', createdAt: '2026-06-19 11:00' },
-      { _id: '3', important: true, reservationDate: '2026-06-21', ackUsers: [], changeType: 'amount_changed', summary: 'later', createdAt: '2026-06-19 12:00' },
-      { _id: '4', important: false, reservationDate: '2026-06-19', ackUsers: [], changeType: 'amount_changed', summary: 'normal', createdAt: '2026-06-19 13:00' },
-      { _id: '5', important: true, reservationDate: '2026-06-19', ackUsers: ['u1'], changeType: 'amount_changed', summary: 'read', createdAt: '2026-06-19 14:00' },
-      { _id: '6', important: true, changeType: 'cancelled', reservationDate: '2026-06-19', ackUsers: [], summary: 'cancelled today', createdAt: '2026-06-19 15:00' }
+      { _id: '1', important: true, reservationDate: '2026-06-19', ackUsers: [], changeType: 'amount_changed', operatorId: 'u2', summary: 'today', createdAt: '2026-06-19 10:00' },
+      { _id: '2', important: true, reservationDate: '2026-06-20', ackUsers: [], changeType: 'amount_changed', operatorId: 'u2', summary: 'tomorrow', createdAt: '2026-06-19 11:00' },
+      { _id: '3', important: true, reservationDate: '2026-06-21', ackUsers: [], changeType: 'amount_changed', operatorId: 'u2', summary: 'later', createdAt: '2026-06-19 12:00' },
+      { _id: '4', important: false, reservationDate: '2026-06-19', ackUsers: [], changeType: 'amount_changed', operatorId: 'u2', summary: 'normal', createdAt: '2026-06-19 13:00' },
+      { _id: '5', important: true, reservationDate: '2026-06-19', ackUsers: ['u1'], changeType: 'amount_changed', operatorId: 'u2', summary: 'read', createdAt: '2026-06-19 14:00' },
+      { _id: '6', important: true, changeType: 'cancelled', reservationDate: '2026-06-19', ackUsers: [], operatorId: 'u2', summary: 'cancelled today', createdAt: '2026-06-19 15:00' },
+      { _id: '7', important: true, changeType: 'created', reservationDate: '2026-06-19', ackUsers: [], operatorId: 'u1', summary: 'own created today', createdAt: '2026-06-19 16:00' }
     ]
 
     const result = reservationChange.filterUnreadImportantChanges(changes, 'u1', '2026-06-19')
@@ -50,10 +51,27 @@ describe('reservation-change reminder title', () => {
     expect(title).toBe('今天预约取消')
   })
 
+  test('returns "今天新增预约" for created-only today change', () => {
+    const title = reservationChange.getReservationChangeReminderTitle([
+      { reservationDate: '2026-06-20', summary: '今天新增', changeType: 'created' }
+    ], '2026-06-20')
+
+    expect(title).toBe('今天新增预约')
+  })
+
   test('returns "今天预约变动" when today has both cancelled and other changes', () => {
     const title = reservationChange.getReservationChangeReminderTitle([
       { reservationDate: '2026-06-20', summary: '今天取消', changeType: 'cancelled' },
       { reservationDate: '2026-06-20', summary: '今天金额变动', changeType: 'amount_changed' }
+    ], '2026-06-20')
+
+    expect(title).toBe('今天预约变动')
+  })
+
+  test('returns "今天预约变动" when today has both created and cancelled', () => {
+    const title = reservationChange.getReservationChangeReminderTitle([
+      { reservationDate: '2026-06-20', summary: '今天新增', changeType: 'created' },
+      { reservationDate: '2026-06-20', summary: '今天取消', changeType: 'cancelled' }
     ], '2026-06-20')
 
     expect(title).toBe('今天预约变动')
@@ -75,13 +93,48 @@ describe('reservation-change reminder title', () => {
     expect(title).toBe('明天预约取消')
   })
 
-  test('prioritizes today title over tomorrow', () => {
+  test('returns "明天新增预约" for created-only tomorrow change', () => {
     const title = reservationChange.getReservationChangeReminderTitle([
-      { reservationDate: '2026-06-21', summary: '明天变动', changeType: 'amount_changed' },
-      { reservationDate: '2026-06-20', summary: '今天变动', changeType: 'amount_changed' }
+      { reservationDate: '2026-06-21', summary: '明天新增', changeType: 'created' }
     ], '2026-06-20')
 
-    expect(title).toBe('今天预约变动')
+    expect(title).toBe('明天新增预约')
+  })
+
+  test('returns "今天/明天新增预约" when both today and tomorrow have created only', () => {
+    const title = reservationChange.getReservationChangeReminderTitle([
+      { reservationDate: '2026-06-20', summary: '今天新增', changeType: 'created' },
+      { reservationDate: '2026-06-21', summary: '明天新增', changeType: 'created' }
+    ], '2026-06-20')
+
+    expect(title).toBe('今天/明天新增预约')
+  })
+
+  test('returns "今天/明天预约取消" when both today and tomorrow have cancelled only', () => {
+    const title = reservationChange.getReservationChangeReminderTitle([
+      { reservationDate: '2026-06-20', summary: '今天取消', changeType: 'cancelled' },
+      { reservationDate: '2026-06-21', summary: '明天取消', changeType: 'cancelled' }
+    ], '2026-06-20')
+
+    expect(title).toBe('今天/明天预约取消')
+  })
+
+  test('returns "今天/明天预约变动" when both today and tomorrow have amount_changed only', () => {
+    const title = reservationChange.getReservationChangeReminderTitle([
+      { reservationDate: '2026-06-20', summary: '今天变动', changeType: 'amount_changed' },
+      { reservationDate: '2026-06-21', summary: '明天变动', changeType: 'amount_changed' }
+    ], '2026-06-20')
+
+    expect(title).toBe('今天/明天预约变动')
+  })
+
+  test('returns "今天/明天预约变动" when today and tomorrow have different change types', () => {
+    const title = reservationChange.getReservationChangeReminderTitle([
+      { reservationDate: '2026-06-20', summary: '今天新增', changeType: 'created' },
+      { reservationDate: '2026-06-21', summary: '明天取消', changeType: 'cancelled' }
+    ], '2026-06-20')
+
+    expect(title).toBe('今天/明天预约变动')
   })
 
   test('returns "预约变动" for changes without today or tomorrow date', () => {
@@ -101,6 +154,19 @@ describe('reservation-change builders', () => {
     expect(change.important).toBe(true)
     expect(change.summary).toContain('张三 预约已取消')
     expect(change.operatorName).toBe('管理员')
+  })
+
+  test('builds created change summary', () => {
+    const change = reservationChange.buildCreatedChange({
+      _id: 'r2', date: '2026-06-19', time: '中午', roomName: '小包', customerName: '李四', status: 'confirmed'
+    }, { _id: 'u1', name: '管理员' })
+
+    expect(change.changeType).toBe('created')
+    expect(change.important).toBe(true)
+    expect(change.title).toBe('新增预约')
+    expect(change.summary).toContain('李四 新增预约')
+    expect(change.operatorName).toBe('管理员')
+    expect(change.after.status).toBe('confirmed')
   })
 
   test('builds amount changed change for standard and dish price', () => {

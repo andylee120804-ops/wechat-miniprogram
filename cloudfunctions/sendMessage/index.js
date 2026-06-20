@@ -82,6 +82,8 @@ exports.main = async (event, context) => {
         return await getReservationChanges(event)
       case 'markReservationChangesRead':
         return await markReservationChangesRead(event)
+      case 'logReservationCreated':
+        return await logReservationCreated(event)
       case 'cancelReservationWithChange':
         return await cancelReservationWithChange(event)
       case 'deleteReservationWithChange':
@@ -530,6 +532,26 @@ function buildReservationChange(type, oldReservation, newReservation, caller) {
   var customerName = getCustomerName(target)
   var roomName = getRoomName(target)
 
+  if (type === 'created') {
+    return {
+      reservationId: target._id || '',
+      changeType: 'created',
+      title: '新增预约',
+      summary: reservationDate + ' ' + (target.time || '') + ' ' + roomName + ' ' + customerName + ' 新增预约',
+      before: {},
+      after: { status: 'confirmed' },
+      reservationDate: reservationDate,
+      reservationTime: target.time || '',
+      customerName: customerName,
+      roomName: roomName,
+      operatorId: caller._id || '',
+      operatorName: caller.name || '',
+      important: true,
+      ackUsers: [],
+      createdAt: db.serverDate()
+    }
+  }
+
   if (type === 'cancelled') {
     return {
       reservationId: target._id || '',
@@ -575,6 +597,21 @@ function buildReservationChange(type, oldReservation, newReservation, caller) {
     ackUsers: [],
     createdAt: db.serverDate()
   }
+}
+
+async function logReservationCreated(event) {
+  var { OPENID } = cloud.getWXContext()
+  var caller = await findStaffByCaller(OPENID, event.callerWechatId)
+  if (!caller) return { success: false, message: '无法识别操作者' }
+  var reservationId = event.reservationId
+  var docData = event.docData
+  if (!reservationId || !docData) return { success: false, message: '缺少预约数据' }
+
+  var newReservation = Object.assign({}, docData, { _id: reservationId })
+  await db.collection('reservation_change_log').add({
+    data: buildReservationChange('created', null, newReservation, caller)
+  })
+  return { success: true }
 }
 
 async function cancelReservationWithChange(event) {
@@ -756,7 +793,7 @@ async function getReservationChanges(event) {
     .limit(100)
     .get()
   var data = (result.data || []).filter(function(change) {
-    return !(change.ackUsers || []).includes(caller._id)
+    return !(change.ackUsers || []).includes(caller._id) && change.operatorId !== caller._id
   })
   return { success: true, data: data }
 }
