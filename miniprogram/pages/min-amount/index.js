@@ -1,6 +1,8 @@
 const app = getApp()
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
+var _h = require('../../utils/helpers')
+var getChinaToday = _h.getChinaToday
 
 Page({
   data: {
@@ -37,6 +39,17 @@ Page({
     _newFieldName: '',
     _newFieldType: 'text',
     _newFieldTypeIndex: 0,
+    _newOptionValues: {},    // { fieldIdx: value } — controlled inputs for option add
+
+    // ── Tab 3: Customer presets ──
+    customerPresets: [],
+    _newCustomerName: '',
+    _customerPresetsDocId: null,
+    _customerPresetsVersion: 0,
+
+    // ── Editor controlled inputs ──
+    _newTimeSlotValue: '',
+    _newStandardValue: '',
 
     // ── Internal ──
     _roomsDocId: null,
@@ -58,6 +71,7 @@ Page({
     this.loadSettings()
     this.loadRooms()
     this.loadFormConfigFields()
+    this.loadCustomerPresets()
     this.ensureConfigInitialized()
   },
 
@@ -133,11 +147,7 @@ Page({
   onServiceChargeNightInput(e) { this.setData({ serviceChargeNight: e.detail.value }) },
 
   formatToday() {
-    var d = new Date()
-    var y = d.getFullYear()
-    var m = String(d.getMonth() + 1).padStart(2, '0')
-    var day = String(d.getDate()).padStart(2, '0')
-    return y + '-' + m + '-' + day
+    return getChinaToday()
   },
 
   async onSave() {
@@ -207,6 +217,8 @@ Page({
     this.setData({
       showRoomEditor: true,
       editingRoom: null,
+      _newTimeSlotValue: '',
+      _newStandardValue: '',
       editorRoom: {
         id: 'room_' + Date.now(),
         name: '',
@@ -228,6 +240,8 @@ Page({
     this.setData({
       showRoomEditor: true,
       editingRoom: room,
+      _newTimeSlotValue: '',
+      _newStandardValue: '',
       editorRoom: JSON.parse(JSON.stringify(room))
     })
   },
@@ -258,12 +272,25 @@ Page({
     this.setData({ 'editorRoom.timeSlots': slots })
   },
 
-  onAddTimeSlot(e) {
-    var value = e.detail.value.trim()
-    if (!value) return
+  onNewTimeSlotInput(e) { this.setData({ _newTimeSlotValue: e.detail.value }) },
+
+  onAddTimeSlotTap(e) {
+    // Triggered by + button (no detail.value) or by bindconfirm (has detail.value)
+    var value = (e && e.detail && e.detail.value !== undefined)
+      ? e.detail.value
+      : this.data._newTimeSlotValue
+    value = String(value || '').trim()
+    if (!value) {
+      wx.showToast({ title: '请输入时段名称', icon: 'none' })
+      return
+    }
     var slots = this.data.editorRoom.timeSlots.slice()
-    if (!slots.includes(value)) slots.push(value)
-    this.setData({ 'editorRoom.timeSlots': slots })
+    if (slots.includes(value)) {
+      wx.showToast({ title: '时段已存在', icon: 'none' })
+      return
+    }
+    slots.push(value)
+    this.setData({ 'editorRoom.timeSlots': slots, _newTimeSlotValue: '' })
   },
 
   removeStandard(e) {
@@ -273,13 +300,25 @@ Page({
     this.setData({ 'editorRoom.standards': standards })
   },
 
-  onAddStandard(e) {
-    var value = Number(e.detail.value)
-    if (!value || value <= 0) return
+  onNewStandardInput(e) { this.setData({ _newStandardValue: e.detail.value }) },
+
+  onAddStandardTap(e) {
+    var raw = (e && e.detail && e.detail.value !== undefined)
+      ? e.detail.value
+      : this.data._newStandardValue
+    var value = Number(raw)
+    if (!value || value <= 0) {
+      wx.showToast({ title: '请输入有效金额', icon: 'none' })
+      return
+    }
     var standards = this.data.editorRoom.standards.slice()
-    if (!standards.includes(value)) standards.push(value)
+    if (standards.includes(value)) {
+      wx.showToast({ title: '该餐标已存在', icon: 'none' })
+      return
+    }
+    standards.push(value)
     standards.sort(function(a, b) { return a - b })
-    this.setData({ 'editorRoom.standards': standards })
+    this.setData({ 'editorRoom.standards': standards, _newStandardValue: '' })
   },
 
   onPartnerStandardInput(e) { this.setData({ 'editorRoom.partnerStandard': Number(e.detail.value) || 0 }) },
@@ -291,6 +330,13 @@ Page({
       wx.showToast({ title: '请输入房间名称', icon: 'none' })
       return
     }
+
+    // Normalize exclusiveTypes to canonical order so pill labels render
+    // consistently across rooms regardless of toggle history.
+    var EXCLUSIVE_ORDER = ['none', 'noon', 'night', 'full']
+    room.exclusiveTypes = EXCLUSIVE_ORDER.filter(function(t) {
+      return room.exclusiveTypes && room.exclusiveTypes.indexOf(t) >= 0
+    })
 
     // Validate: defaultStandard should be in standards (if both are set)
     var ds = Number(room.defaultStandard) || 0
@@ -322,7 +368,21 @@ Page({
 
       // Optimistic lock check
       var docId = this.data._roomsDocId
+      if (!docId) {
+        // _roomsDocId may be stale (e.g. ensureConfigInitialized created the doc
+        // after loadRooms ran). Re-query to avoid duplicate-key errors.
+        var preCheck = await db.queryAll(COLLECTIONS.SETTINGS, { key: 'reservation_rooms' })
+        if (preCheck.data && preCheck.data.length > 0) {
+          docId = preCheck.data[0]._id
+          this.setData({
+            _roomsDocId: docId,
+            _roomsVersion: preCheck.data[0]._version || 0
+          })
+        }
+      }
       if (docId) {
+        // NOTE: Best-effort optimistic lock (TOCTOU window exists — acceptable
+        // for low-concurrency admin-only settings page).
         var check = await db.queryAll(COLLECTIONS.SETTINGS, { key: 'reservation_rooms' })
         var latestVersion = (check.data && check.data[0]) ? (check.data[0]._version || 0) : 0
         if (latestVersion !== this.data._roomsVersion) {
@@ -332,7 +392,7 @@ Page({
         }
         await db.updateDoc(COLLECTIONS.SETTINGS, docId, {
           value: rooms,
-          _version: this.data._roomsVersion + 1
+          _version: latestVersion + 1
         })
       } else {
         await db.addDoc(COLLECTIONS.SETTINGS, {
@@ -523,16 +583,33 @@ Page({
     this.setData({ formFields: fields })
   },
 
-  onAddSelectOption(e) {
+  onNewOptionInput(e) {
     var fieldIdx = Number(e.currentTarget.dataset.fieldidx)
-    var value = e.detail.value.trim()
-    if (!value) return
+    var newOpts = Object.assign({}, this.data._newOptionValues)
+    newOpts[fieldIdx] = e.detail.value
+    this.setData({ _newOptionValues: newOpts })
+  },
+
+  onAddSelectOptionTap(e) {
+    var fieldIdx = Number(e.currentTarget.dataset.fieldidx)
+    var raw = (e && e.detail && e.detail.value !== undefined)
+      ? e.detail.value
+      : (this.data._newOptionValues[fieldIdx] || '')
+    var value = String(raw || '').trim()
+    if (!value) {
+      wx.showToast({ title: '请输入选项内容', icon: 'none' })
+      return
+    }
     var fields = this.data.formFields.slice()
     if (!fields[fieldIdx].options) fields[fieldIdx].options = []
-    if (!fields[fieldIdx].options.includes(value)) {
-      fields[fieldIdx].options.push(value)
+    if (fields[fieldIdx].options.includes(value)) {
+      wx.showToast({ title: '选项已存在', icon: 'none' })
+      return
     }
-    this.setData({ formFields: fields })
+    fields[fieldIdx].options.push(value)
+    var newOpts = Object.assign({}, this.data._newOptionValues)
+    delete newOpts[fieldIdx]
+    this.setData({ formFields: fields, _newOptionValues: newOpts })
   },
 
   async onSaveFormConfig() {
@@ -540,7 +617,19 @@ Page({
     try {
       var fields = this.data.formFields
       var docId = this.data._formConfigDocId
+      if (!docId) {
+        var preCheck = await db.queryAll(COLLECTIONS.SETTINGS, { key: 'reservation_form_config' })
+        if (preCheck.data && preCheck.data.length > 0) {
+          docId = preCheck.data[0]._id
+          this.setData({
+            _formConfigDocId: docId,
+            _formConfigVersion: preCheck.data[0]._version || 0
+          })
+        }
+      }
       if (docId) {
+        // NOTE: Best-effort optimistic lock (TOCTOU window exists — acceptable
+        // for low-concurrency admin-only settings page).
         var check = await db.queryAll(COLLECTIONS.SETTINGS, { key: 'reservation_form_config' })
         var latestVersion = (check.data && check.data[0]) ? (check.data[0]._version || 0) : 0
         if (latestVersion !== this.data._formConfigVersion) {
@@ -550,7 +639,7 @@ Page({
         }
         await db.updateDoc(COLLECTIONS.SETTINGS, docId, {
           value: { fields: fields },
-          _version: this.data._formConfigVersion + 1
+          _version: latestVersion + 1
         })
       } else {
         await db.addDoc(COLLECTIONS.SETTINGS, {
@@ -565,6 +654,104 @@ Page({
       wx.showToast({ title: '保存成功', icon: 'success' })
     } catch (err) {
       wx.hideLoading()
+      wx.showToast({ title: '保存失败', icon: 'none' })
+    }
+  },
+
+  // ── Tab 3: Customer presets ───────────────────────────────────
+
+  async loadCustomerPresets() {
+    try {
+      var res = await db.queryAll(COLLECTIONS.SETTINGS, { key: 'reservation_customer_presets' })
+      var doc = (res.data && res.data[0]) || null
+      var value = (doc && Array.isArray(doc.value)) ? doc.value : []
+      this.setData({
+        customerPresets: value,
+        _customerPresetsDocId: doc ? doc._id : null,
+        _customerPresetsVersion: doc ? (doc._version || 0) : 0
+      })
+    } catch (err) {
+      if (err.errCode === -502005) {
+        // settings collection not yet created — fine, empty state
+        return
+      }
+      console.warn('加载客户预设失败:', err)
+    }
+  },
+
+  onNewCustomerInput(e) { this.setData({ _newCustomerName: e.detail.value }) },
+
+  onAddCustomerPresetTap(e) {
+    var raw = (e && e.detail && e.detail.value !== undefined)
+      ? e.detail.value
+      : this.data._newCustomerName
+    var value = String(raw || '').trim()
+    if (!value) {
+      wx.showToast({ title: '请输入客户姓名', icon: 'none' })
+      return
+    }
+    var presets = this.data.customerPresets.slice()
+    if (presets.includes(value)) {
+      wx.showToast({ title: '该客户已存在', icon: 'none' })
+      return
+    }
+    presets.push(value)
+    this.setData({ customerPresets: presets, _newCustomerName: '' })
+  },
+
+  onRemoveCustomerPreset(e) {
+    var idx = Number(e.currentTarget.dataset.index)
+    var presets = this.data.customerPresets.slice()
+    presets.splice(idx, 1)
+    this.setData({ customerPresets: presets })
+  },
+
+  async onSaveCustomerPresets() {
+    wx.showLoading({ title: '保存中' })
+    try {
+      var presets = this.data.customerPresets
+      var docId = this.data._customerPresetsDocId
+      if (!docId) {
+        var preCheck = await db.queryAll(COLLECTIONS.SETTINGS, { key: 'reservation_customer_presets' })
+        if (preCheck.data && preCheck.data.length > 0) {
+          docId = preCheck.data[0]._id
+          this.setData({
+            _customerPresetsDocId: docId,
+            _customerPresetsVersion: preCheck.data[0]._version || 0
+          })
+        }
+      }
+      if (docId) {
+        // NOTE: Best-effort optimistic lock (TOCTOU window exists — acceptable
+        // for low-concurrency admin-only settings page).
+        var check = await db.queryAll(COLLECTIONS.SETTINGS, { key: 'reservation_customer_presets' })
+        var latestVersion = (check.data && check.data[0]) ? (check.data[0]._version || 0) : 0
+        if (latestVersion !== this.data._customerPresetsVersion) {
+          wx.hideLoading()
+          wx.showModal({ title: '冲突', content: '配置已被他人修改，请刷新后再保存', showCancel: false })
+          return
+        }
+        await db.updateDoc(COLLECTIONS.SETTINGS, docId, {
+          value: presets,
+          _version: latestVersion + 1
+        })
+        this.setData({ _customerPresetsVersion: latestVersion + 1 })
+      } else {
+        var addRes = await db.addDoc(COLLECTIONS.SETTINGS, {
+          key: 'reservation_customer_presets',
+          value: presets,
+          _version: 1
+        })
+        this.setData({
+          _customerPresetsDocId: (addRes && addRes._id) || null,
+          _customerPresetsVersion: 1
+        })
+      }
+      wx.hideLoading()
+      wx.showToast({ title: '保存成功', icon: 'success' })
+    } catch (err) {
+      wx.hideLoading()
+      console.error('保存客户预设失败:', err)
       wx.showToast({ title: '保存失败', icon: 'none' })
     }
   },
@@ -602,6 +789,9 @@ Page({
         })
 
         config.invalidateCache()
+        // Refresh local state so subsequent saves go through update, not add.
+        await this.loadRooms()
+        await this.loadFormConfigFields()
         wx.showToast({ title: '已创建默认配置', icon: 'none', duration: 2000 })
       }
     } catch (err) {

@@ -1,0 +1,9 @@
+{
+  "name": "getFinanceStats",
+  "version": "1.0.0",
+  "description": "经营财务统计云函数（报表与AI共用唯一计算源）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

@@ -10,7 +10,9 @@
  */
 const db = require('../../../utils/db')
 const { COLLECTIONS } = require('../../../utils/db')
-const { getRoomName } = require('../../../utils/helpers')
+var _h = require('../../../utils/helpers')
+var getRoomName = _h.getRoomName
+var createChinaDate = _h.createChinaDate
 
 /**
  * Throws an Error with a Chinese message if a conflict is found.
@@ -27,13 +29,12 @@ async function checkReservationConflict({ dateStr, time, room, exclusiveType, is
     const dbInstance = db.getDb()
     const _ = dbInstance.command
 
-    const parts = dateStr.split('-')
-    const dayStart = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 0, 0, 0)
-    const dayEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 23, 59, 59)
+    const dayStart = createChinaDate(dateStr)
+    const dayEnd = createChinaDate(dateStr, 23, 59, 59)
 
     const conditions = [
       { date: _.gte(dayStart).and(_.lte(dayEnd)) },
-      { status: 'confirmed' }
+      { status: _.neq('cancelled') }
     ]
 
     if (isEdit && id) {
@@ -43,20 +44,24 @@ async function checkReservationConflict({ dateStr, time, room, exclusiveType, is
     if (exclusiveType === 'none') {
       conditions.push(_.or([
         { time: time, room: room },
-        { exclusiveType: 'full', room: room }
+        { exclusiveType: time === '中午' ? 'noon' : 'night' },
+        { exclusiveType: 'full' },
+        { isExclusive: true }
       ]))
     } else if (exclusiveType === 'noon') {
       conditions.push(_.or([
-        { time: '中午', room: room },
-        { exclusiveType: 'full', room: room }
+        { time: '中午' },
+        { exclusiveType: 'full' },
+        { isExclusive: true }
       ]))
     } else if (exclusiveType === 'night') {
       conditions.push(_.or([
-        { time: '晚上', room: room },
-        { exclusiveType: 'full', room: room }
+        { time: '晚上' },
+        { exclusiveType: 'full' },
+        { isExclusive: true }
       ]))
     }
-    // 'full': check all reservations on this date for this room (no extra filter)
+    // 'full': check all non-cancelled reservations on this date (no extra filter)
 
     const where = _.and(conditions)
     const res = await db.queryAll(COLLECTIONS.RESERVATION, where)
@@ -74,7 +79,7 @@ async function checkReservationConflict({ dateStr, time, room, exclusiveType, is
     if (err.message && (err.message.indexOf('已被包场') !== -1 || err.message.indexOf('已有预约') !== -1)) {
       throw err
     }
-    // Other errors (network, etc.) are silently swallowed — let main flow handle them
+    throw new Error('预约冲突校验失败，请重试')
   }
 }
 

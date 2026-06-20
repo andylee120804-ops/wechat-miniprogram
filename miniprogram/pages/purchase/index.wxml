@@ -91,8 +91,8 @@
 
   <!-- FAB -->
   <view class="fab press-scale" bindtap="onAddPurchase"
-    style="background: {{theme.gradientFab || 'linear-gradient(135deg, #C9A96E 0%, #D4B87A 100%)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28)'}};">
-    <text class="fab-icon" style="color: {{theme.textInverse || '#0F0F1A'}};">+</text>
+    style="background: {{theme.gradientFab || 'linear-gradient(145deg, #E8D5A8 0%, #C9A96E 40%, #A68B4B 100%)'}}; box-shadow: {{theme.shadowMd || '0 8rpx 24rpx rgba(0,0,0,0.28), 0 4rpx 16rpx rgba(201,169,110,0.20)'}};">
+    <text class="fab-icon" style="color: {{theme.textInverse || '#0F0F1A'}};">＋</text>
   </view>
 
   <!-- Bottom Spacer for tab bar -->

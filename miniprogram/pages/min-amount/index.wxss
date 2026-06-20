@@ -423,3 +423,55 @@
   padding: 20rpx 24rpx;
   border-bottom: 1rpx solid rgba(255, 255, 255, 0.06);
 }
+
+/* ── Add row (input + button) ─────────────────────────────── */
+
+.add-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 12rpx;
+}
+
+.add-row-input {
+  flex: 1;
+}
+
+.add-row-btn {
+  flex-shrink: 0;
+  padding: 16rpx 24rpx;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+/* ── Customer Presets (Tab 3) ─────────────────────────────── */
+
+.preset-list {
+  margin-bottom: 8rpx;
+}
+
+.preset-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 16rpx;
+  padding: 24rpx 28rpx;
+  margin-bottom: 16rpx;
+}
+
+.preset-name {
+  font-size: 30rpx;
+  font-weight: 500;
+  flex: 1;
+}
+
+.preset-delete {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(248, 113, 113, 0.12);
+}

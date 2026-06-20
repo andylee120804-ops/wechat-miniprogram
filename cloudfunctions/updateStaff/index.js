@@ -3,21 +3,24 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 exports.main = async (event, context) => {
   const { OPENID } = cloud.getWXContext()
-  const { staffId, staffData, permissions, callerRole } = event
+  const { staffId, staffData, permissions } = event
 
   if (!staffId) {
     return { success: false, message: '缺少员工ID' }
   }
 
-  // Role verification: accept admin role from client
-  // (In test environment OPENID may not match real user, trust client role)
-  if (callerRole !== 'admin') {
-    return { success: false, message: '只有管理员可以操作员工' }
-  }
-
   const db = cloud.database()
 
   try {
+    const callerRes = await db.collection('staff')
+      .where({ boundOpenid: OPENID, status: 'active' })
+      .limit(1)
+      .get()
+    const caller = callerRes.data && callerRes.data[0]
+    if (!caller || caller.role !== 'admin') {
+      return { success: false, message: '只有管理员可以操作员工' }
+    }
+
     // Update staff record
     await db.collection('staff').doc(staffId).update({
       data: {

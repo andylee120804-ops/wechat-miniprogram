@@ -23,6 +23,9 @@
 .threshold-input-wrap { display: flex; align-items: center; gap: 8rpx; }
 .threshold-input { width: 120rpx; text-align: right; font-size: 28rpx; }
 
+.setting-label-wrap { display: flex; flex-direction: column; gap: 4rpx; }
+.setting-hint { font-size: 22rpx; }
+
 .save-section { margin-top: 48rpx; padding-bottom: 40rpx; }
 .save-btn { padding: 28rpx; border-radius: 20rpx; text-align: center; }
 .save-btn.saving { opacity: 0.6; }

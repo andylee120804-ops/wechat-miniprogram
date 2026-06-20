@@ -1,3 +1,11 @@
 node_modules/
 .claude/
 .worktrees/
+.superpowers/
+
+# CI 私钥与产物（严禁提交）
+ci/keys/
+*.key
+ci/dist/
+ci/preview.png
+ci/preview.jpg

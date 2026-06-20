@@ -1,0 +1,69 @@
+{
+  "_comment": "AI Skill 配置备份 - 审核通过后将此内容恢复到 app.json 和 page-meta.json",
+  "app_json_subPackages": [
+    {
+      "root": "packageA/ai-skill",
+      "independent": true,
+      "pages": [
+        "pages/reservation-detail/index",
+        "pages/income-detail/index",
+        "pages/purchase-detail/index"
+      ]
+    }
+  ],
+  "app_json_agent": {
+    "skills": [
+      {
+        "name": "club-assistant",
+        "description": "小食堂AI助手，提供预约查询、房间可用性检查、经营数据概览、采购统计等服务",
+        "path": "packageA/ai-skill"
+      }
+    ],
+    "instruction": "AGENTS.md",
+    "pageMetadata": "page-meta.json"
+  },
+  "page_meta_ai_entries": [
+    {
+      "path": "packageA/ai-skill/pages/reservation-detail/index",
+      "name": "预约详情(AI)",
+      "description": "AI对话流中查看预约详情",
+      "query": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "预约记录ID" }
+        },
+        "required": ["id"]
+      }
+    },
+    {
+      "path": "packageA/ai-skill/pages/income-detail/index",
+      "name": "收入详情(AI)",
+      "description": "AI对话流中查看收入详情",
+      "query": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "收入记录ID" }
+        },
+        "required": ["id"]
+      }
+    },
+    {
+      "path": "packageA/ai-skill/pages/purchase-detail/index",
+      "name": "采购详情(AI)",
+      "description": "AI对话流中查看采购详情",
+      "query": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "采购记录ID" }
+        },
+        "required": ["id"]
+      }
+    }
+  ],
+  "restore_instructions": [
+    "1. feature-flags.js: AI_ENABLED 改为 true",
+    "2. app.json: 在 pages 列表末尾恢复 pages/ai-chat/index，并在 pages 列表后添加 subPackages 和 agent 配置（见上面字段）",
+    "3. page-meta.json: 在 pages 数组末尾添加 3 个 AI Skill 条目（见上面字段）",
+    "4. app.js: wx.onAgentOpen 注册已有 AI_ENABLED 判断，改为 true 后自动恢复"
+  ]
+}

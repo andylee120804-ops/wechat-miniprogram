@@ -72,7 +72,9 @@ Component({
       const markDates = this.data.markDates || [];
       const selectedDate = this.data.selectedDate || '';
       const now = new Date();
-      const todayStr = now.getFullYear() + '-' + this._pad(now.getMonth() + 1) + '-' + this._pad(now.getDate());
+      // Use China Standard Time for "today" so the highlight matches reservation dates
+      const chinaNow = new Date(now.getTime() + 8 * 3600000);
+      const todayStr = chinaNow.getUTCFullYear() + '-' + this._pad(chinaNow.getUTCMonth() + 1) + '-' + this._pad(chinaNow.getUTCDate());
 
       // First day of the month (0=Sun, 1=Mon, ...)
       const firstDay = new Date(year, month - 1, 1).getDay();

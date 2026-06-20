@@ -196,7 +196,7 @@ describe('validators.js', () => {
     test('returns invalid for negative', () => {
       const result = validators.validateAmount(-100)
       expect(result.valid).toBe(false)
-      expect(result.message).toContain('金额不能为负数')
+      expect(result.message).toContain('金额必须大于0')
     })
 
     test('returns invalid for exceeding max', () => {
@@ -211,9 +211,10 @@ describe('validators.js', () => {
       expect(result.message).toContain('金额最多保留两位小数')
     })
 
-    test('returns valid for zero', () => {
+    test('returns invalid for zero', () => {
       const result = validators.validateAmount(0)
-      expect(result.valid).toBe(true)
+      expect(result.valid).toBe(false)
+      expect(result.message).toContain('金额必须大于0')
     })
 
     test('returns valid for positive amount', () => {
@@ -289,7 +290,7 @@ describe('validators.js', () => {
       expect(result.errors.length).toBe(3)
       expect(result.errors).toContain('姓名不能为空')
       expect(result.errors).toContain('手机号不能为空')
-      expect(result.errors).toContain('金额不能为负数')
+      expect(result.errors).toContain('金额必须大于0')
     })
 
     test('handles mixed valid and invalid rules', () => {

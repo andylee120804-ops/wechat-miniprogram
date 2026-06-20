@@ -1,0 +1,32 @@
+<view class="detail-page">
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <view class="content" wx:if="{{!loading && income}}">
+    <view class="amount-row">
+      <text class="amount positive">¥{{amountStr}}</text>
+      <text class="type-tag">{{income.type || '其他'}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">日期</text>
+      <text class="value">{{dateStr}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">类型</text>
+      <text class="value">{{income.type || '其他'}}</text>
+    </view>
+    <view class="info-row" wx:if="{{income.description || income.remark}}">
+      <text class="label">备注</text>
+      <text class="value">{{income.description || income.remark}}</text>
+    </view>
+    <view class="info-row" wx:if="{{income.reservationId}}">
+      <text class="label">关联预约</text>
+      <text class="value link">查看</text>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !income}}">
+    <text>未找到收入记录</text>
+  </view>
+</view>

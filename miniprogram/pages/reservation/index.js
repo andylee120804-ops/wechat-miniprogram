@@ -1,8 +1,13 @@
-const { formatDate, getReservationStatusText } = require('../../utils/helpers')
+var _h = require('../../utils/helpers')
+var formatDate = _h.formatDate
+var getReservationStatusText = _h.getReservationStatusText
+var getChinaToday = _h.getChinaToday
+var createChinaDate = _h.createChinaDate
 const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
+const reservationConfig = require('../../utils/reservationConfig')
 
 Page({
   data: {
@@ -28,7 +33,7 @@ Page({
     const app = getApp()
     const theme = app.getThemePageData()
     const now = new Date()
-    const today = formatDate(now)
+    const today = getChinaToday()
     this.setData({
       theme,
       statusBarHeight: app.globalData.statusBarHeight || 44,
@@ -45,8 +50,10 @@ Page({
       const dbInstance = db.getDb()
       const _ = dbInstance.command
 
-      const startDate = new Date(year, month - 1, 1)
-      const endDate = new Date(year, month, 0, 23, 59, 59)
+      const monthStr = String(month).padStart(2, '0')
+      const startDate = createChinaDate(year + '-' + monthStr + '-01')
+      const lastDay = new Date(year, month, 0).getDate()
+      const endDate = createChinaDate(year + '-' + monthStr + '-' + String(lastDay).padStart(2, '0'), 23, 59, 59)
 
       const res = await db.queryAll(COLLECTIONS.RESERVATION, {
         date: _.gte(startDate).and(_.lte(endDate)),
@@ -81,10 +88,9 @@ Page({
       const dbInstance = db.getDb()
       const _ = dbInstance.command
 
-      // Parse the selected date string to start and end of day
-      const parts = dateStr.split('-')
-      const dayStart = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 0, 0, 0)
-      const dayEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 23, 59, 59)
+      // Use China Standard Time boundaries for date range queries
+      const dayStart = createChinaDate(dateStr)
+      const dayEnd = createChinaDate(dateStr, 23, 59, 59)
 
       const res = await db.queryAll(COLLECTIONS.RESERVATION, {
         date: _.gte(dayStart).and(_.lte(dayEnd))
@@ -110,7 +116,7 @@ Page({
   },
 
   async groupByRoomDynamic(reservations) {
-    var rooms = await require('../../utils/reservationConfig').loadRooms()
+    var rooms = await reservationConfig.loadRooms()
     var enabledRooms = rooms.filter(function(r) { return r.enabled })
     var sortOrder = {}
     enabledRooms.forEach(function(r, i) { sortOrder[r.id] = i })
@@ -158,7 +164,7 @@ Page({
       var aEx = exclusiveOrder[a] !== undefined
       var bEx = exclusiveOrder[b] !== undefined
       if (aEx !== bEx) return aEx ? -1 : 1
-      if (aEx && bEx) return (exclusiveOrder[a] || 99) - (exclusiveOrder[b] || 99)
+      if (aEx && bEx) return (exclusiveOrder[a] !== undefined ? exclusiveOrder[a] : 99) - (exclusiveOrder[b] !== undefined ? exclusiveOrder[b] : 99)
       return (sortOrder[a] !== undefined ? sortOrder[a] : 99) - (sortOrder[b] !== undefined ? sortOrder[b] : 99)
     })
 
@@ -186,7 +192,7 @@ Page({
       wx.showToast({ title: '无权限创建预约', icon: 'none' })
       return
     }
-    const today = formatDate(new Date())
+    const today = getChinaToday()
     if (this.data.selectedDate < today) {
       wx.showToast({ title: '不能创建过去日期的预约', icon: 'none' })
       return

@@ -8,7 +8,8 @@ App({
     isLogin: false,
     theme: 'ink-gold',
     statusBarHeight: 44,
-    venueName: ''
+    venueName: '',
+    prefetchData: null
   },
 
   onLaunch() {
@@ -32,6 +33,21 @@ App({
     this._initialLoginChecked = false
     this._loginPromise = this.checkLogin()
     this.loadVenueName()
+
+    // 读取预拉取数据（冷启动时微信已提前拉好）
+    this._readPrefetchData()
+
+    // 监听用户从胶囊入口进入小程序 AI（受 feature flag 控制）
+    // 审核期间暂时隐藏，AI_ENABLED=false 时不会注册
+    const { AI_ENABLED } = require('./utils/feature-flags')
+    if (AI_ENABLED && wx.onAgentOpen) {
+      wx.onAgentOpen(() => {
+        return {
+          followUpMessage: '你好，我是我们小食堂的AI助手，有什么可以帮您？',
+          context: '从胶囊入口进入'
+        }
+      })
+    }
   },
 
   // Mark initial check done — called from checkLogin once it settles
@@ -258,5 +274,55 @@ App({
     const perm = perms.find(p => p.module === module)
     if (!perm) return false
     return perm.actions.includes(action) || perm.actions.includes('*')
+  },
+
+  _readPrefetchData() {
+    try {
+      wx.getBackgroundFetchData({
+        fetchType: 'pre',
+        success: (res) => {
+          if (res.fetchedData) {
+            try {
+              const data = typeof res.fetchedData === 'string'
+                ? JSON.parse(res.fetchedData)
+                : res.fetchedData
+              if (data.success && data.data) {
+                this._applyPrefetchData(data.data)
+              }
+            } catch (e) {
+              console.warn('[prefetch] 解析数据失败:', e)
+            }
+          }
+        },
+        fail: () => {
+          // 首次冷启动可能还没有缓存数据，忽略
+        }
+      })
+      wx.onBackgroundFetchData((res) => {
+        if (res.fetchedData) {
+          try {
+            const data = typeof res.fetchedData === 'string'
+              ? JSON.parse(res.fetchedData)
+              : res.fetchedData
+            if (data.success && data.data) {
+              this._applyPrefetchData(data.data)
+            }
+          } catch (e) {
+            console.warn('[prefetch] 解析数据失败:', e)
+          }
+        }
+      })
+    } catch (e) {
+      // 低版本基础库可能不支持，忽略
+    }
+  },
+
+  _applyPrefetchData(data) {
+    this.globalData.prefetchData = data
+    // 预拉取数据只作为缓存，不能建立登录态或授予权限。
+    // 认证状态必须由 checkLogin / autoLogin 经云函数校验后设置。
+    if (data.venueName) {
+      this.globalData.venueName = data.venueName
+    }
   }
 })

@@ -1,3 +1,14 @@
+<wxs module="m">
+  function isSelected(value, opt) {
+    if (!value) return false
+    var arr = value.split(',')
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] === opt) return true
+    }
+    return false
+  }
+  module.exports = { isSelected: isSelected }
+</wxs>
 <view class="page" style="background: {{theme.surfaceColor || '#1A1A2E'}}; min-height: 100vh;">
   <!-- Custom Navigation Bar -->
   <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor || '#1A1A2E'}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">
@@ -98,6 +109,17 @@
                   style="color: {{theme.textPrimary || '#F5F0E8'}};" />
               </block>
             </view>
+            <!-- Customer presets: quick-fill buttons (outside fixed-height wrap) -->
+            <view wx:if="{{!isPartner && customerPresets.length > 0}}" class="customer-preset-row">
+              <view class="customer-preset-label" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">常用：</view>
+              <view class="customer-preset-pills">
+                <view wx:for="{{customerPresets}}" wx:for-item="preset" wx:key="*this"
+                  class="customer-preset-pill {{formData.customerName === preset ? 'preset-pill-active' : ''}}"
+                  data-name="{{preset}}" bindtap="onPickPresetCustomer"
+                  style="{{formData.customerName === preset ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
+                >{{preset}}</view>
+              </view>
+            </view>
           </theme-form-item>
         </block>
 
@@ -150,9 +172,9 @@
             <view class="select-field">
               <view class="pill-selector" wx:if="{{item.options && item.options.length > 0}}">
                 <view wx:for="{{item.options}}" wx:for-item="opt" wx:key="*this"
-                  class="pill {{(formData[item.id] || '').split(',').indexOf(opt) >= 0 ? 'pill-active' : ''}}"
+                  class="pill {{m.isSelected(formData[item.id], opt) ? 'pill-active' : ''}}"
                   data-fieldid="{{item.id}}" data-option="{{opt}}" bindtap="onSelectOptionToggle"
-                  style="{{(formData[item.id] || '').split(',').indexOf(opt) >= 0 ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
+                  style="{{m.isSelected(formData[item.id], opt) ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
                 >{{opt}}</view>
               </view>
               <input class="form-input" data-fieldid="{{item.id}}" bindconfirm="onSelectOptionAdd"

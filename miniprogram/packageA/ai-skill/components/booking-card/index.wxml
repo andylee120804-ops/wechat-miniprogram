@@ -1,0 +1,55 @@
+<view class="card">
+  <!-- Created -->
+  <view wx:if="{{mode === 'created'}}">
+    <view class="card-header">
+      <text class="title">✅ 预约创建成功</text>
+    </view>
+    <view class="info-row">
+      <text class="label">客人</text>
+      <text class="value">{{customerName}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">日期</text>
+      <text class="value">{{date}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">时段</text>
+      <text class="value">{{time}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">房间</text>
+      <text class="value">{{roomName}}</text>
+    </view>
+    <view class="info-row" wx:if="{{guestCount}}">
+      <text class="label">人数</text>
+      <text class="value">{{guestCount}}人</text>
+    </view>
+    <view class="action-row">
+      <view class="btn" bindtap="onViewDetail">查看详情</view>
+      <view class="btn secondary" bindtap="onBookAgain">继续预约</view>
+    </view>
+  </view>
+
+  <!-- Cancelled -->
+  <view wx:if="{{mode === 'cancelled'}}">
+    <view class="card-header">
+      <text class="title">❌ 预约已取消</text>
+    </view>
+    <view class="info-row">
+      <text class="label">客人</text>
+      <text class="value">{{customerName}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">日期</text>
+      <text class="value">{{date}} {{time}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">房间</text>
+      <text class="value">{{roomName}}</text>
+    </view>
+  </view>
+
+  <view class="error" wx:if="{{error}}">
+    <text>{{errorMsg}}</text>
+  </view>
+</view>

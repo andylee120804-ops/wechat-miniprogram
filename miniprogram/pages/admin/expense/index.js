@@ -1,5 +1,5 @@
 const app = getApp()
-const { formatAmount, formatDate } = require('../../../utils/helpers')
+const { formatAmount, formatDate, buildChanges } = require('../../../utils/helpers')
 const { validateAmount } = require('../../../utils/validators')
 const { log, LOG_TYPES } = require('../../../utils/logger')
 const { handleCloudError } = require('../../../utils/error-handler')
@@ -121,7 +121,8 @@ Page({
       description: item.description || '',
       splitHint: this.calcSplitHint(amountStr, item.cycle || 'monthly'),
       startDate: item.startDate || formatDate(new Date()),
-      endDate: item.endDate || ''
+      endDate: item.endDate || '',
+      _oldData: { name: item.name || '', amount: item.amount !== undefined ? String(item.amount) : '', cycle: item.cycle || 'monthly', description: item.description || '' }
     })
     this._updateCycleStyles()
   },
@@ -198,7 +199,12 @@ Page({
       wx.hideLoading()
       const action = this.data.isEdit ? '更新' : '新增'
       const logType = this.data.isEdit ? LOG_TYPES.EXPENSE_UPDATE : LOG_TYPES.EXPENSE_CREATE
-      log(logType, action + '固定成本: ' + data.name + ' ¥' + numAmount + '/' + (cycle === 'yearly' ? '年' : '月'))
+      if (this.data.isEdit) {
+        var logExtra = buildChanges(this.data._oldData || {}, data, { name: '名称', amount: '金额', cycle: '周期', description: '说明' }, { amount: true }, { cycle: { monthly: '月付', yearly: '年付' } }) || {}
+        log(logType, action + '固定成本: ' + data.name + ' ¥' + numAmount + '/' + (cycle === 'yearly' ? '年' : '月'), logExtra)
+      } else {
+        log(logType, action + '固定成本: ' + data.name + ' ¥' + numAmount + '/' + (cycle === 'yearly' ? '年' : '月'))
+      }
       wx.showToast({ title: this.data.isEdit ? '保存成功' : '添加成功', icon: 'success' })
       this.setData({ showModal: false, submitting: false })
       this.loadData()

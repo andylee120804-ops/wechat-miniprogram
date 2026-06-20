@@ -21,6 +21,7 @@ Page({
       drink: '🍷 饮品', seasoning: '🧂 调味品', supplies: '🧹 日用品',
       equipment: '🔧 设备', banquet: '🍽 宴会菜价', other: '📦 其他'
     },
+    autoPurchaseEnabled: true,
     defaultApproverId: '',
     defaultApproverName: '',
     defaultReimburserId: '',
@@ -65,6 +66,7 @@ Page({
         var d = rulesRes.result.data
         that.setData({
           enabled: d.enabled !== false,
+          autoPurchaseEnabled: d.autoPurchaseEnabled !== false,
           categories: that._mergeCategories(d.categories),
           amountThreshold: d.amountThreshold || 0,
           defaultApproverId: d.defaultApproverId || '',
@@ -170,6 +172,8 @@ Page({
 
   onToggleEnabled: function(e) { this.setData({ enabled: !!e.detail.value }) },
 
+  onToggleAutoPurchase: function(e) { this.setData({ autoPurchaseEnabled: !!e.detail.value }) },
+
   onCategoryToggle: function(e) {
     var key = e.currentTarget.dataset.key
     var cats = {}
@@ -217,6 +221,7 @@ Page({
           callerWechatId: (app.globalData.userInfo || {}).wechatId || '',
           approvalRules: {
             enabled: that.data.enabled,
+            autoPurchaseEnabled: that.data.autoPurchaseEnabled,
             categories: that.data.categories,
             amountThreshold: that.data.amountThreshold,
             defaultApproverId: that.data.defaultApproverId,

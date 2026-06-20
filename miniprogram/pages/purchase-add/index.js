@@ -1,11 +1,16 @@
 const app = getApp()
-const { formatDate } = require('../../utils/helpers')
+var _h = require('../../utils/helpers')
+var formatDate = _h.formatDate
+var buildChanges = _h.buildChanges
+var getChinaToday = _h.getChinaToday
+var createChinaDate = _h.createChinaDate
 const { validateAmount } = require('../../utils/validators')
 const { log, LOG_TYPES } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { checkPermission, ACTIONS, hasPermission } = require('../../utils/permission')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
+const { syncIncomeFromPurchase, deleteIncomeByPurchase } = require('../reservation-add/helpers/sync')
 
 Page({
   data: {
@@ -88,7 +93,7 @@ Page({
     }
   },
 
-  // 加载审批预览信息（默认审批人姓名）
+  // 加载审批预览信息（默认审批人姓名），同时缓存审批规则供提交时复用
   loadApprovalPreview: async function() {
     try {
       var userInfo = app.globalData.userInfo || {}
@@ -98,6 +103,7 @@ Page({
       })
       if (res.result && res.result.success && res.result.data) {
         var rules = res.result.data
+        this._approvalRules = rules  // 缓存供 determineApprovalStatus 复用
         this.setData({ approverName: rules.defaultApproverName || '' })
       }
     } catch (e) {
@@ -114,12 +120,12 @@ Page({
         return
       }
       const now = new Date()
-      const todayStr = formatDate(now)
+      const todayStr = getChinaToday()
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000)
       // [Fix #1] 使用 Date 对象比较而非字符串比较，避免格式异常时结果不可预期
-      const enabledDateObj = new Date(enabledDate + 'T00:00:00')
+      const enabledDateObj = createChinaDate(enabledDate)
       const startDate = enabledDateObj > thirtyDaysAgo ? enabledDateObj : thirtyDaysAgo
-      const endDate = new Date(todayStr + 'T23:59:59')
+      const endDate = createChinaDate(todayStr, 23, 59, 59)
       const _db = db.getDb()
       const _ = _db.command
       const resvRes = await db.queryAll(COLLECTIONS.RESERVATION, {
@@ -136,7 +142,12 @@ Page({
             sourceReservationId: _.in(allIds),
             category: 'banquet'
           })
-          ;(linkedRes.data || []).forEach(function(p) { linkedIds.add(p.sourceReservationId) })
+          // 编辑模式下，排除当前采购自身，保留当前采购关联的预约可选
+          const currentId = this.data.id
+          ;(linkedRes.data || []).forEach(function(p) {
+            if (currentId && p._id === currentId) return
+            linkedIds.add(p.sourceReservationId)
+          })
         } catch (e) {
           console.warn('[purchase-add] 查询关联采购失败:', e)
         }
@@ -186,7 +197,8 @@ Page({
         date: data.date || formatDate(new Date()),
         remark: data.remark || '',
         receiptImages: data.receiptImages || [],
-        sourceReservationId: data.sourceReservationId || ''
+        sourceReservationId: data.sourceReservationId || '',
+        _oldData: { item: data.item || '', amount: data.amount !== undefined ? String(data.amount) : '', category: data.category || 'meat', remark: data.remark || '', receiptImages: data.receiptImages || [] }
       })
 
       // 编辑模式：回填关联预约（与 income-add 保持一致）
@@ -201,7 +213,18 @@ Page({
               pickerIndex: idx,
               reservationId: data.sourceReservationId
             })
+          } else {
+            // 原关联预约不再可选（已被其他采购占用）
+            that.setData({
+              selectedReservation: null,
+              pickerIndex: -1,
+              reservationId: '',
+              sourceReservationId: ''
+            })
+            wx.showToast({ title: '原关联预约已被占用，请重新选择', icon: 'none', duration: 2500 })
           }
+        }).catch(function() {
+          wx.showToast({ title: '加载预约列表失败', icon: 'none' })
         })
       }
     }).catch(function(err) {
@@ -219,7 +242,12 @@ Page({
   },
 
   onAmountInput: function(e) {
-    this.setData({ amount: e.detail.value })
+    const amount = String(e.detail.value || '')
+    if (amount.indexOf('-') !== -1) {
+      this.setData({ amount: this.data.amount || '' })
+      return
+    }
+    this.setData({ amount: amount })
     if (this.data.errors.amount) {
       this.setData({ 'errors.amount': '' })
     }
@@ -281,10 +309,12 @@ Page({
     that.setData({ uploadingReceipt: true })
     wx.showLoading({ title: '上传中' })
 
+    var batchTime = Date.now()
+    var randomSuffix = Math.random().toString(36).substring(2, 8)
     var uploadPromises = files.map(function(file, index) {
       var ext = file.tempFilePath.match(/\.\w+$/)
       var extStr = ext ? ext[0] : '.jpg'
-      var cloudPath = 'purchase-receipts/temp_' + Date.now() + '_' + index + extStr
+      var cloudPath = 'purchase-receipts/temp_' + batchTime + '_' + randomSuffix + '_' + index + extStr
 
       return new Promise(function(resolve, reject) {
         wx.cloud.uploadFile({
@@ -357,6 +387,11 @@ Page({
       errors.item = '请输入采购项目名称'
     }
 
+    // 宴会菜价必须关联预约
+    if (this.data.category === 'banquet' && !this.data.sourceReservationId) {
+      errors.reservation = '宴会菜价必须关联预约'
+    }
+
     const amountResult = validateAmount(this.data.amount)
     if (!amountResult.valid) errors.amount = amountResult.message
 
@@ -370,16 +405,44 @@ Page({
 
   // --- [Fix #2] 从 onSubmit 中拆分的子方法 ---
 
+  // 宴会菜价采购保存后，根据采购金额+服务费生成/更新收入
+  async _syncIncomeAfterPurchaseSave(purchaseId, data, userInfo) {
+    if (data.category !== 'banquet' || !data.sourceReservationId) return
+    try {
+      var settings = await this.loadSettings()
+      var reservationData = this.data.selectedReservation
+      if (!reservationData && data.sourceReservationId) {
+        reservationData = await db.getDoc(COLLECTIONS.RESERVATION, data.sourceReservationId)
+      }
+      await syncIncomeFromPurchase({
+        purchaseId: purchaseId,
+        purchaseAmount: data.amount,
+        reservationData: reservationData,
+        reservationId: data.sourceReservationId,
+        settings: settings,
+        userInfo: userInfo
+      })
+    } catch (e) {
+      console.warn('[purchase-add] 从采购生成收入失败:', e)
+    }
+  },
+
   // 判断是否需要审批并填充 status/approver 字段
   async determineApprovalStatus(data) {
     try {
-      var userInfo = app.globalData.userInfo || {}
-      var rulesRes = await wx.cloud.callFunction({
-        name: 'sendMessage',
-        data: { action: 'getApprovalSettings', callerWechatId: userInfo.wechatId || '' }
-      })
-      if (rulesRes.result && rulesRes.result.success && rulesRes.result.data) {
-        var rules = rulesRes.result.data
+      // 优先使用 loadApprovalPreview 缓存的规则，避免重复云函数调用
+      var rules = this._approvalRules
+      if (!rules) {
+        var userInfo = app.globalData.userInfo || {}
+        var rulesRes = await wx.cloud.callFunction({
+          name: 'sendMessage',
+          data: { action: 'getApprovalSettings', callerWechatId: userInfo.wechatId || '' }
+        })
+        if (rulesRes.result && rulesRes.result.success && rulesRes.result.data) {
+          rules = rulesRes.result.data
+        }
+      }
+      if (rules) {
         var needApproval = false
         if (rules.enabled !== false) {
           if (rules.categories && rules.categories[data.category] === true) {
@@ -474,6 +537,10 @@ Page({
     if (!this.validate()) return
 
     const that = this
+
+    // 立即锁定，防止异步等待期间重复提交
+    that.setData({ submitting: true })
+
     const userInfo = app.globalData.userInfo || {}
 
     var data = {
@@ -499,11 +566,11 @@ Page({
       data = await this.determineApprovalStatus(data)
     } catch (e) {
       console.error('[purchase-add] determineApprovalStatus error:', e)
+      that.setData({ submitting: false })
       wx.showToast({ title: '获取审批规则失败', icon: 'none' })
       return
     }
 
-    that.setData({ submitting: true })
     wx.showLoading({ title: that.data.isEdit ? '保存中...' : '添加中...' })
 
     // Safety: auto-reset submitting after 30s to prevent permanent lock
@@ -528,8 +595,13 @@ Page({
             console.warn('清理云存储图片失败:', e)
           })
         }
+        // Sync income for banquet purchases (amount may have changed)
+        that._syncIncomeAfterPurchaseSave(that.data.id, data, userInfo).catch(function(e) {
+          console.warn('[purchase-add] 同步收入失败:', e)
+        })
         wx.hideLoading()
-        log(LOG_TYPES.PURCHASE_UPDATE, '更新采购: ' + data.item, { id: that.data.id, amount: data.amount })
+        var logExtra = buildChanges(that.data._oldData || {}, data, { item: '项目', amount: '金额', category: '分类', remark: '备注' }, { amount: true }) || {}
+        log(LOG_TYPES.PURCHASE_UPDATE, '更新采购: ' + data.item, logExtra)
         that.setData({ submitting: false })
         wx.showToast({ title: '保存成功', icon: 'success' })
         setTimeout(function() { wx.switchTab({ url: '/pages/purchase/index' }) }, 1500)
@@ -545,25 +617,79 @@ Page({
         wx.showToast({ title: '无权操作新增采购，请联系管理员分配权限', icon: 'none', duration: 3000 })
         return
       }
-      // [Fix #5] 等待图片重传和审批日志完成后再提示成功
-      db.addDoc(COLLECTIONS.PURCHASE, data).then(async function(result) {
-        var finalImages = await that.reuploadReceiptImages(result._id, that.data.receiptImages)
-        await db.updateDoc(COLLECTIONS.PURCHASE, result._id, { receiptImages: finalImages }).catch(function(e) {
-          console.warn('更新单据图片路径失败:', e)
+
+      // 重复提交检测：同一天、同一类目、同一金额、同一提交人
+      try {
+        var dupRes = await db.queryAll(COLLECTIONS.PURCHASE, {
+          date: data.date,
+          category: data.category,
+          amount: data.amount,
+          purchaseBy: data.purchaseBy || ''
         })
+        var existingPurchases = dupRes.data || []
+        if (existingPurchases.length > 0) {
+          var dupItem = existingPurchases[0]
+          wx.hideLoading()
+          // 保持 submitting 为 true，仅在用户取消时解锁，防止弹窗期间再次提交
+          wx.showModal({
+            title: '采购重复提交提醒',
+            content: '当天已存在相同类目和金额的采购记录（' + (dupItem.item || '未命名') + ' ¥' + dupItem.amount + '），是否继续提交？',
+            confirmText: '继续提交',
+            cancelText: '取消',
+            confirmColor: '#C9A96E',
+            success: function(res) {
+              if (res.confirm) {
+                that._doSubmit(data, userInfo)
+              } else {
+                that.setData({ submitting: false })
+              }
+            }
+          })
+          return
+        }
+      } catch (e) {
+        console.warn('[purchase-add] 重复检测查询失败，继续提交:', e)
+      }
 
-        wx.hideLoading()
-        log(LOG_TYPES.PURCHASE_CREATE, '新增采购: ' + data.item, { amount: data.amount, category: data.category })
-        await that.submitApprovalLog(result._id, userInfo, data)
+      that._doSubmit(data, userInfo)
+    }
+  },
 
-        that.setData({ submitting: false })
-        wx.showToast({ title: '添加成功', icon: 'success' })
-        setTimeout(function() { wx.switchTab({ url: '/pages/purchase/index' }) }, 1500)
-      }).catch(function(err) {
-        that.setData({ submitting: false })
-        wx.hideLoading()
-        handleCloudError(err, '添加采购记录')
+  // 实际执行新增提交（与上方重复检测分离）
+  _doSubmit: async function(data, userInfo) {
+    const that = this
+    // submitting 已在 onSubmit 中设为 true，无需重复设置
+    wx.showLoading({ title: '添加中...' })
+
+    // 无需再注册超时定时器，onSubmit 中已有一个
+
+    // [Fix #5] 等待图片重传和审批日志完成后再提示成功
+    try {
+      var result = await db.addDoc(COLLECTIONS.PURCHASE, data)
+      try {
+        var finalImages = await that.reuploadReceiptImages(result._id, that.data.receiptImages)
+        await db.updateDoc(COLLECTIONS.PURCHASE, result._id, { receiptImages: finalImages })
+      } catch (e) {
+        console.warn('更新单据图片路径失败:', e)
+      }
+
+      wx.hideLoading()
+      log(LOG_TYPES.PURCHASE_CREATE, '新增采购: ' + data.item, { amount: data.amount, category: data.category })
+      that.submitApprovalLog(result._id, userInfo, data).catch(function(e) {
+        console.warn('[purchase-add] 审批日志写入失败:', e)
       })
+      // Generate income from banquet purchase + service charge
+      that._syncIncomeAfterPurchaseSave(result._id, data, userInfo).catch(function(e) {
+        console.warn('[purchase-add] 从采购生成收入失败:', e)
+      })
+
+      that.setData({ submitting: false })
+      wx.showToast({ title: '添加成功', icon: 'success' })
+      setTimeout(function() { wx.switchTab({ url: '/pages/purchase/index' }) }, 1500)
+    } catch (err) {
+      that.setData({ submitting: false })
+      wx.hideLoading()
+      handleCloudError(err, '添加采购记录')
     }
   },
 
@@ -578,7 +704,21 @@ Page({
     if (!checkPermission('purchase', ACTIONS.DELETE)) return
 
     wx.showLoading({ title: '删除中...' })
+    // Clean up linked income before deleting the banquet purchase
+    if (that.data.category === 'banquet' && that.data.sourceReservationId) {
+      deleteIncomeByPurchase(that.data.id, that.data.sourceReservationId).catch(function(e) {
+        console.warn('[purchase-add] 删除关联收入失败:', e)
+      })
+    }
     db.deleteDoc(COLLECTIONS.PURCHASE, that.data.id).then(function() {
+      // 清理所有关联的云存储图片（当前记录的 receiptImages + 之前编辑时标记删除的）
+      var allFileIDs = (that.data.receiptImages || []).map(function(img) { return img.fileID })
+        .concat(that.data.pendingDeleteFileIDs || [])
+      if (allFileIDs.length > 0) {
+        wx.cloud.deleteFile({ fileList: allFileIDs }).catch(function(e) {
+          console.warn('清理云存储图片失败:', e)
+        })
+      }
       wx.hideLoading()
       log(LOG_TYPES.PURCHASE_DELETE, '删除采购: ' + that.data.item, { id: that.data.id })
       wx.showToast({ title: '已删除', icon: 'success' })

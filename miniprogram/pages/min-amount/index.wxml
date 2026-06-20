@@ -1,3 +1,13 @@
+<wxs module="m">
+  function includes(arr, item) {
+    if (!arr) return false
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] === item) return true
+    }
+    return false
+  }
+  module.exports = { includes: includes }
+</wxs>
 <view class="page" style="background: {{theme.surface || '#1A1A2E'}}; min-height: 100vh;">
   <!-- Custom Navigation Bar -->
   <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">
@@ -14,13 +24,16 @@
     <!-- Tab Bar -->
     <view class="tab-bar">
       <view class="tab-item {{activeTab === 0 ? 'tab-active' : ''}}" data-tab="0" bindtap="switchTab">
-        🏠 房间管理
+        🏠 房间
       </view>
       <view class="tab-item {{activeTab === 1 ? 'tab-active' : ''}}" data-tab="1" bindtap="switchTab">
-        📋 表单配置
+        📋 表单
+      </view>
+      <view class="tab-item {{activeTab === 3 ? 'tab-active' : ''}}" data-tab="3" bindtap="switchTab">
+        👤 客户
       </view>
       <view class="tab-item {{activeTab === 2 ? 'tab-active' : ''}}" data-tab="2" bindtap="switchTab">
-        💰 收费设置
+        💰 收费
       </view>
     </view>
 
@@ -96,10 +109,14 @@
             data-fieldidx="{{index}}" data-optidx="{{optIdx}}" bindtap="removeSelectOption">
             {{opt}} ✕
           </view>
-          <input class="option-input" placeholder="输入选项后回车"
-            data-fieldidx="{{index}}" bindconfirm="onAddSelectOption"
-            placeholder-style="color: {{theme.textMuted || '#5C5C72'}};"
-            style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+          <view class="add-row" style="width: 100%; margin-top: 12rpx;">
+            <input class="option-input add-row-input" placeholder="输入选项" value="{{_newOptionValues[index] || ''}}"
+              data-fieldidx="{{index}}" bindinput="onNewOptionInput" bindconfirm="onAddSelectOptionTap"
+              placeholder-style="color: {{theme.textMuted || '#5C5C72'}};"
+              style="color: {{theme.textPrimary || '#F5F0E8'}}; flex: 1;" />
+            <view class="add-row-btn" data-fieldidx="{{index}}" bindtap="onAddSelectOptionTap"
+              style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}};">＋ 添加</view>
+          </view>
         </view>
 
         <!-- Hidden in rooms -->
@@ -137,6 +154,47 @@
         <view class="bar-btn bar-btn-primary" bindtap="onSaveFormConfig"
           style="background: linear-gradient(135deg, {{theme.accentColor || '#C9A96E'}}, {{theme.accentLight || '#E8D5A8'}}); border-radius: 999rpx; padding: 24rpx; text-align: center;">
           <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 30rpx; font-weight: 700;">保存表单配置</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ════════════════ Tab 3: Customer Preset Names ════════════════ -->
+    <view wx:elif="{{activeTab === 3}}" class="tab-content">
+      <view style="padding: 0 0 16rpx;">
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; line-height: 1.6;">
+          预设常用客户姓名，新增预约时可一键填入。员工选择「其他」可手动输入新客户名称。
+        </text>
+      </view>
+
+      <!-- Preset list -->
+      <view wx:if="{{customerPresets.length > 0}}" class="preset-list">
+        <view wx:for="{{customerPresets}}" wx:key="*this" class="preset-row"
+          style="background: {{theme.cardBg || 'rgba(255,255,255,0.06)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}};">
+          <text class="preset-name" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item}}</text>
+          <view class="preset-delete" data-index="{{index}}" bindtap="onRemoveCustomerPreset">
+            <text style="color: #F87171; font-size: 32rpx;">✕</text>
+          </view>
+        </view>
+      </view>
+      <view wx:else style="padding: 60rpx 0; text-align: center;">
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">暂无预设客户，点击下方添加</text>
+      </view>
+
+      <!-- Add new preset -->
+      <view class="add-row" style="background: {{theme.cardBg || 'rgba(255,255,255,0.06)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.10)'}}; border-radius: 16rpx; padding: 16rpx; margin-top: 16rpx;">
+        <input class="add-row-input" placeholder="输入客户姓名" value="{{_newCustomerName}}"
+          bindinput="onNewCustomerInput" bindconfirm="onAddCustomerPresetTap"
+          placeholder-style="color: {{theme.textMuted || '#5C5C72'}};"
+          style="color: {{theme.textPrimary || '#F5F0E8'}}; flex: 1; padding: 0 16rpx; height: 72rpx;" />
+        <view class="add-row-btn" bindtap="onAddCustomerPresetTap"
+          style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}};">＋ 添加</view>
+      </view>
+
+      <!-- Save -->
+      <view style="padding: 32rpx 0;">
+        <view class="bar-btn bar-btn-primary" bindtap="onSaveCustomerPresets"
+          style="background: linear-gradient(135deg, {{theme.accentColor || '#C9A96E'}}, {{theme.accentLight || '#E8D5A8'}}); border-radius: 999rpx; padding: 24rpx; text-align: center;">
+          <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 30rpx; font-weight: 700;">保存客户预设</text>
         </view>
       </view>
     </view>
@@ -279,9 +337,9 @@
         <text class="editor-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">包场模式</text>
         <view class="pill-selector">
           <view wx:for="{{['none','noon','night','full']}}" wx:key="*this"
-            class="pill {{editorRoom.exclusiveTypes.indexOf(item) >= 0 ? 'pill-active' : ''}}"
+            class="pill {{m.includes(editorRoom.exclusiveTypes, item) ? 'pill-active' : ''}}"
             data-value="{{item}}" bindtap="toggleExclusiveType"
-            style="{{editorRoom.exclusiveTypes.indexOf(item) >= 0 ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
+            style="{{m.includes(editorRoom.exclusiveTypes, item) ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : 'background:' + (theme.glassBg || 'rgba(255,255,255,0.06)') + ';color:' + (theme.textSecondary || 'rgba(245,240,232,0.65)') + ';'}}"
           >{{item === 'none' ? '不包场' : item === 'noon' ? '午包场' : item === 'night' ? '晚包场' : '全天'}}</view>
         </view>
       </view>
@@ -291,13 +349,18 @@
         <text class="editor-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">时段</text>
         <view class="pill-selector">
           <view wx:for="{{editorRoom.timeSlots}}" wx:key="*this"
-            class="pill pill-active"
+            class="pill pill-active pill-removable"
             data-value="{{item}}" bindtap="toggleTimeSlot"
             style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}};"
-          >{{item}}</view>
+          >{{item}} ✕</view>
         </view>
-        <input class="editor-input" placeholder="输入新时段后回车" bindconfirm="onAddTimeSlot"
-          style="color: {{theme.textPrimary || '#F5F0E8'}}; margin-top: 12rpx;" />
+        <view class="add-row">
+          <input class="editor-input add-row-input" placeholder="输入新时段，如：下午茶" value="{{_newTimeSlotValue}}"
+            bindinput="onNewTimeSlotInput" bindconfirm="onAddTimeSlotTap"
+            style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+          <view class="add-row-btn" bindtap="onAddTimeSlotTap"
+            style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}};">＋ 添加</view>
+        </view>
       </view>
 
       <!-- Standards -->
@@ -310,8 +373,13 @@
             style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}};"
           >¥{{item}} ✕</view>
         </view>
-        <input class="editor-input" type="number" placeholder="添加餐标后回车" bindconfirm="onAddStandard"
-          style="color: {{theme.textPrimary || '#F5F0E8'}}; margin-top: 12rpx;" />
+        <view class="add-row">
+          <input class="editor-input add-row-input" type="number" placeholder="输入金额，如：500" value="{{_newStandardValue}}"
+            bindinput="onNewStandardInput" bindconfirm="onAddStandardTap"
+            style="color: {{theme.textPrimary || '#F5F0E8'}};" />
+          <view class="add-row-btn" bindtap="onAddStandardTap"
+            style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}};">＋ 添加</view>
+        </view>
       </view>
 
       <!-- Partner & Default Standard -->

@@ -1,0 +1,44 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "name": "首页",
+      "description": "今日预约、收入、采购汇总和快捷操作"
+    },
+    {
+      "path": "pages/reservation/index",
+      "name": "预约管理",
+      "description": "日历视图查看和管理所有预约"
+    },
+    {
+      "path": "pages/reservation-detail/index",
+      "name": "预约详情",
+      "description": "查看预约的详细信息，包括客人、房间、时间等",
+      "query": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "预约记录ID"
+          }
+        },
+        "required": ["id"]
+      }
+    },
+    {
+      "path": "pages/purchase/index",
+      "name": "采购管理",
+      "description": "月度采购列表，按类别筛选"
+    },
+    {
+      "path": "pages/income/index",
+      "name": "收入管理",
+      "description": "月度收入列表和统计"
+    },
+    {
+      "path": "pages/insights/index",
+      "name": "经营洞察",
+      "description": "最忙日、收入趋势、TOP来源、回头客排名"
+    }
+  ]
+}

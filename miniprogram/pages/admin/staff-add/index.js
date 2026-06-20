@@ -1,9 +1,26 @@
 const app = getApp()
+const { AI_ENABLED } = require('../../../utils/feature-flags')
+const { buildChanges } = require('../../../utils/helpers')
 const { log } = require('../../../utils/logger')
 const { handleCloudError } = require('../../../utils/error-handler')
 const { ACTIONS } = require('../../../utils/permission')
 const { COLLECTIONS } = require('../../../utils/db')
 const db = require('../../../utils/db')
+
+const BASE_MODULE_OPTIONS = [
+  { key: 'purchase', name: '采购管理', actions: ['view', 'add', 'edit', 'delete', 'approve', 'reimburse'] },
+  { key: 'reservation', name: '预约管理', actions: ['view', 'add', 'edit', 'delete'] },
+  { key: 'income', name: '收入管理', actions: ['view', 'add', 'edit', 'delete'] },
+  { key: 'expense', name: '支出管理', actions: ['view', 'add', 'edit', 'delete'] },
+  { key: 'announcement', name: '公告管理', actions: ['view', 'add', 'edit', 'delete'] },
+  { key: 'staff', name: '员工管理', actions: ['view', 'add', 'edit', 'delete'] },
+  { key: 'attendance', name: '考勤打卡', actions: ['view'] },
+  { key: 'dashboard', name: '经营报表', actions: ['view', 'export'] }
+]
+
+const MODULE_OPTIONS = AI_ENABLED
+  ? BASE_MODULE_OPTIONS.concat([{ key: 'ai', name: 'AI助手', actions: ['view'] }])
+  : BASE_MODULE_OPTIONS
 
 Page({
   data: {
@@ -15,7 +32,6 @@ Page({
     name: '',
     role: 'admin',
     wechatId: '',
-    phone: '',
     salary: '',
     hireDate: '',
     submitting: false,
@@ -27,7 +43,8 @@ Page({
       announcement: { view: false, add: false, edit: false, delete: false },
       staff: { view: false, add: false, edit: false, delete: false },
       attendance: { view: false },
-      dashboard: { view: false, export: false }
+      dashboard: { view: false, export: false },
+      ai: { view: false }
     },
     roleOptions: [
       { value: 'boss', label: '老板' },
@@ -36,16 +53,7 @@ Page({
       { value: 'chef', label: '厨师' },
       { value: 'waiter', label: '服务员' }
     ],
-    moduleOptions: [
-      { key: 'purchase', name: '采购管理', actions: ['view', 'add', 'edit', 'delete', 'approve', 'reimburse'] },
-      { key: 'reservation', name: '预约管理', actions: ['view', 'add', 'edit', 'delete'] },
-      { key: 'income', name: '收入管理', actions: ['view', 'add', 'edit', 'delete'] },
-      { key: 'expense', name: '支出管理', actions: ['view', 'add', 'edit', 'delete'] },
-      { key: 'announcement', name: '公告管理', actions: ['view', 'add', 'edit', 'delete'] },
-      { key: 'staff', name: '员工管理', actions: ['view', 'add', 'edit', 'delete'] },
-      { key: 'attendance', name: '考勤打卡', actions: ['view'] },
-      { key: 'dashboard', name: '经营报表', actions: ['view', 'export'] }
-    ],
+    moduleOptions: MODULE_OPTIONS,
     showDeleteModal: false
   },
 
@@ -109,7 +117,8 @@ Page({
         announcement: { view: false, add: false, edit: false, delete: false },
         staff: { view: false, add: false, edit: false, delete: false },
         attendance: { view: false },
-        dashboard: { view: false, export: false }
+        dashboard: { view: false, export: false },
+        ai: { view: false }
       }
       // Overlay stored permissions on top of defaults
       Object.keys(permMap).forEach(mod => {
@@ -125,10 +134,10 @@ Page({
         name: s.name || '',
         role: s.role || 'admin',
         wechatId: s.wechatId || '',
-        phone: s.phone || '',
         salary: s.salary ? String(s.salary) : '',
         hireDate: s.hireDate || '',
-        permissions: defaultPerms
+        permissions: defaultPerms,
+        _oldData: { name: s.name || '', role: s.role || 'admin', wechatId: s.wechatId || '', salary: s.salary ? String(s.salary) : '0', hireDate: s.hireDate || '' }
       })
     } catch (err) {
       this.setData({ loading: false })
@@ -138,7 +147,6 @@ Page({
 
   onNameInput(e) { this.setData({ name: e.detail.value }) },
   onWechatIdInput(e) { this.setData({ wechatId: e.detail.value }) },
-  onPhoneInput(e) { this.setData({ phone: e.detail.value }) },
   onSalaryInput(e) { this.setData({ salary: e.detail.value }) },
   onHireDateChange(e) { this.setData({ hireDate: e.detail.value }) },
   onRoleChange(e) { this.setData({ role: e.currentTarget.dataset.value }) },
@@ -168,7 +176,7 @@ Page({
   },
 
   async onSubmit() {
-    const { name, role, wechatId, phone, salary, permissions } = this.data
+    const { name, role, wechatId, salary, permissions } = this.data
     if (!name.trim() || !wechatId.trim()) {
       wx.showToast({ title: '请填写姓名和微信号', icon: 'none' })
       return
@@ -181,7 +189,6 @@ Page({
         name: name.trim(),
         role,
         wechatId: wechatId.trim(),
-        phone: phone.trim(),
         salary: salary ? parseFloat(salary) : 0,
         hireDate: this.data.hireDate,
         updatedAt: new Date()
@@ -229,7 +236,13 @@ Page({
       if (this.data.isEdit && userInfo._id === this.data.id) {
         app.globalData.userInfo.name = staffData.name
       }
-      log(this.data.isEdit ? 'STAFF_UPDATE' : 'STAFF_CREATE', { name: staffData.name, role: staffData.role })
+      // 记录变更前后对比
+      if (this.data.isEdit) {
+        var logExtra = buildChanges(this.data._oldData || {}, staffData, { name: '姓名', role: '角色', wechatId: '微信号', salary: '薪资', hireDate: '入职日期' }, { salary: true }) || {}
+        log('STAFF_UPDATE', { name: staffData.name, role: staffData.role }, logExtra)
+      } else {
+        log('STAFF_CREATE', { name: staffData.name, role: staffData.role })
+      }
       wx.showToast({ title: '保存成功', icon: 'success' })
       setTimeout(() => wx.navigateBack(), 1500)
     } catch (err) {

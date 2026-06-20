@@ -94,7 +94,7 @@
           <view class="makeup-date-header">
             <text class="makeup-date-label" style="color: {{theme.textMuted || '#5C5C72'}};">选择补卡日期</text>
           </view>
-          <picker mode="date" value="{{selectedDate}}" end="{{maxDate}}" bindchange="onDateChange" fields="day">
+          <picker mode="date" value="{{selectedDate}}" end="{{maxMakeupDate}}" bindchange="onDateChange" fields="day">
             <view class="makeup-date-value-row">
               <text class="makeup-date-icon">📅</text>
               <text class="makeup-date-value" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{isToday ? '请选择过去的日期' : selectedDate}}</text>
@@ -122,7 +122,7 @@
           <!-- Time Pickers -->
           <view class="makeup-time-section mt-lg">
             <view class="makeup-time-row">
-              <view class="makeup-time-item {{!hasClockedIn ? 'editable' : 'filled'}}" wx:if="{{!hasClockedIn || hasClockedIn}}">
+              <view class="makeup-time-item {{!hasClockedIn ? 'editable' : 'filled'}}">
                 <view class="makeup-time-label-row">
                   <text class="makeup-time-label" style="color: {{theme.textMuted || '#5C5C72'}};">上班时间</text>
                   <view wx:if="{{hasClockedIn}}" class="makeup-time-filled-tag" style="background: rgba(74,222,128,0.12); border-radius: 6rpx; padding: 2rpx 10rpx;">

@@ -45,12 +45,12 @@ const DEFAULT_FORM_CONFIG = {
   fields: [
     { id: 'customerName', label: '客户姓名', type: 'text',
       builtin: true, visible: true, required: true, hiddenInRooms: [] },
-    { id: 'phone', label: '手机号', type: 'text',
-      builtin: true, visible: true, required: false, hiddenInRooms: [] },
     { id: 'guestCount', label: '人数', type: 'number',
       builtin: true, visible: true, required: true, hiddenInRooms: ['chess'] },
     { id: 'dishPrice', label: '预定菜价', type: 'number',
       builtin: true, visible: true, required: false, hiddenInRooms: ['chess'] },
+    { id: 'phone', label: '手机号', type: 'text',
+      builtin: true, visible: true, required: false, hiddenInRooms: [] },
     { id: 'remark', label: '备注', type: 'textarea',
       builtin: true, visible: true, required: false, hiddenInRooms: [] }
   ]
@@ -58,6 +58,10 @@ const DEFAULT_FORM_CONFIG = {
 
 // ── Cache ─────────────────────────────────────────────────────────────
 
+// Module-level cache — survives across page navigations within the same session.
+// invalidateCache() must be called after admin saves new config.
+// Limitation: pages that already loaded data before invalidation will not
+// automatically refresh; they must call loadRooms/loadFormConfig again on onShow.
 let _roomsCache = null
 let _formConfigCache = null
 

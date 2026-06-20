@@ -68,13 +68,12 @@ Page({
     if (hasPermission('expense', ACTIONS.VIEW)) {
       managementGroup.push({ key: 'fixedExpense', icon: '🏠', text: '固定成本' })
     }
-    // Approval settings — admin only
+    // Settings group — approval, reservation, venue
     if (userInfo.role === 'admin') {
-      managementGroup.push({ key: 'approvalSettings', icon: '✅', text: '采购审批设置' })
+      settingsGroup.push({ key: 'approvalSettings', icon: '✅', text: '采购审批设置' })
     }
-    // Admin-only settings
     if (hasPermission('minAmount', ACTIONS.VIEW)) {
-      managementGroup.push({ key: 'minAmount', icon: '⚙️', text: '预约管理设置' })
+      settingsGroup.push({ key: 'minAmount', icon: '⚙️', text: '预约管理设置' })
     }
     if (hasPermission('venueSettings', ACTIONS.VIEW)) {
       settingsGroup.push({ key: 'venueSettings', icon: '🏠', text: '食堂设置' })

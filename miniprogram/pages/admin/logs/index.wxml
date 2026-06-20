@@ -51,6 +51,7 @@
   <view class="log-list px-lg mt-md" wx:if="{{!loading}}">
     <view class="log-card stagger-item mb-md"
       wx:for="{{logs}}" wx:key="_id"
+      data-index="{{index}}" bindtap="onLogTap"
       style="animation-delay: {{index * 50}}ms; background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; box-shadow: {{theme.shadowSm || '0 2rpx 8rpx rgba(0,0,0,0.20)'}};">
       <view class="log-inner p-lg">
         <!-- Header: type badge + timestamp -->
@@ -72,6 +73,10 @@
             </view>
           </view>
         </view>
+        <!-- Tap hint -->
+        <view class="log-tap-hint mt-sm">
+          <text class="text-caption" style="color: {{theme.textMuted || '#5C5C72'}};">点击查看详情 ›</text>
+        </view>
       </view>
     </view>
 
@@ -90,6 +95,49 @@
   <!-- Skeleton Loading -->
   <view class="px-lg mt-md" wx:if="{{loading}}">
     <skeleton theme="{{theme}}" type="card" count="5" />
+  </view>
+
+  <!-- Detail Popup -->
+  <view class="detail-mask" wx:if="{{detailPopup}}" bindtap="hideDetail"
+    style="background: rgba(0,0,0,0.55);">
+    <view class="detail-popup" catchtap=""
+      style="background: {{theme.elevatedColor || '#252540'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+      <!-- Header: type badge + close -->
+      <view class="popup-header flex-row flex-between" style="border-bottom: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+        <view class="flex-row" style="align-items: center; gap: 16rpx;">
+          <theme-badge theme="{{theme}}" status="{{detailPopup.type}}" type="log" text="{{detailPopup.typeName}}" size="sm" />
+        </view>
+        <view class="popup-close" bindtap="hideDetail">
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 36rpx; font-weight: 300;">✕</text>
+        </view>
+      </view>
+
+      <!-- Description: 核心一句话说清做了什么 -->
+      <view class="popup-desc mt-md">
+        <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 32rpx; line-height: 1.7; font-weight: 500;">{{detailPopup.description}}</text>
+      </view>
+
+      <!-- 关键信息卡片 -->
+      <view class="popup-fields mt-lg" wx:if="{{detailPopup.allDetails.length > 0}}">
+        <view class="popup-field-row" wx:for="{{detailPopup.allDetails}}" wx:key="key"
+          style="padding: 20rpx 0; border-bottom: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.06)'}};">
+          <text class="popup-field-key" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx; display: block; margin-bottom: 4rpx;">{{item.key}}</text>
+          <text class="popup-field-value" style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 30rpx; font-weight: 500; word-break: break-all;">{{item.value}}</text>
+        </view>
+      </view>
+
+      <!-- Footer: 操作人 + 时间 -->
+      <view class="popup-meta mt-lg" style="padding-top: 20rpx; border-top: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.06)'}};">
+        <view class="flex-row flex-between mb-xs">
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">操作人</text>
+          <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx; font-weight: 500;">{{detailPopup.operator || '未知'}}</text>
+        </view>
+        <view class="flex-row flex-between">
+          <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">操作时间</text>
+          <text style="color: {{theme.textPrimary || '#F5F0E8'}}; font-size: 26rpx; font-weight: 400;" class="font-mono">{{detailPopup.formattedTime || detailPopup.timeStr}}</text>
+        </view>
+      </view>
+    </view>
   </view>
 
   <!-- Bottom Spacer -->

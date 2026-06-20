@@ -51,7 +51,28 @@
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
   "simulatorPluginLibVersion": {},
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "miniprogram/pages/ai-chat"
+      },
+      {
+        "type": "folder",
+        "value": "miniprogram/packageA/ai-skill"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/AGENTS.md"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/app.ai-config.backup.json"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/.ai-skill-config-backup.json"
+      }
+    ],
     "include": []
   },
   "editorSetting": {}

@@ -1,0 +1,59 @@
+<view class="card">
+  <view class="card-header">
+    <text class="title">{{mode === 'daily' ? '今日概览' : mode === 'finance' ? month + ' 收支' : month + ' 采购'}}</text>
+  </view>
+
+  <!-- 每日概览 -->
+  <view class="stats" wx:if="{{mode === 'daily'}}">
+    <view class="stat-row">
+      <view class="stat">
+        <text class="stat-value">{{reservationCount}}</text>
+        <text class="stat-label">预约</text>
+      </view>
+      <view class="stat">
+        <text class="stat-value positive">¥{{totalIncome}}</text>
+        <text class="stat-label">收入</text>
+      </view>
+      <view class="stat">
+        <text class="stat-value negative">¥{{totalExpense}}</text>
+        <text class="stat-label">支出</text>
+      </view>
+    </view>
+    <view class="profit-row">
+      <text class="profit-label">净利润</text>
+      <text class="profit-value {{netProfit >= 0 ? 'positive' : 'negative'}}">¥{{netProfit}}</text>
+    </view>
+  </view>
+
+  <!-- 月度收支 -->
+  <view class="stats" wx:if="{{mode === 'finance'}}">
+    <view class="stat-row">
+      <view class="stat">
+        <text class="stat-value positive">¥{{totalIncome}}</text>
+        <text class="stat-label">收入</text>
+      </view>
+      <view class="stat">
+        <text class="stat-value negative">¥{{totalExpense}}</text>
+        <text class="stat-label">支出</text>
+      </view>
+    </view>
+    <view class="profit-row">
+      <text class="profit-label">净利润</text>
+      <text class="profit-value {{netProfit >= 0 ? 'positive' : 'negative'}}">¥{{netProfit}}</text>
+    </view>
+  </view>
+
+  <!-- 月度采购 -->
+  <view class="stats" wx:if="{{mode === 'purchase'}}">
+    <view class="category-list">
+      <view class="cat-item" wx:for="{{byCategory}}" wx:key="index">
+        <text class="cat-name">{{item[0]}}</text>
+        <text class="cat-amount">¥{{item[1].amount || item[1]}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="error" wx:if="{{error}}">
+    <text>{{errorMsg}}</text>
+  </view>
+</view>

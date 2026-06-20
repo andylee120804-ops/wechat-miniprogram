@@ -1,0 +1,230 @@
+@import '../../styles/mixins.wxss';
+
+.ai-chat-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* ========== Chat Body ========== */
+.chat-body {
+  padding: 0 24rpx;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* ========== Welcome Section ========== */
+.welcome-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 24rpx;
+}
+
+.welcome-hero {
+  position: relative;
+  width: 128rpx;
+  height: 128rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32rpx;
+}
+
+.welcome-glow {
+  position: absolute;
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 64rpx;
+  opacity: 0.25;
+  filter: blur(24rpx);
+}
+
+.welcome-bot {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.welcome-bot-icon {
+  font-size: 40rpx;
+}
+
+.welcome-title {
+  font-size: 38rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.welcome-sub {
+  font-size: 26rpx;
+  margin-bottom: 56rpx;
+  letter-spacing: 4rpx;
+}
+
+/* Quick Grid */
+.quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.quick-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 8rpx;
+  border-radius: 12rpx;
+  transition: opacity 0.15s;
+  box-sizing: border-box;
+}
+
+.quick-card-hover {
+  opacity: 0.7;
+}
+
+.quick-card-icon {
+  font-size: 28rpx;
+  margin-bottom: 4rpx;
+}
+
+.quick-card-label {
+  font-size: 22rpx;
+  font-weight: 500;
+}
+
+/* ========== Message List ========== */
+.message-list {
+  padding-top: 24rpx;
+}
+
+.msg {
+  margin-bottom: 28rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.msg.user {
+  align-items: flex-end;
+}
+
+.msg.assistant {
+  align-items: flex-start;
+}
+
+.msg-bubble {
+  max-width: 80%;
+  padding: 20rpx 24rpx;
+  border-radius: 24rpx;
+  overflow-wrap: break-word;
+  box-sizing: border-box;
+}
+
+.msg-bubble.assistant {
+  border-top-left-radius: 4rpx;
+}
+
+.msg-bubble.user {
+  border-top-right-radius: 4rpx;
+}
+
+.msg-text {
+  font-size: 30rpx;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+/* ========== Typing Indicator ========== */
+.typing-indicator {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 8rpx 0;
+  gap: 8rpx;
+}
+
+.typing-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 6rpx;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.typing-dot:nth-child(1) { animation-delay: 0s; }
+.typing-dot:nth-child(2) { animation-delay: 0.16s; }
+.typing-dot:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0.5);
+    opacity: 0.3;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ========== Input Bar ========== */
+.input-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 16rpx 24rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.input-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.input-field {
+  flex: 1;
+  border-radius: 40rpx;
+  padding: 0 28rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.chat-input {
+  flex: 1;
+  font-size: 30rpx;
+  height: 80rpx;
+}
+
+.send-btn {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.send-btn.disabled {
+  opacity: 0.4;
+}
+
+.send-icon {
+  font-size: 36rpx;
+  font-weight: 700;
+}

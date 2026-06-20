@@ -1,0 +1,828 @@
+{
+  "apis": [
+    {
+      "name": "getReservations",
+      "description": "查询指定日期的预约列表，可按房间筛选",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/reservation-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "查询日期，格式 YYYY-MM-DD，不传则默认今天"
+          },
+          "room": {
+            "type": "string",
+            "description": "房间名称筛选，如大包、小包、棋牌"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "date": { "type": "string" },
+          "total": { "type": "number" },
+          "reservations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "customerName": { "type": "string" },
+                "room": { "type": "string" },
+                "roomName": { "type": "string" },
+                "time": { "type": "string" },
+                "status": { "type": "string" },
+                "guestCount": { "type": "number" },
+                "exclusiveType": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "checkAvailability",
+      "description": "检查指定房间在指定日期的可用时段，用于客人询问房间是否空闲",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/reservation-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "room": {
+            "type": "string",
+            "description": "房间名称，如大包、小包、棋牌"
+          },
+          "date": {
+            "type": "string",
+            "description": "日期，格式 YYYY-MM-DD，不传则默认今天"
+          }
+        },
+        "required": ["room"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "room": { "type": "string" },
+          "roomName": { "type": "string" },
+          "date": { "type": "string" },
+          "availableSlots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": { "type": "string" }
+              }
+            }
+          },
+          "bookedSlots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": { "type": "string" },
+                "customerName": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "getTodaySummary",
+      "description": "获取今日经营概览，包括预约数、收入、支出、净利润等汇总数据",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/summary-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "date": { "type": "string" },
+          "reservationCount": { "type": "number" },
+          "totalIncome": { "type": "number" },
+          "totalExpense": { "type": "number" },
+          "netProfit": { "type": "number" },
+          "roomStats": { "type": "object" },
+          "incomeByType": { "type": "object" }
+        }
+      }
+    },
+    {
+      "name": "getMonthlyStats",
+      "description": "获取指定月份的采购统计或收支统计",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/summary-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "统计类型: purchase(采购) 或 finance(收支)，默认 finance"
+          },
+          "category": {
+            "type": "string",
+            "description": "采购类别筛选(仅type=purchase时有效): 肉类/海鲜/蔬菜/水果/饮品/调味品/日用品/设备/其他"
+          },
+          "month": {
+            "type": "string",
+            "description": "月份，格式 YYYY-MM，不传则默认当月"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "month": { "type": "string" },
+          "type": { "type": "string" },
+          "totalAmount": { "type": "number" },
+          "details": { "type": "object" }
+        }
+      }
+    },
+    {
+      "name": "createReservation",
+      "description": "创建预约，需要提供客户姓名、日期，可选时段(中午/晚上)、房间(大包/小包/棋牌)、人数、手机号等",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/booking-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerName": {
+            "type": "string",
+            "description": "客户姓名（必填）"
+          },
+          "date": {
+            "type": "string",
+            "description": "预约日期，格式 YYYY-MM-DD（必填）"
+          },
+          "time": {
+            "type": "string",
+            "description": "时段：中午 或 晚上，默认中午"
+          },
+          "room": {
+            "type": "string",
+            "description": "房间：大包/小包/棋牌，默认大包"
+          },
+          "guestCount": {
+            "type": "number",
+            "description": "人数，棋牌室可不填"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号（选填）"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注（选填）"
+          },
+          "standard": {
+            "type": "number",
+            "description": "餐标，如500/600/800"
+          },
+          "dishPrice": {
+            "type": "number",
+            "description": "菜价（选填）"
+          },
+          "exclusiveType": {
+            "type": "string",
+            "description": "包场类型：none/noon/night/full"
+          }
+        },
+        "required": ["customerName", "date"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "customerName": { "type": "string" },
+          "date": { "type": "string" },
+          "time": { "type": "string" },
+          "room": { "type": "string" },
+          "roomName": { "type": "string" },
+          "guestCount": { "type": "number" },
+          "status": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "cancelReservation",
+      "description": "取消预约，可通过预约ID或客户姓名+日期等条件定位预约",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/booking-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "reservationId": {
+            "type": "string",
+            "description": "预约记录ID（与下面条件二选一）"
+          },
+          "customerName": {
+            "type": "string",
+            "description": "客户姓名（用于查找预约）"
+          },
+          "date": {
+            "type": "string",
+            "description": "日期 YYYY-MM-DD（用于查找预约）"
+          },
+          "room": {
+            "type": "string",
+            "description": "房间类型（用于查找预约）"
+          },
+          "time": {
+            "type": "string",
+            "description": "时段（用于查找预约）"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "customerName": { "type": "string" },
+          "date": { "type": "string" },
+          "time": { "type": "string" },
+          "roomName": { "type": "string" },
+          "status": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "getCustomerInfo",
+      "description": "查询客户历史信息，包括到店次数、消费金额、偏好房间等",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/reservation-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "客户姓名"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号（与姓名二选一）"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "customerName": { "type": "string" },
+          "totalVisits": { "type": "number" },
+          "totalSpent": { "type": "number" },
+          "preferredRoom": { "type": "string" },
+          "recentVisits": { "type": "array" }
+        }
+      }
+    },
+    {
+      "name": "getIncomeDetail",
+      "description": "查询收入明细，支持按日期、月份、收入类型筛选",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/income-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "查询日期 YYYY-MM-DD"
+          },
+          "month": {
+            "type": "string",
+            "description": "查询月份 YYYY-MM"
+          },
+          "type": {
+            "type": "string",
+            "description": "收入类型：餐饮/棋牌/酒水/茶时/服务/其他"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "period": { "type": "string" },
+          "totalAmount": { "type": "number" },
+          "count": { "type": "number" },
+          "byType": { "type": "object" }
+        }
+      }
+    },
+    {
+      "name": "getExpenseDetail",
+      "description": "查询支出明细，包括一次性支出和固定月支出",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/income-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "查询日期 YYYY-MM-DD"
+          },
+          "month": {
+            "type": "string",
+            "description": "查询月份 YYYY-MM"
+          },
+          "category": {
+            "type": "string",
+            "description": "支出分类：工资/房租/水电/物资/其他"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "period": { "type": "string" },
+          "totalExpense": { "type": "number" },
+          "totalFixed": { "type": "number" },
+          "count": { "type": "number" },
+          "byCategory": { "type": "object" }
+        }
+      }
+    },
+    {
+      "name": "getPurchaseStatus",
+      "description": "查询采购申请状态，支持按状态(待审批/已审批/已拒绝/已报销)和类别筛选",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/summary-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "采购状态筛选：待审批/已审批/已拒绝/已报销"
+          },
+          "category": {
+            "type": "string",
+            "description": "采购类别筛选：肉类/海鲜/蔬菜/水果/饮品/调味品/日用品/设备/其他"
+          },
+          "limit": {
+            "type": "number",
+            "description": "返回条数，默认10，最多20"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "total": { "type": "number" },
+          "totalAmount": { "type": "number" },
+          "purchases": { "type": "array" }
+        }
+      }
+    },
+    {
+      "name": "submitPurchase",
+      "description": "提交采购申请，需要提供物品名称和金额",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/summary-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "采购物品名称（必填）"
+          },
+          "category": {
+            "type": "string",
+            "description": "采购类别：肉类/海鲜/蔬菜/水果/饮品/调味品/日用品/设备/其他"
+          },
+          "amount": {
+            "type": "number",
+            "description": "采购金额（必填，大于0）"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "数量，默认1"
+          },
+          "unit": {
+            "type": "string",
+            "description": "单位，如斤/箱/份，默认份"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注"
+          }
+        },
+        "required": ["name", "amount"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "category": { "type": "string" },
+          "amount": { "type": "number" },
+          "status": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "approvePurchase",
+      "description": "审批采购申请，可批准或拒绝。不指定ID时自动选择最近的待审批采购",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/summary-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "purchaseId": {
+            "type": "string",
+            "description": "采购记录ID（不传则自动选择最近待审批的）"
+          },
+          "action": {
+            "type": "string",
+            "description": "审批动作：approve(批准) 或 reject(拒绝)，默认 approve"
+          },
+          "remark": {
+            "type": "string",
+            "description": "审批备注"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "amount": { "type": "number" },
+          "status": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "getAttendance",
+      "description": "查询考勤情况，可按日期和员工姓名筛选",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/summary-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "查询日期 YYYY-MM-DD，默认今天"
+          },
+          "name": {
+            "type": "string",
+            "description": "员工姓名（选填，不传则查全员）"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "date": { "type": "string" },
+          "total": { "type": "number" },
+          "onTime": { "type": "number" },
+          "late": { "type": "number" },
+          "records": { "type": "array" }
+        }
+      }
+    },
+    {
+      "name": "getInsights",
+      "description": "获取经营洞察与智能建议，包括收入、支出、采购分析、最忙日、收入来源等",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/summary-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "description": "分析周期：month(本月) 或 week(本周)，默认 month"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "period": { "type": "string" },
+          "totalIncome": { "type": "number" },
+          "totalExpense": { "type": "number" },
+          "netProfit": { "type": "number" },
+          "reservationCount": { "type": "number" },
+          "busiestDays": { "type": "array" },
+          "incomeByType": { "type": "object" },
+          "suggestions": { "type": "array" }
+        }
+      }
+    },
+    {
+      "name": "updateReservationStatus",
+      "description": "更新预约状态，可将预约设为已确认/已完成/已取消",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/booking-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "reservationId": {
+            "type": "string",
+            "description": "预约ID（与下面查询条件二选一）"
+          },
+          "customerName": {
+            "type": "string",
+            "description": "客户姓名（用于查找预约）"
+          },
+          "date": {
+            "type": "string",
+            "description": "日期 YYYY-MM-DD（用于查找预约）"
+          },
+          "time": {
+            "type": "string",
+            "description": "时段：中午/晚上（用于查找预约）"
+          },
+          "room": {
+            "type": "string",
+            "description": "房间类型（用于查找预约）"
+          },
+          "status": {
+            "type": "string",
+            "description": "目标状态：confirmed(确认)/completed(完成)/cancelled(取消)"
+          }
+        },
+        "required": ["status"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "customerName": { "type": "string" },
+          "date": { "type": "string" },
+          "time": { "type": "string" },
+          "roomName": { "type": "string" },
+          "status": { "type": "string" },
+          "statusLabel": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "addIncome",
+      "description": "录入收入记录，支持餐饮/棋牌/酒水/茶水/服务/其他6种类型",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/income-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "收入类型：餐饮/棋牌/酒水/茶水/服务/其他"
+          },
+          "amount": {
+            "type": "number",
+            "description": "收入金额（必填，大于0）"
+          },
+          "date": {
+            "type": "string",
+            "description": "收入日期 YYYY-MM-DD，默认今天"
+          },
+          "source": {
+            "type": "string",
+            "description": "来源（如客户姓名等）"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注"
+          }
+        },
+        "required": ["type", "amount"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string" },
+          "typeName": { "type": "string" },
+          "amount": { "type": "number" },
+          "date": { "type": "string" },
+          "source": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "addExpense",
+      "description": "录入一次性支出，支持工资/房租/水电/物资/其他5种分类",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/income-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "支出项目名称（必填）"
+          },
+          "amount": {
+            "type": "number",
+            "description": "支出金额（必填，大于0）"
+          },
+          "date": {
+            "type": "string",
+            "description": "支出日期 YYYY-MM-DD，默认今天"
+          },
+          "category": {
+            "type": "string",
+            "description": "支出分类：工资/房租/水电/物资/其他"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注"
+          }
+        },
+        "required": ["name", "amount", "category"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "category": { "type": "string" },
+          "categoryName": { "type": "string" },
+          "amount": { "type": "number" },
+          "date": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "addFixedExpense",
+      "description": "添加固定支出项（月付或年付），如房租、工资等周期性支出",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/income-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "项目名称（必填，如房租、宽带费等）"
+          },
+          "amount": {
+            "type": "number",
+            "description": "金额（必填，大于0）"
+          },
+          "cycle": {
+            "type": "string",
+            "description": "周期：monthly(月付) 或 yearly(年付)，默认月付"
+          },
+          "description": {
+            "type": "string",
+            "description": "说明"
+          },
+          "startDate": {
+            "type": "string",
+            "description": "起始日期 YYYY-MM-DD，默认今天"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "结束日期 YYYY-MM-DD（选填）"
+          }
+        },
+        "required": ["name", "amount", "cycle"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "amount": { "type": "number" },
+          "cycle": { "type": "string" },
+          "cycleLabel": { "type": "string" },
+          "monthlyAmount": { "type": "number" },
+          "startDate": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "reimbursePurchase",
+      "description": "标记已审批的采购为已报销。可按ID或名称查找采购记录",
+      "_meta": {
+        "ui": {
+          "componentPath": "components/summary-card/index"
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "purchaseId": {
+            "type": "string",
+            "description": "采购记录ID（与name二选一）"
+          },
+          "name": {
+            "type": "string",
+            "description": "采购物品名称（模糊匹配）"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "amount": { "type": "number" },
+          "category": { "type": "string" },
+          "status": { "type": "string" }
+        }
+      }
+    }
+  ],
+  "components": [
+    {
+      "path": "components/reservation-card/index",
+      "relatedPage": "/packageA/ai-skill/pages/reservation-detail/index",
+      "expirable": true,
+      "expiredText": "预约数据已过期",
+      "permissions": {
+        "scope.dynamic": {
+          "desc": "实时刷新预约状态"
+        }
+      }
+    },
+    {
+      "path": "components/summary-card/index",
+      "relatedPage": "/pages/index/index",
+      "expirable": true,
+      "expiredText": "数据已过期",
+      "permissions": {
+        "scope.dynamic": {
+          "desc": "实时刷新经营数据"
+        }
+      }
+    },
+    {
+      "path": "components/booking-card/index",
+      "relatedPage": "/packageA/ai-skill/pages/reservation-detail/index",
+      "expirable": true,
+      "expiredText": "预约数据已过期",
+      "permissions": {
+        "scope.dynamic": {
+          "desc": "实时刷新预约状态"
+        }
+      }
+    },
+    {
+      "path": "components/income-card/index",
+      "relatedPage": "/pages/income/index",
+      "expirable": true,
+      "expiredText": "财务数据已过期",
+      "permissions": {
+        "scope.dynamic": {
+          "desc": "实时刷新财务数据"
+        }
+      }
+    }
+  ]
+}

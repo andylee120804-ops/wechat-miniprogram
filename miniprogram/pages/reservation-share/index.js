@@ -100,7 +100,9 @@ Page({
               detailItems.push({ icon: '📋', label: fd.label, value: String(cf[key]) })
             }
           })
-        } catch (e) { /* ignore config load failures */ }
+        } catch (e) {
+          console.warn('[reservation-share] 加载自定义字段失败:', e)
+        }
       }
 
       // 根据模板生成默认标题

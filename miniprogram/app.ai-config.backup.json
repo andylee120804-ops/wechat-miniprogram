@@ -1,0 +1,26 @@
+{
+  "_comment": "AI 功能配置备份 — 当 AI_ENABLED=true 时，将以下内容合并回 app.json",
+  "pages": ["pages/ai-chat/index"],
+  "subPackages": [
+    {
+      "root": "packageA/ai-skill",
+      "independent": true,
+      "pages": [
+        "pages/reservation-detail/index",
+        "pages/income-detail/index",
+        "pages/purchase-detail/index"
+      ]
+    }
+  ],
+  "agent": {
+    "skills": [
+      {
+        "name": "club-assistant",
+        "description": "小食堂AI助手，提供预约查询、房间可用性检查、经营数据概览、采购统计等服务",
+        "path": "packageA/ai-skill"
+      }
+    ],
+    "instruction": "AGENTS.md",
+    "pageMetadata": "page-meta.json"
+  }
+}

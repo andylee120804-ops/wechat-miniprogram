@@ -2,6 +2,7 @@ const app = getApp()
 const { formatDate, formatAmount, getMonthRange } = require('../../utils/helpers')
 const { COLLECTIONS } = require('../../utils/db')
 const { hasPermission, ACTIONS } = require('../../utils/permission')
+const { AI_ENABLED } = require('../../utils/feature-flags')
 const db = require('../../utils/db')
 
 const ROOM_MAP = { '大包': 'big', '大包厢': 'big', '小包': 'small', '小包厢': 'small', '棋牌': 'chess', '棋牌室': 'chess' }
@@ -42,15 +43,11 @@ Page({
   _onKeyboardHeightChange: null,
 
   onLoad() {
-    // Feature flag guard: AI not enabled yet
-    const { AI_ENABLED } = require('../../utils/feature-flags')
     if (!AI_ENABLED) {
-      wx.showToast({ title: 'AI功能即将上线', icon: 'none' })
-      setTimeout(() => {
-        wx.navigateBack({
-          fail: () => wx.switchTab({ url: '/pages/index/index' })
-        })
-      }, 1500)
+      wx.switchTab({
+        url: '/pages/index/index',
+        fail: () => wx.reLaunch({ url: '/pages/index/index' })
+      })
       return
     }
 

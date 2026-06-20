@@ -4,7 +4,8 @@
  * Pure validation function that takes the page's data snapshot and
  * resolved formFields, and returns an `errors` object keyed by field id.
  */
-const { formatDate } = require('../../../utils/helpers')
+var _h = require('../../../utils/helpers')
+var getChinaToday = _h.getChinaToday
 const { validateRequired, validateGuestCount } = require('../../../utils/validators')
 
 /**
@@ -28,7 +29,7 @@ function validateReservationForm({
 
   const dateResult = validateRequired(date, '日期')
   if (!dateResult.valid) errors.date = dateResult.message
-  if (!errors.date && date < formatDate(new Date())) {
+  if (!errors.date && date < getChinaToday()) {
     errors.date = '不能选择过去的日期'
   }
 

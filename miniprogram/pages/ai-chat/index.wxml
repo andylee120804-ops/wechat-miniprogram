@@ -1,0 +1,81 @@
+<view class="ai-chat-page" style="background: {{theme.surface || '#1A1A2E'}}; height: 100vh; display: flex; flex-direction: column;">
+  <!-- Chat Body -->
+  <scroll-view
+    class="chat-body"
+    scroll-y
+    scroll-into-view="{{scrollToId}}"
+    scroll-with-animation
+    style="height: {{scrollViewHeight}}px; padding-bottom: {{keyboardHeight + inputBarHeight}}px;"
+  >
+    <!-- Welcome -->
+    <view class="welcome-section" wx:if="{{messages.length === 0}}">
+      <view class="welcome-hero">
+        <view class="welcome-glow" style="background: {{theme.gradientAvatar || 'linear-gradient(135deg, #C9A96E, #8B6F3A)'}};"></view>
+        <view class="welcome-bot" style="background: {{theme.gradientAvatar || 'linear-gradient(135deg, #C9A96E, #8B6F3A)'}};">
+          <text class="welcome-bot-icon" style="color: {{theme.textInverse || '#0F0F1A'}};">✦</text>
+        </view>
+      </view>
+      <text class="welcome-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">你好，有什么可以帮你？</text>
+      <text class="welcome-sub" style="color: {{theme.textSecondary || 'rgba(245,240,232,0.50)'}};">查预约 · 看数据 · 管经营</text>
+
+      <view class="quick-grid">
+        <view class="quick-card" wx:for="{{visibleQuickActions}}" wx:key="index"
+          style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}};"
+          bindtap="onQuickAction" data-query="{{item.query}}" hover-class="quick-card-hover">
+          <text class="quick-card-icon">{{item.icon}}</text>
+          <text class="quick-card-label" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.text}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Messages -->
+    <view class="message-list" wx:if="{{messages.length > 0}}">
+      <view class="msg {{item.role}}" wx:for="{{messages}}" wx:key="id" id="msg-{{item.id}}">
+        <view class="msg-bubble {{item.role}}" style="{{item.role === 'assistant' ? '' : 'background: ' + (theme.accentBg || 'rgba(201,169,110,0.15)')}}">
+          <text class="msg-text" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.content}}{{item.streaming ? '▌' : ''}}</text>
+          <view class="booking-action" wx:if="{{item.reservationId}}" style="margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid rgba(255,255,255,0.08);">
+            <view class="booking-action-btn" style="display: inline-flex; align-items: center; padding: 10rpx 24rpx; border-radius: 8rpx; background: {{theme.accentColor || '#C9A96E'}};" data-id="{{item.reservationId}}" bindtap="onViewReservation">
+              <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 24rpx; font-weight: 600;">查看详情</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- Loading -->
+      <view class="msg assistant" wx:if="{{isLoading && !streamingText}}">
+        <view class="msg-bubble assistant" style="background: {{theme.glassBg || 'rgba(255, 255, 255, 0.06)'}};">
+          <view class="typing-indicator">
+            <view class="typing-dot" style="background: {{theme.accent || '#C9A96E'}};"></view>
+            <view class="typing-dot" style="background: {{theme.accent || '#C9A96E'}};"></view>
+            <view class="typing-dot" style="background: {{theme.accent || '#C9A96E'}};"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view id="scroll-bottom"></view>
+  </scroll-view>
+
+  <!-- Input Bar -->
+  <view class="input-bar" style="background: {{theme.elevated || '#252540'}}; border-top: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; bottom: {{keyboardHeight}}px;">
+    <view class="input-row">
+      <view class="input-field" style="background: {{theme.cardBg || 'rgba(15,15,26,0.70)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.08)'}};">
+        <input
+          class="chat-input"
+          style="color: {{theme.textPrimary || '#F5F0E8'}};"
+          placeholder="输入问题..."
+          placeholder-style="color: {{theme.textMuted || 'rgba(245,240,232,0.30)'}}"
+          value="{{inputText}}"
+          bindinput="onInput"
+          bindconfirm="onSend"
+          confirm-type="send"
+          adjust-position="{{false}}"
+          disabled="{{isLoading}}"
+        />
+      </view>
+      <view class="send-btn {{isLoading ? 'disabled' : ''}}" style="background: {{isLoading ? (theme.textDisabled || 'rgba(245,240,232,0.15)') : (theme.gradientAvatar || 'linear-gradient(135deg, #C9A96E, #8B6F3A)')}}" bindtap="onSend">
+        <text class="send-icon" style="color: {{isLoading ? (theme.textMuted || 'rgba(245,240,232,0.30)') : '#0F0F1A'}};">↑</text>
+      </view>
+    </view>
+  </view>
+</view>

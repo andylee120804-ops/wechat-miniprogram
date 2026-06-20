@@ -1,0 +1,9 @@
+{
+  "name": "autoSyncReservation",
+  "version": "1.0.0",
+  "description": "自动同步预约数据，生成采购和收入记录",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

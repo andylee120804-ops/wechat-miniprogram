@@ -4,16 +4,23 @@ const { hasPermission, ACTIONS } = require('../../../utils/permission')
 const { COLLECTIONS } = require('../../../utils/db')
 const db = require('../../../utils/db')
 const { handleCloudError } = require('../../../utils/error-handler')
+const { AI_ENABLED } = require('../../../utils/feature-flags')
 
 const PERMISSION_MODULE_NAMES = {
   purchase: '采购', reservation: '预约', income: '收入',
   staff: '员工', dashboard: '报表', expense: '支出'
 }
 
+if (AI_ENABLED) {
+  PERMISSION_MODULE_NAMES.ai = 'AI助手'
+}
+
 function getPermissionModules(perms) {
   if (!perms || perms.length === 0) return []
   if (perms.find(p => p.module === '*')) return ['全部权限']
-  return perms.map(p => PERMISSION_MODULE_NAMES[p.module] || p.module)
+  return perms
+    .filter(p => AI_ENABLED || p.module !== 'ai')
+    .map(p => PERMISSION_MODULE_NAMES[p.module] || p.module)
 }
 
 Page({

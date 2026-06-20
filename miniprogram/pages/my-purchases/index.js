@@ -43,14 +43,25 @@ Page({
     that.setData({ loading: true })
 
     try {
-      var res = await db.queryAll(COLLECTIONS.PURCHASE, { purchaseBy: userId })
+      var res = await db.queryAll(COLLECTIONS.PURCHASE, { purchaseBy: userId }, 'date', 'desc')
       var list = (res.data || []).map(that._formatItem)
 
-      // Build status cards with counts
+      // Filter to current month for counting and sorting
+      var now = new Date()
+      var monthStart = formatDate(new Date(now.getFullYear(), now.getMonth(), 1))
+      var monthEnd = formatDate(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+      var monthList = list.filter(function (item) {
+        return item.date >= monthStart && item.date <= monthEnd
+      })
+
+      // Build status cards with current-month counts, sorted by count descending
       var statusCards = STATUS_MAP.map(function (s) {
-        var count = list.filter(function (item) { return item.status === s.key }).length
+        var count = monthList.filter(function (item) { return item.status === s.key }).length
         return { key: s.key, label: s.label, color: s.color, count: count }
       })
+      // Add "全部" card then sort all by count
+      statusCards.unshift({ key: '', label: '全部', color: '#C9A96E', count: monthList.length })
+      statusCards.sort(function (a, b) { return b.count - a.count })
 
       that.setData({
         statusCards: statusCards,

@@ -39,45 +39,56 @@
           <text class="pill-text" style="font-size: 24rpx;">{{item.label}}</text>
         </view>
       </view>
+      <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; margin-top: 12rpx; display: block;">{{category === 'banquet' ? '必填：采购日期、采购分类、关联预约、金额' : '必填：采购日期、采购分类、物品名称、金额'}}</text>
     </view>
 
     <!-- Reservation Picker (only for banquet category) -->
     <block wx:if="{{category === 'banquet'}}">
-      <view class="flex-row flex-between" style="background: {{theme.elevated || '#252540'}}; border-radius: 10rpx; padding: 16rpx 20rpx; margin-top: 16rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
-        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx; flex-shrink: 0;">关联预约</text>
+      <view class="flex-row flex-between" style="background: {{theme.elevated || '#252540'}}; border-radius: 10rpx; padding: 16rpx 20rpx; margin-top: 16rpx; border: 1rpx solid {{errors.reservation ? '#F87171' : theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+        <view class="flex-row" style="align-items: center; flex-shrink: 0;">
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">关联预约</text>
+          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 22rpx; margin-left: 8rpx;">*</text>
+        </view>
         <block wx:if="{{recentReservations.length > 0}}">
           <picker mode="selector" range="{{pickerItems}}" bindchange="onReservationPickerChange" style="flex:1">
             <view class="flex-row" style="align-items: center; justify-content: flex-end;">
-              <text style="color: {{pickerIndex >= 0 ? theme.textPrimary || '#F5F0E8' : theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{pickerIndex >= 0 ? pickerItems[pickerIndex] : ''}}</text>
+              <text style="color: {{pickerIndex >= 0 ? theme.textPrimary || '#F5F0E8' : theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{pickerIndex >= 0 ? pickerItems[pickerIndex] : '请选择预约'}}</text>
               <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 20rpx; margin-left: 4rpx; flex-shrink: 0;">▾</text>
             </view>
           </picker>
         </block>
-        <text wx:else style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">暂无</text>
+        <text wx:else style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">暂无可关联预约</text>
       </view>
+      <text wx:if="{{errors.reservation}}" style="color: #F87171; font-size: 22rpx; margin-top: 4rpx; display: block;">{{errors.reservation}}</text>
     </block>
 
     <!-- Item Name -->
-    <view class="flex-row flex-between" style="background: {{theme.elevated || '#252540'}}; border-radius: 10rpx; padding: 16rpx 20rpx; margin-top: 16rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
-      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">物品名称</text>
-      <input class="form-input" placeholder="选填" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;"
+    <view class="flex-row flex-between" style="background: {{theme.elevated || '#252540'}}; border-radius: 10rpx; padding: 16rpx 20rpx; margin-top: 16rpx; border: 1rpx solid {{errors.item ? '#F87171' : theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+      <view class="flex-row" style="align-items: center; flex-shrink: 0;">
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">物品名称</text>
+        <text wx:if="{{category !== 'banquet'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 22rpx; margin-left: 8rpx;">*</text>
+        <text wx:else style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx; margin-left: 8rpx;">选填</text>
+      </view>
+      <input class="form-input" placeholder="{{category === 'banquet' ? '可选填' : '必填'}}" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;"
         value="{{item}}" bindinput="onItemInput"
         style="color: {{theme.textPrimary || '#F5F0E8'}}; text-align: right; flex: 1; margin-left: 20rpx;" />
     </view>
+    <text wx:if="{{errors.item}}" style="color: #F87171; font-size: 22rpx; margin-top: 4rpx; display: block;">{{errors.item}}</text>
 
     <!-- Amount -->
-    <view class="flex-row flex-between" style="background: {{theme.elevated || '#252540'}}; border-radius: 10rpx; padding: 16rpx 20rpx; margin-top: 16rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+    <view class="flex-row flex-between" style="background: {{theme.elevated || '#252540'}}; border-radius: 10rpx; padding: 16rpx 20rpx; margin-top: 16rpx; border: 1rpx solid {{errors.amount ? '#F87171' : theme.borderColor || 'rgba(255,255,255,0.10)'}};">
       <view class="flex-row" style="align-items: center;">
         <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">金额</text>
         <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 22rpx; margin-left: 8rpx;">*</text>
       </view>
       <view class="flex-row" style="align-items: center;">
         <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 26rpx;">¥</text>
-        <input class="amount-input" type="digit" placeholder="0.00" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 28rpx;"
+        <input class="amount-input" type="digit" placeholder="必填，大于0" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;"
           value="{{amount}}" bindinput="onAmountInput"
-          style="color: {{theme.amountNegative || '#F87171'}}; text-align: right; width: 160rpx; margin-left: 8rpx;" />
+          style="color: {{theme.amountNegative || '#F87171'}}; text-align: right; width: 200rpx; margin-left: 8rpx;" />
       </view>
     </view>
+    <text wx:if="{{errors.amount}}" style="color: #F87171; font-size: 22rpx; margin-top: 4rpx; display: block;">{{errors.amount}}</text>
 
     <!-- Receipt Images -->
     <view style="background: {{theme.elevated || '#252540'}}; border-radius: 10rpx; padding: 16rpx 20rpx; margin-top: 16rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
@@ -123,7 +134,7 @@
   <view class="bottom-bar">
     <view class="bottom-bar-inner {{isEdit ? 'two-btns' : 'single-btn'}}">
       <view wx:if="{{isEdit}}" class="bar-btn bar-btn-danger" bindtap="onDelete">删除</view>
-      <view class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onSubmit">{{isEdit ? '保存修改' : '确认添加'}}</view>
+      <view class="bar-btn bar-btn-primary bar-btn-primary-wide {{submitting ? 'bar-btn-disabled' : ''}}" bindtap="onSubmit">{{submitting ? '提交中...' : (isEdit ? '保存修改' : '确认添加')}}</view>
     </view>
   </view>
 
