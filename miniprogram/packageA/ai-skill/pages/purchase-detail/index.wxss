@@ -1,0 +1,72 @@
+.detail-page {
+  background: #0F0F1A;
+  min-height: 100vh;
+  padding: 32rpx;
+  color: #E8E4DC;
+}
+
+.loading, .empty {
+  text-align: center;
+  padding: 64rpx 0;
+  color: #8E8E93;
+  font-size: 28rpx;
+}
+
+.amount-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 32rpx;
+  padding-bottom: 24rpx;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+
+.amount {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #C9A96E;
+}
+
+.status-tag {
+  font-size: 22rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+}
+
+.status-tag.pending {
+  color: #FBBF24;
+  background: rgba(251, 191, 36, 0.15);
+}
+
+.status-tag.approved {
+  color: #4CAF50;
+  background: rgba(76, 175, 80, 0.15);
+}
+
+.status-tag.rejected {
+  color: #FF6B6B;
+  background: rgba(255, 107, 107, 0.15);
+}
+
+.status-tag.reimbursed {
+  color: #60A5FA;
+  background: rgba(96, 165, 250, 0.15);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.05);
+}
+
+.label {
+  font-size: 28rpx;
+  color: #8E8E93;
+}
+
+.value {
+  font-size: 28rpx;
+  color: #E8E4DC;
+  font-weight: 500;
+}

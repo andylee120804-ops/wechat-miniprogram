@@ -87,6 +87,24 @@ Page({
       // 客人看到的「温馨提示」：只有 sc.shareRemark（员工在弹窗里填写的）才显示
       if (sc.shareRemark) detailItems.push({ icon: templateData.fieldEmojis[5] || EMOJI_FALLBACKS[5], label: '温馨提示', value: sc.shareRemark })
 
+      // Custom fields from reservation
+      var cf = r.customFields || {}
+      var cfKeys = Object.keys(cf)
+      if (cfKeys.length > 0) {
+        try {
+          var config = require('../../utils/reservationConfig')
+          var formConfig = await config.loadFormConfig()
+          cfKeys.forEach(function(key) {
+            var fd = formConfig.fields.find(function(f) { return f.id === key })
+            if (fd && cf[key] !== undefined && cf[key] !== '' && cf[key] !== 0) {
+              detailItems.push({ icon: '📋', label: fd.label, value: String(cf[key]) })
+            }
+          })
+        } catch (e) {
+          console.warn('[reservation-share] 加载自定义字段失败:', e)
+        }
+      }
+
       // 根据模板生成默认标题
       const defaultTitle = template === 'friend'
         ? '朋友们，不见不散！'

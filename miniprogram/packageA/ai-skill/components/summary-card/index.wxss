@@ -1,0 +1,97 @@
+.card {
+  background: #1A1A2E;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  color: #E8E4DC;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.card-header {
+  margin-bottom: 20rpx;
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #C9A96E;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 16rpx;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.stat-value {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.stat-label {
+  font-size: 22rpx;
+  color: #8E8E93;
+}
+
+.positive {
+  color: #4CAF50;
+}
+
+.negative {
+  color: #FF6B6B;
+}
+
+.profit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 0;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.05);
+}
+
+.profit-label {
+  font-size: 26rpx;
+  color: #8E8E93;
+}
+
+.profit-value {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.cat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.05);
+}
+
+.cat-name {
+  font-size: 26rpx;
+  color: #E8E4DC;
+}
+
+.cat-amount {
+  font-size: 26rpx;
+  color: #C9A96E;
+  font-weight: 500;
+}
+
+.error {
+  text-align: center;
+  padding: 32rpx 0;
+  color: #FF6B6B;
+  font-size: 26rpx;
+}

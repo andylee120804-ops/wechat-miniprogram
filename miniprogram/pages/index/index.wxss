@@ -47,6 +47,17 @@
   justify-content: flex-end;
 }
 
+.ai-btn {
+  font-size: 36rpx;
+  padding: 8rpx 16rpx;
+  opacity: 0.85;
+}
+
+.ai-btn:active {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
 /* Announcement Marquee */
 .announcement-marquee {
   display: flex;
@@ -63,10 +74,22 @@
   background: rgba(26,26,46,0.6);
 }
 
-@keyframes marquee-scroll {
-  0% { margin-left: 100%; }
-  33% { margin-left: 0; }
-  100% { margin-left: 0; }
+@keyframes marquee-scroll-a {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes marquee-scroll-b {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(0); }
+}
+
+.marquee-anim-a {
+  animation: marquee-scroll-a 5s ease-out forwards;
+}
+
+.marquee-anim-b {
+  animation: marquee-scroll-b 5s ease-out forwards;
 }
 
 .marquee-icon {
@@ -279,10 +302,21 @@
 
 .tomorrow-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
   padding: 16rpx 0;
   border-bottom: 1rpx solid rgba(255,255,255,0.05);
+}
+
+.tomorrow-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tomorrow-left {
+  flex: 1;
+  min-width: 0;
+  padding-right: 16rpx;
 }
 
 .tomorrow-item:last-child {
@@ -319,6 +353,17 @@
   font-size: 22rpx;
   opacity: 0.5;
   margin-top: 4rpx;
+}
+
+.tomorrow-remark {
+  margin-top: 12rpx;
+  padding: 10rpx 14rpx;
+  background: rgba(255,255,255,0.03);
+  border-radius: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  opacity: 0.75;
+  word-break: break-all;
 }
 
 .tomorrow-more {
@@ -444,4 +489,168 @@
   color: #4ADE80;
 }
 
+/* Floating AI Button */
+.fab-ai {
+  position: fixed;
+  right: 32rpx;
+  bottom: 200rpx;
+  width: 108rpx;
+  height: 108rpx;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #C9A96E 0%, #A88B50 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 32rpx rgba(201,169,110,0.45), 0 2rpx 8rpx rgba(0,0,0,0.3);
+  z-index: 200;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: fab-pulse 3s ease-in-out infinite;
+}
 
+.fab-ai-hover {
+  transform: scale(0.88);
+  box-shadow: 0 4rpx 16rpx rgba(201,169,110,0.3);
+}
+
+@keyframes fab-pulse {
+  0%, 100% { box-shadow: 0 8rpx 32rpx rgba(201,169,110,0.45), 0 2rpx 8rpx rgba(0,0,0,0.3); }
+  50% { box-shadow: 0 8rpx 40rpx rgba(201,169,110,0.6), 0 2rpx 12rpx rgba(0,0,0,0.3), 0 0 24rpx rgba(201,169,110,0.25); }
+}
+
+/* Sparkle dots orbiting */
+.fab-ai-sparkle {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  animation: fab-spin 8s linear infinite;
+}
+
+@keyframes fab-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.sparkle-dot {
+  position: absolute;
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.sparkle-dot.s1 {
+  top: 6rpx;
+  left: 50%;
+  margin-left: -4rpx;
+  animation: sparkle-blink 1.5s ease-in-out infinite;
+}
+
+.sparkle-dot.s2 {
+  bottom: 16rpx;
+  left: 14rpx;
+  width: 6rpx;
+  height: 6rpx;
+  animation: sparkle-blink 1.5s ease-in-out 0.5s infinite;
+}
+
+.sparkle-dot.s3 {
+  bottom: 16rpx;
+  right: 14rpx;
+  width: 6rpx;
+  height: 6rpx;
+  animation: sparkle-blink 1.5s ease-in-out 1s infinite;
+}
+
+@keyframes sparkle-blink {
+  0%, 100% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Core icon */
+.fab-ai-core {
+  position: relative;
+  width: 44rpx;
+  height: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.core-ring {
+  position: absolute;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  border: 4rpx solid rgba(255, 255, 255, 0.85);
+  border-top-color: transparent;
+  animation: ring-rotate 2s linear infinite;
+}
+
+@keyframes ring-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.core-inner {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 12rpx rgba(255, 255, 255, 0.6);
+}
+
+
+
+/* 预约变动提醒弹窗 */
+.change-reminder-list {
+  padding: 10rpx 0;
+  max-height: 600rpx;
+  overflow-y: auto;
+}
+
+.change-reminder-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid rgba(255,255,255,0.06);
+}
+
+.change-reminder-index {
+  width: 40rpx;
+  height: 40rpx;
+  line-height: 40rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: rgba(201,169,110,0.2);
+  color: #C9A96E;
+  font-size: 24rpx;
+  font-weight: 700;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+  margin-top: 4rpx;
+}
+
+.change-reminder-summary {
+  flex: 1;
+  font-size: 28rpx;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.change-reminder-more {
+  text-align: center;
+  padding: 20rpx 0 10rpx;
+  font-size: 24rpx;
+}
+
+.change-reminder-item-hover {
+  background: rgba(255,255,255,0.04);
+  border-radius: 8rpx;
+}
+
+.change-reminder-arrow {
+  font-size: 36rpx;
+  margin-left: 12rpx;
+  flex-shrink: 0;
+  margin-top: 2rpx;
+}

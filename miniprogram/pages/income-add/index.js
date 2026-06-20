@@ -1,5 +1,5 @@
 const app = getApp()
-const { formatDate } = require('../../utils/helpers')
+const { formatDate, buildChanges } = require('../../utils/helpers')
 const { log } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { hasPermission, ACTIONS } = require('../../utils/permission')
@@ -113,7 +113,8 @@ Page({
         reservationId: d.reservationId || '',
         remark: d.remark || '',
         selectedReservation,
-        pickerIndex
+        pickerIndex,
+        _oldData: { type: d.type || 'dining', amount: d.amount !== undefined ? String(d.amount) : '', source: d.source || '', date: d.date || '', remark: d.remark || '' }
       })
     } catch (err) {
       handleCloudError(err, '加载收入')
@@ -394,7 +395,8 @@ Page({
         log('INCOME_CREATE', { type, amount: data.amount, source: data.source })
       } else {
         await db.updateDoc(COLLECTIONS.INCOME, this.data.id, data)
-        log('INCOME_UPDATE', { type, amount: data.amount })
+        var extra = buildChanges(this.data._oldData || {}, data, { type: '类型', amount: '金额', source: '来源', date: '日期', remark: '备注' }, { amount: true }) || {}
+        log('INCOME_UPDATE', { type, amount: data.amount }, extra)
       }
 
       wx.showToast({ title: '保存成功', icon: 'success' })

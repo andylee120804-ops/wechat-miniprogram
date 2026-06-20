@@ -5,7 +5,7 @@ class ReservationAddPage extends BasePage {
     super(miniProgram, 'reservation-add/index')
   }
 
-  // --- Data assertions ---
+  // ── Config/state getters (post dynamic-config refactor) ───────
 
   async getStandard() {
     return this.getData('standard')
@@ -35,12 +35,46 @@ class ReservationAddPage extends BasePage {
     return this.getData('standardPicked')
   }
 
+  async getRoom() {
+    return this.getData('room')
+  }
+
+  async getRoomOptions() {
+    return this.getData('roomOptions')
+  }
+
+  async getCurrentRoomConfig() {
+    return this.getData('currentRoomConfig')
+  }
+
+  async getTimeOptions() {
+    return this.getData('timeOptions')
+  }
+
+  async getExclusiveOptions() {
+    return this.getData('exclusiveOptions')
+  }
+
+  async getFormFields() {
+    return this.getData('formFields')
+  }
+
+  async getFormConfigFields() {
+    return this.getData('formConfigFields')
+  }
+
+  async getFormData() {
+    return this.getData('formData')
+  }
+
   async getCustomerName() {
-    return this.getData('customerName')
+    const formData = await this.getData('formData')
+    return formData ? formData.customerName : ''
   }
 
   async getDishPrice() {
-    return this.getData('dishPrice')
+    const formData = await this.getData('formData')
+    return formData ? formData.dishPrice : ''
   }
 
   async getBossList() {
@@ -59,7 +93,7 @@ class ReservationAddPage extends BasePage {
     return this.getData('isEdit')
   }
 
-  // --- Actions ---
+  // ── Actions ──────────────────────────────────────────────────
 
   async togglePartner() {
     return this.callMethod('togglePartner')
@@ -69,16 +103,36 @@ class ReservationAddPage extends BasePage {
     return this.setData({ standard: value, standardPicked: true })
   }
 
+  async selectRoom(roomId) {
+    return this.callMethod('selectRoom', { currentTarget: { dataset: { value: roomId } } })
+  }
+
+  async setRoomDirect(roomId) {
+    return this.setData({ room: roomId })
+  }
+
+  async setFormField(fieldId, value) {
+    return this.setData({ ['formData.' + fieldId]: value })
+  }
+
   async setCustomerName(name) {
-    return this.setData({ customerName: name })
+    return this.setData({ 'formData.customerName': name })
   }
 
   async setPhone(phone) {
-    return this.setData({ phone: phone })
+    return this.setData({ 'formData.phone': phone })
   }
 
   async setGuestCount(count) {
-    return this.setData({ guestCount: String(count) })
+    return this.setData({ 'formData.guestCount': String(count) })
+  }
+
+  async setDishPrice(val) {
+    return this.setData({ 'formData.dishPrice': String(val) })
+  }
+
+  async setRemark(remark) {
+    return this.setData({ 'formData.remark': remark })
   }
 
   async setDate(dateStr) {
@@ -89,36 +143,16 @@ class ReservationAddPage extends BasePage {
     return this.setData({ time: time })
   }
 
-  async setRoom(room) {
-    return this.setData({ room: room })
-  }
-
-  async setDishPrice(val) {
-    return this.setData({ dishPrice: String(val) })
-  }
-
   async submit() {
     return this.callMethod('onSubmit')
   }
 
-  async loadVenueSettings() {
-    return this.callMethod('loadVenueSettings')
+  async loadReservationConfig() {
+    return this.callMethod('loadReservationConfig')
   }
 
   async loadBossList() {
     return this.callMethod('loadBossList')
-  }
-
-  // --- Form field order verification ---
-
-  async getFormFieldsOrder() {
-    const page = this.page || await this.miniProgram.currentPage()
-    const card = await page.$('theme-card')
-    if (!card) return null
-    const inputs = await card.$$('.form-input')
-    if (!inputs || inputs.length === 0) return null
-    const labels = await card.$$('.form-label')
-    return labels
   }
 }
 

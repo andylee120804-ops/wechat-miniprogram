@@ -1,0 +1,52 @@
+<view class="card">
+  <!-- 头部 -->
+  <view class="card-header">
+    <text class="title">{{date}} 预约</text>
+    <text class="badge" wx:if="{{total}}">{{total}}条</text>
+  </view>
+
+  <!-- 可用时段模式 -->
+  <view class="availability" wx:if="{{mode === 'availability'}}">
+    <view class="section-title">可用时段</view>
+    <view class="slot-list">
+      <view class="slot available" wx:for="{{availableSlots}}" wx:key="startTime"
+            bindtap="onBookSlot" data-slot="{{item.startTime}}-{{item.endTime}}">
+        <text>{{item.startTime}}-{{item.endTime}}</text>
+        <text class="tag">可预约</text>
+      </view>
+    </view>
+    <view class="section-title" wx:if="{{bookedSlots.length}}">已预约</view>
+    <view class="slot-list">
+      <view class="slot booked" wx:for="{{bookedSlots}}" wx:key="startTime">
+        <text>{{item.startTime}}-{{item.endTime}}</text>
+        <text class="tag booked-tag">{{item.guestName}}</text>
+      </view>
+    </view>
+    <view class="empty" wx:if="{{!availableSlots.length && !bookedSlots.length}}">
+      <text>暂无数据</text>
+    </view>
+  </view>
+
+  <!-- 预约列表模式 -->
+  <view class="list" wx:if="{{mode === 'list'}}">
+    <view class="item" wx:for="{{reservations}}" wx:key="id"
+          bindtap="onTapItem" data-id="{{item.id}}">
+      <view class="item-left">
+        <text class="time">{{item.time}}</text>
+        <text class="room">{{item.room}}</text>
+      </view>
+      <view class="item-right">
+        <text class="guest">{{item.guestName}}</text>
+        <text class="count" wx:if="{{item.guestCount}}">{{item.guestCount}}人</text>
+      </view>
+    </view>
+    <view class="empty" wx:if="{{!reservations.length}}">
+      <text>暂无预约</text>
+    </view>
+  </view>
+
+  <!-- 错误状态 -->
+  <view class="error" wx:if="{{error}}">
+    <text>{{errorMsg}}</text>
+  </view>
+</view>

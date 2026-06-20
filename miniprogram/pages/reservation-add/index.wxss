@@ -169,6 +169,16 @@
   height: env(safe-area-inset-bottom);
 }
 
+/* Select field */
+.select-field {
+  width: 100%;
+}
+
+.select-field .pill-selector {
+  margin-top: 8rpx;
+  gap: 10rpx;
+}
+
 /* Boss Picker Modal */
 .boss-picker-list {
   padding: 0 32rpx 32rpx;
@@ -181,4 +191,42 @@
 .boss-picker-name {
   font-size: 34rpx;
   font-weight: 500;
+}
+
+/* mt-sm utility */
+.mt-sm {
+  margin-top: 12rpx;
+}
+
+/* Customer presets row */
+.customer-preset-row {
+  margin-top: 16rpx;
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.customer-preset-label {
+  font-size: 24rpx;
+  line-height: 56rpx;
+  flex-shrink: 0;
+}
+
+.customer-preset-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  flex: 1;
+}
+
+.customer-preset-pill {
+  padding: 10rpx 24rpx;
+  border-radius: 28rpx;
+  font-size: 26rpx;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+}
+
+.preset-pill-active {
+  /* inline styles override */
 }

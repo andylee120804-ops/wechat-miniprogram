@@ -5,6 +5,15 @@ const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 
+const INCOME_TYPES = [
+  { id: 'dining', name: '餐饮' },
+  { id: 'chess', name: '棋牌' },
+  { id: 'liquor', name: '酒水' },
+  { id: 'teatime', name: '茶时' },
+  { id: 'service', name: '服务' },
+  { id: 'other', name: '其他' }
+]
+
 Page({
   data: {
     theme: {},
@@ -18,13 +27,7 @@ Page({
     totalAmount: '0.00',
     activeType: '',
     typeOptions: [
-      { id: '', name: '全部' },
-      { id: 'dining', name: '餐饮' },
-      { id: 'chess', name: '棋牌' },
-      { id: 'liquor', name: '酒水' },
-      { id: 'teatime', name: '茶水' },
-      { id: 'service', name: '服务' },
-      { id: 'other', name: '其他' }
+      { id: '', name: '全部' }
     ],
     searchKeyword: '',
     // Sort
@@ -41,20 +44,25 @@ Page({
 
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ active: 3 })
+      this.getTabBar().setActiveByPage('/pages/income/index')
     }
     if (!hasPermission('income', ACTIONS.VIEW)) {
       wx.showToast({ title: '无权限', icon: 'none' })
       wx.navigateBack()
       return
     }
+    const range = getMonthRange(0)
     const theme = app.getThemePageData()
-    const range = getMonthRange(this.data.monthOffset)
     this.setData({
       theme,
       statusBarHeight: app.globalData.statusBarHeight || 44,
+      monthOffset: 0,
       currentMonth: range.label,
-      monthStr: range.monthStr
+      monthStr: range.monthStr,
+      filterDate: '',
+      filterDateDisplay: '',
+      activeType: '',
+      searchKeyword: ''
     })
     this.loadData()
   },
@@ -91,13 +99,26 @@ Page({
       const allData = (await totalPromise).data || []
       const total = allData.reduce((s, i) => s + (i.amount || 0), 0)
 
+      // Sort typeOptions by count descending ("全部" first), only show count on "全部"
+      const typeCounts = {}
+      allData.forEach(i => { const t = i.type || 'other'; typeCounts[t] = (typeCounts[t] || 0) + 1 })
+      const sortedOptions = [
+        { id: '', name: '全部', count: allData.length },
+        ...INCOME_TYPES
+          .map(t => ({ ...t, count: typeCounts[t.id] || 0 }))
+          .filter(o => o.count > 0)
+          .sort((a, b) => b.count - a.count)
+          .map(({ count, ...rest }) => rest)
+      ]
+
       this.setData({
         loading: false,
         incomes: items,
         filteredIncomes: items,
         totalAmount: formatAmount(total),
         hasMore: res.hasMore,
-        page: 1
+        page: 1,
+        typeOptions: sortedOptions
       })
       this.applyFilter()
     } catch (err) {
@@ -219,7 +240,7 @@ Page({
   },
 
   onSortToggle() {
-    const newField = this.data.sortField === 'date' ? 'createdAt' : 'date'
+    const newField = this.data.sortField === 'createdAt' ? 'date' : 'createdAt'
     this.setData({ sortField: newField })
     this.loadData()
   },

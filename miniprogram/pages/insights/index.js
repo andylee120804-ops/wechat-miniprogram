@@ -1,5 +1,5 @@
 const app = getApp()
-const { formatAmount, formatDate } = require('../../utils/helpers')
+const { formatAmount, formatDate, getMonthRange } = require('../../utils/helpers')
 const { handleCloudError } = require('../../utils/error-handler')
 const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { COLLECTIONS } = require('../../utils/db')
@@ -37,6 +37,7 @@ Page({
       const _ = dbInst.command
       const now = new Date()
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const monthStartDate = monthStart
 
       // Call getInsights cloud function for aggregated data
       const [busiestRes, topSourceRes, customerRes] = await Promise.all([
@@ -54,9 +55,10 @@ Page({
         })
       ])
 
-      // Monthly revenue for avg daily calculation
+      // Monthly revenue for avg daily calculation — date is stored as "YYYY-MM-DD" string
+      const monthRange = getMonthRange(0)
       const monthIncome = await db.queryAll(COLLECTIONS.INCOME, {
-        date: _.gte(monthStart)
+        date: _.gte(monthRange.start).and(_.lte(monthRange.end))
       })
 
       const totalMonthIncome = (monthIncome.data || []).reduce((s, i) => s + (i.amount || 0), 0)
@@ -103,18 +105,17 @@ Page({
 
       const [reservationRes, purchaseRes] = await Promise.all([
         db.queryAll(COLLECTIONS.RESERVATION, {
-          date: _.gte(monthStart),
+          date: _.gte(monthStartDate),
           status: 'confirmed'
         }),
         db.queryAll(COLLECTIONS.PURCHASE, {
-          date: _.gte(monthStart)
+          date: _.gte(monthRange.start).and(_.lte(monthRange.end))
         })
       ])
 
-      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
+      const lastMonthRange = getMonthRange(-1)
       const lastPurchase = await db.queryAll(COLLECTIONS.PURCHASE, {
-        date: _.gte(lastMonthStart).and(_.lte(lastMonthEnd))
+        date: _.gte(lastMonthRange.start).and(_.lte(lastMonthRange.end))
       })
 
       const curTotal = (purchaseRes.data || []).reduce((s, p) => s + (p.amount || 0), 0)

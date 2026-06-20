@@ -56,7 +56,12 @@
             <text class="menu-icon">{{item.icon}}</text>
             <text class="menu-text text-body" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{item.text}}</text>
           </view>
-          <text class="menu-arrow" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">›</text>
+          <view class="menu-item-right flex-row" style="align-items: center;">
+            <view wx:if="{{item.count > 0}}" class="todo-badge" style="background: rgba(251,191,36,0.15); margin-right: 12rpx;">
+              <text class="todo-badge-text" style="color: #FBBF24;">{{item.count}}</text>
+            </view>
+            <text class="menu-arrow" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">›</text>
+          </view>
         </view>
       </view>
     </view>

@@ -38,16 +38,18 @@ function setUnreadCount(count) {
       wx.setStorageSync(UNREAD_COUNT_KEY, count)
       wx.setTabBarBadge({
         index: TAB_NOTIFICATION_INDEX,
-        text: String(count)
-      }).catch(err => {
-        console.warn('[Notify] Failed to set tab bar badge:', err)
+        text: String(count),
+        fail: function(err) {
+          console.warn('[Notify] Failed to set tab bar badge:', err)
+        }
       })
     } else {
       wx.removeStorageSync(UNREAD_COUNT_KEY)
       wx.removeTabBarBadge({
-        index: TAB_NOTIFICATION_INDEX
-      }).catch(err => {
-        console.warn('[Notify] Failed to remove tab bar badge:', err)
+        index: TAB_NOTIFICATION_INDEX,
+        fail: function(err) {
+          console.warn('[Notify] Failed to remove tab bar badge:', err)
+        }
       })
     }
   } catch (e) {
@@ -62,9 +64,10 @@ function clearUnreadCount() {
   try {
     wx.removeStorageSync(UNREAD_COUNT_KEY)
     wx.removeTabBarBadge({
-      index: TAB_NOTIFICATION_INDEX
-    }).catch(err => {
-      console.warn('[Notify] Failed to remove tab bar badge on clear:', err)
+      index: TAB_NOTIFICATION_INDEX,
+      fail: function(err) {
+        console.warn('[Notify] Failed to remove tab bar badge on clear:', err)
+      }
     })
   } catch (e) {
     console.error('[Notify] Failed to clear unread count:', e)

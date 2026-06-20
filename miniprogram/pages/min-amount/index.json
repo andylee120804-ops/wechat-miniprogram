@@ -1,7 +1,8 @@
 {
   "usingComponents": {
-    "theme-card": "/components/theme-card/index"
+    "theme-card": "/components/theme-card/index",
+    "theme-modal": "/components/theme-modal/index"
   },
   "navigationStyle": "custom",
-  "navigationBarTitleText": "最低消费设置"
+  "navigationBarTitleText": "预约管理设置"
 }

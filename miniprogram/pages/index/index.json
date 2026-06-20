@@ -4,6 +4,7 @@
     "glass-card": "/components/glass-card/index",
     "theme-badge": "/components/theme-badge/index",
     "skeleton": "/components/skeleton/index",
-    "theme-btn": "/components/theme-btn/index"
+    "theme-btn": "/components/theme-btn/index",
+    "theme-modal": "/components/theme-modal/index"
   }
 }

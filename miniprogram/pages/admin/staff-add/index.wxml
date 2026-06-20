@@ -16,14 +16,11 @@
       <theme-form-item theme="{{theme}}" label="姓名" required="true">
         <input placeholder="请输入姓名" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{name}}" bindinput="onNameInput" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; height: 48rpx;" />
       </theme-form-item>
-      <theme-form-item theme="{{theme}}" label="微信号" required="true">
-        <input placeholder="请输入微信号" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{wechatId}}" bindinput="onWechatIdInput" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; height: 48rpx;" />
-      </theme-form-item>
-      <theme-form-item theme="{{theme}}" label="手机号">
-        <input type="number" placeholder="请输入手机号" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{phone}}" bindinput="onPhoneInput" maxlength="11" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; height: 48rpx;" />
+      <theme-form-item theme="{{theme}}" label="用户名" required="true">
+    <input placeholder="请输入用户名" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{wechatId}}" bindinput="onWechatIdInput" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; height: 48rpx;" />
       </theme-form-item>
       <theme-form-item theme="{{theme}}" label="月工资">
-        <input type="digit" placeholder="请输入月工资" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{salary}}" bindinput="onSalaryInput" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; height: 48rpx;" />
+        <input type="digit" placeholder="请输入月工资（选填）" placeholder-style="color: {{theme.textMuted || '#5C5C72'}};" value="{{salary}}" bindinput="onSalaryInput" style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; height: 48rpx;" />
       </theme-form-item>
       <theme-form-item theme="{{theme}}" label="入职日期">
         <picker mode="date" value="{{hireDate}}" bindchange="onHireDateChange">

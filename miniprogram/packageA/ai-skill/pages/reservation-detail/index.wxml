@@ -1,0 +1,36 @@
+<view class="detail-page">
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <view class="content" wx:if="{{!loading && reservation}}">
+    <view class="info-row">
+      <text class="label">客人</text>
+      <text class="value">{{reservation.customerName}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">房间</text>
+      <text class="value">{{reservation.room}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">时间</text>
+      <text class="value">{{reservation.time}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">人数</text>
+      <text class="value">{{reservation.guestCount}}人</text>
+    </view>
+    <view class="info-row">
+      <text class="label">状态</text>
+      <text class="value">{{reservation.status}}</text>
+    </view>
+    <view class="info-row" wx:if="{{reservation.exclusiveType && reservation.exclusiveType !== 'none'}}">
+      <text class="label">包场</text>
+      <text class="value">{{reservation.exclusiveType === 'full' ? '全体包场' : reservation.exclusiveType === 'noon' ? '午包场' : '晚包场'}}</text>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !reservation}}">
+    <text>未找到预约信息</text>
+  </view>
+</view>

@@ -25,8 +25,14 @@ Component({
 
   observers: {
     'value': function(val) {
-      if (val !== this.data.innerValue) {
-        this.setData({ innerValue: val });
+      // Only sync when parent explicitly clears the search (val === ''),
+      // to avoid overwriting user's in-progress typing during re-renders
+      if (val === '' && this.data.innerValue !== '') {
+        this.setData({ innerValue: '' });
+        if (this.data.debounceTimer) {
+          clearTimeout(this.data.debounceTimer);
+          this.data.debounceTimer = null;
+        }
       }
     }
   },

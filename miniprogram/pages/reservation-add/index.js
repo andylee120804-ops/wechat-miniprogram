@@ -1,10 +1,18 @@
-const { formatDate, getRoomName, getExclusiveTypeName } = require('../../utils/helpers')
+var _h = require('../../utils/helpers')
+var formatDate = _h.formatDate
+var getExclusiveTypeName = _h.getExclusiveTypeName
+var getChinaToday = _h.getChinaToday
+var createChinaDate = _h.createChinaDate
 const { hasPermission, ACTIONS } = require('../../utils/permission')
-const { validateRequired, validateGuestCount } = require('../../utils/validators')
 const { log, LOG_TYPES } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
+const reservationConfig = require('../../utils/reservationConfig')
+const { createSettingsCache } = require('./helpers/settings-cache')
+const { syncBanquetPurchase, deleteBanquetPurchase } = require('./helpers/sync')
+const { checkReservationConflict } = require('./helpers/conflict-check')
+const { validateReservationForm } = require('./helpers/validation')
 
 Page({
   data: {
@@ -13,100 +21,210 @@ Page({
     isEdit: false,
     id: '',
     date: '',
-    time: '中午',
+    time: '',
     exclusiveType: 'none',
-    room: 'big',
+    room: '',
     standard: 0,
     isPartner: false,
     standardPicked: false,
-    customerName: '',
-    phone: '',
-    guestCount: '',
-    remark: '',
-    dishPrice: '',
-    _dishPriceRequired: false,
     submitting: false,
-    timeOptions: ['中午', '晚上'],
-    roomOptions: [
-      { value: 'big', label: '大包厢' },
-      { value: 'small', label: '小包厢' }
-    ],
-    standardOptions: [500, 600, 800],
-    partnerStandard: 300,
-    defaultStandard: 500,
-    allowNoStandard: false,
     bossList: [],
     showBossPicker: false,
     selectedBossIndex: -1,
     errors: {},
-    showDeleteModal: false
+    showDeleteModal: false,
+
+    // ── Dynamic config-driven data ──
+    roomOptions: [],
+    rooms: [],
+    currentRoomConfig: null,
+    timeOptions: [],
+    exclusiveOptions: [],
+    standardOptions: [],
+    partnerStandard: 0,
+    defaultStandard: 0,
+    allowNoStandard: false,
+    formConfigFields: [],
+    formFields: [],
+    formData: {},
+    customerPresets: [],
+    _dishPriceRequired: false
   },
 
+  // ── Lifecycle ────────────────────────────────────────────────────
+
   async onLoad(options) {
+    this._settingsCache = createSettingsCache()
+
     const app = getApp()
     const theme = app.getThemePageData()
-    const today = formatDate(new Date())
-    this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44, date: today, todayDate: today })
+    const today = getChinaToday()
+    this.setData({
+      theme: theme,
+      statusBarHeight: app.globalData.statusBarHeight || 44,
+      date: today,
+      todayDate: today
+    })
 
-    // 先加载餐标配置和老板名单（确保默认值就绪）
-    await this.loadVenueSettings()
+    await this.loadReservationConfig()
+    // Eagerly warm settings cache to avoid first-interaction latency
+    this._settingsCache.get().catch(function() { /* swallow */ })
 
     if (options.id) {
       this.setData({ isEdit: true, id: options.id })
       this.loadReservation(options.id)
     } else if (options.date) {
-      this.setData({ date: options.date })
+      if (options.date < today) {
+        wx.showModal({
+          title: '无法创建',
+          content: '不能创建过去日期的预约',
+          showCancel: false,
+          complete: function() { wx.navigateBack() }
+        })
+      } else {
+        this.setData({ date: options.date })
+      }
     }
     this.loadDishPriceRequired()
   },
 
-  async loadVenueSettings() {
+  onBack() { wx.navigateBack() },
+
+  // ── Config loading ───────────────────────────────────────────────
+
+  async loadReservationConfig() {
     try {
+      const rooms = await reservationConfig.loadRooms()
+      const formConfig = await reservationConfig.loadFormConfig()
+      const enabledRooms = rooms.filter(function(r) { return r.enabled })
+        .sort(function(a, b) { return a.order - b.order })
+      const firstRoom = enabledRooms[0] || rooms[0]
+
+      const formData = {}
+      formConfig.fields.forEach(function(f) {
+        formData[f.id] = ''
+      })
+
+      this.setData({
+        rooms: rooms,
+        roomOptions: enabledRooms,
+        formConfigFields: formConfig.fields,
+        formData: formData,
+        room: firstRoom ? firstRoom.id : '',
+        currentRoomConfig: firstRoom
+      })
+
+      if (firstRoom) {
+        this.applyRoomConfig(firstRoom)
+      }
+      this.loadBossList()
+      this.loadCustomerPresets()
+    } catch (err) {
+      console.warn('加载预约配置失败:', err)
+      this.loadBossList()
+      this.loadCustomerPresets()
+    }
+  },
+
+  async loadCustomerPresets() {
+    try {
+      const settingsRes = await db.queryAll(COLLECTIONS.SETTINGS, { key: 'reservation_customer_presets' })
+      const doc = (settingsRes.data && settingsRes.data[0]) || null
+      const configuredPresets = (doc && Array.isArray(doc.value)) ? doc.value : []
+      this.setData({ customerPresets: configuredPresets })
+
+      const app = getApp()
+      const userInfo = app.globalData.userInfo || {}
       const res = await wx.cloud.callFunction({
         name: 'sendMessage',
-        data: { action: 'getSettings' }
+        data: {
+          action: 'getCustomerNameSuggestions',
+          callerWechatId: userInfo.wechatId || ''
+        }
       })
-      console.log('[reservation-add] getSettings result:', JSON.stringify(res.result))
-      if (res.result && res.result.success && res.result.data) {
-        const d = res.result.data
-        const standards = d.mealStandards || [500, 600, 800]
-        const defaultStd = d.defaultStandard !== undefined && d.defaultStandard !== '' ? d.defaultStandard : 0
-        const partnerStd = d.partnerStandard || 300
-
-        // 明确默认值类型
-        const isPartnerDefault = defaultStd === 'partner'
-        // 有数值默认值（如 600）且在选项里才预填，否则为 0
-        const numDefault = Number(defaultStd) || 0
-        const validDefault = numDefault > 0 && standards.includes(numDefault) ? numDefault : 0
-
-        // 明确告诉 UI 是否自动选中
-        const shouldAutoSelect = defaultStd !== '' && defaultStd !== undefined && defaultStd !== 0
-
-        this.setData({
-          standardOptions: standards,
-          partnerStandard: partnerStd,
-          defaultStandard: defaultStd,
-          allowNoStandard: d.allowNoStandard || false,
-          standard: shouldAutoSelect ? (isPartnerDefault ? partnerStd : validDefault) : 0,
-          standardPicked: shouldAutoSelect,
-          isPartner: isPartnerDefault,
-          selectedBossIndex: -1
-        })
+      if (res.result && res.result.success && Array.isArray(res.result.data)) {
+        this.setData({ customerPresets: configuredPresets.concat(res.result.data) })
       }
     } catch (err) {
-      console.warn('加载设置失败:', err)
-      // 使用默认值
-      this.setData({
-        standardOptions: [500, 600, 800],
-        partnerStandard: 300,
-        defaultStandard: 500,
-        allowNoStandard: false,
-        standard: 0,
-        standardPicked: false
-      })
+      if (err.errCode !== -502005) {
+        console.warn('加载客户预设失败:', err)
+      }
     }
-    // 无论设置加载成功与否，都尝试加载老板列表
-    this.loadBossList()
+  },
+
+  onPickPresetCustomer(e) {
+    const name = e.currentTarget.dataset.name
+    if (!name) return
+    wx.vibrateShort({ type: 'light' })
+    this.setData({
+      formData: Object.assign({}, this.data.formData, { customerName: name })
+    })
+    this.clearError('customerName')
+  },
+
+  refreshCustomerNameTop() {
+    const app = getApp()
+    const userInfo = app.globalData.userInfo || {}
+    wx.cloud.callFunction({
+      name: 'sendMessage',
+      data: {
+        action: 'refreshCustomerNameTop',
+        callerWechatId: userInfo.wechatId || ''
+      }
+    }).catch(function(err) {
+      console.warn('刷新客户标签缓存失败:', err)
+    })
+  },
+
+  applyRoomConfig(roomConfig) {
+    const resolved = reservationConfig.resolveFields(
+      this.data.formConfigFields, roomConfig.id
+    )
+
+    // Normalize exclusiveTypes to canonical order so pill labels render
+    // consistently regardless of the toggle history saved in DB.
+    const EXCLUSIVE_ORDER = ['none', 'noon', 'night', 'full']
+    const normalizedExclusive = EXCLUSIVE_ORDER.filter(function(t) {
+      return roomConfig.exclusiveTypes && roomConfig.exclusiveTypes.indexOf(t) >= 0
+    })
+
+    const updates = {
+      timeOptions: roomConfig.timeSlots,
+      exclusiveOptions: normalizedExclusive,
+      standardOptions: roomConfig.standards,
+      partnerStandard: roomConfig.partnerStandard,
+      defaultStandard: roomConfig.defaultStandard,
+      allowNoStandard: roomConfig.standards.length === 0,
+      formFields: resolved
+    }
+
+    if (!roomConfig.timeSlots.includes(this.data.time)) {
+      updates.time = roomConfig.timeSlots[0] || ''
+    }
+    if (!roomConfig.exclusiveTypes.includes(this.data.exclusiveType)) {
+      updates.exclusiveType = roomConfig.exclusiveTypes.includes('none') ? 'none' :
+        roomConfig.exclusiveTypes[0] || 'none'
+    }
+
+    // Auto-select defaultStandard when valid; otherwise clear stale selection.
+    if (!this.data.isPartner) {
+      const ds = Number(roomConfig.defaultStandard) || 0
+      if (ds > 0 && roomConfig.standards.indexOf(ds) >= 0) {
+        const currentInOptions = roomConfig.standards.indexOf(this.data.standard) >= 0
+        if (!this.data.standardPicked || !currentInOptions) {
+          updates.standard = ds
+          updates.standardPicked = true
+        }
+      } else if (roomConfig.standards.length === 0) {
+        updates.standard = 0
+        updates.standardPicked = false
+      } else if (!roomConfig.standards.includes(this.data.standard)) {
+        updates.standard = 0
+        updates.standardPicked = false
+      }
+    }
+
+    this.setData(updates)
   },
 
   async loadBossList() {
@@ -120,10 +238,6 @@ Page({
     }
   },
 
-  onBack() {
-    wx.navigateBack()
-  },
-
   async loadReservation(id) {
     try {
       wx.showLoading({ title: '加载中' })
@@ -133,31 +247,50 @@ Page({
         setTimeout(function() { wx.navigateBack() }, 1500)
         return
       }
+
       const isPartner = res.isPartner || false
       let selectedBossIndex = -1
-      if (isPartner && this.data.bossList.length === 0) {
-        await this.loadBossList()
-      }
       if (isPartner && this.data.bossList.length > 0) {
         selectedBossIndex = this.data.bossList.findIndex(function(b) { return b.name === res.customerName })
       }
-      // 编辑模式：直接用原预约的餐标值，不自动填充默认值
+
+      const formData = {}
+      this.data.formConfigFields.forEach(function(f) {
+        if (f.builtin) {
+          formData[f.id] = res[f.id] !== undefined ? String(res[f.id]) : ''
+        }
+      })
+      const customFields = res.customFields || {}
+      this.data.formConfigFields.forEach(function(f) {
+        if (!f.builtin && customFields[f.id] !== undefined) {
+          formData[f.id] = String(customFields[f.id])
+        }
+      })
+
+      const room = res.room || 'big'
+      let roomConfig = this.data.roomOptions.find(function(r) { return r.id === room })
+      if (!roomConfig) {
+        roomConfig = this.data.rooms.find(function(r) { return r.id === room }) || this.data.currentRoomConfig
+      }
+
       const hasStandard = res.standard !== undefined && res.standard !== null && res.standard !== 0
+
       this.setData({
         date: formatDate(res.date),
         time: res.time || '中午',
         exclusiveType: res.exclusiveType || (res.isExclusive ? 'full' : 'none'),
-        room: res.room || 'big',
+        room: room,
+        currentRoomConfig: roomConfig,
         standard: hasStandard ? res.standard : 0,
         isPartner: isPartner,
         standardPicked: hasStandard || isPartner,
-        customerName: res.customerName || '',
-        phone: res.phone || '',
-        guestCount: res.guestCount ? String(res.guestCount) : '',
-        remark: res.remark || '',
-        dishPrice: res.dishPrice ? String(res.dishPrice) : '',
-        selectedBossIndex: selectedBossIndex
+        selectedBossIndex: selectedBossIndex,
+        formData: formData
       })
+
+      if (roomConfig) {
+        this.applyRoomConfig(roomConfig)
+      }
       this.loadDishPriceRequired()
       wx.hideLoading()
     } catch (err) {
@@ -166,9 +299,11 @@ Page({
     }
   },
 
+  // ── Field handlers ───────────────────────────────────────────────
+
   onDateChange(e) {
     const selected = e.detail.value
-    const today = formatDate(new Date())
+    const today = getChinaToday()
     if (selected < today) {
       wx.showToast({ title: '不能选择过去的日期', icon: 'none' })
       return
@@ -186,28 +321,50 @@ Page({
 
   selectExclusive(e) {
     wx.vibrateShort({ type: 'light' })
-    const value = e.currentTarget.dataset.value
-    this.setData({ exclusiveType: value })
+    this.setData({ exclusiveType: e.currentTarget.dataset.value })
     this.clearError('room')
   },
 
   selectRoom(e) {
     wx.vibrateShort({ type: 'light' })
-    this.setData({ room: e.currentTarget.dataset.value })
+    const roomId = e.currentTarget.dataset.value
+    const roomConfig = this.data.roomOptions.find(function(r) { return r.id === roomId })
+    if (!roomConfig) return
+
+    // Capture previous room id BEFORE any setData to avoid race when
+    // user rapidly switches rooms.
+    const previousRoomId = this.data.room
+    this.setData({ room: roomId, currentRoomConfig: roomConfig })
+    this.applyRoomConfig(roomConfig)
+    this._clearFieldsHiddenByRoomTransition(previousRoomId, roomId)
+
     this.clearError('room')
+    this.loadDishPriceRequired()
+  },
+
+  _clearFieldsHiddenByRoomTransition(oldRoomId, newRoomId) {
+    const oldFields = reservationConfig.resolveFields(this.data.formConfigFields, oldRoomId)
+    const newFields = reservationConfig.resolveFields(this.data.formConfigFields, newRoomId)
+    const updates = {}
+    oldFields.forEach(function(f) {
+      if (!newFields.find(function(nf) { return nf.id === f.id })) {
+        updates['formData.' + f.id] = ''
+      }
+    })
+    if (Object.keys(updates).length > 0) {
+      this.setData(updates)
+    }
   },
 
   selectStandard(e) {
     wx.vibrateShort({ type: 'light' })
     const value = Number(e.currentTarget.dataset.value)
     if (this.data.standard === value && this.data.standardPicked) {
-      // 股东已选中时，餐标由股东满足，取消数字选项允许
       if (this.data.isPartner) {
         this.setData({ standard: 0, standardPicked: false })
         this.clearError('standard')
         return
       }
-      // Only allow deselection if allowNoStandard is enabled
       if (!this.data.allowNoStandard) {
         wx.showToast({ title: '设置要求必须选择餐标', icon: 'none' })
         return
@@ -219,22 +376,19 @@ Page({
     this.clearError('standard')
   },
 
-  togglePartner(e) {
+  togglePartner() {
     wx.vibrateShort({ type: 'light' })
     const newVal = !this.data.isPartner
     const updates = { isPartner: newVal, selectedBossIndex: -1 }
     if (newVal) {
-      // 选股东：自动使用股东餐标
       updates.standard = this.data.partnerStandard
       updates.standardPicked = true
     } else {
-      // 取消股东：如果要求必选餐标，重置为0让用户手动选
       if (!this.data.allowNoStandard) {
         updates.standard = 0
         updates.standardPicked = false
       } else {
-        let defaultStd = this.data.defaultStandard
-        if (defaultStd === 'partner') defaultStd = this.data.partnerStandard
+        const defaultStd = this.data.defaultStandard
         updates.standard = defaultStd || 0
         updates.standardPicked = !!updates.standard
       }
@@ -254,7 +408,7 @@ Page({
     const boss = this.data.bossList[index]
     if (boss) {
       this.setData({
-        customerName: boss.name,
+        formData: { ...this.data.formData, customerName: boss.name },
         selectedBossIndex: index,
         showBossPicker: false
       })
@@ -266,173 +420,51 @@ Page({
     this.setData({ showBossPicker: false })
   },
 
-  onCustomerNameInput(e) {
-    this.setData({ customerName: e.detail.value })
-    this.clearError('customerName')
-  },
-
-  onPhoneInput(e) {
-    this.setData({ phone: e.detail.value })
-    this.clearError('phone')
-  },
-
-  onGuestCountInput(e) {
-    this.setData({ guestCount: e.detail.value })
-    this.clearError('guestCount')
-  },
-
-  onRemarkInput(e) {
-    this.setData({ remark: e.detail.value })
-  },
-
-  onDishPriceInput(e) {
-    this.setData({ dishPrice: e.detail.value })
-  },
-
-  async syncBanquetPurchase(docData, reservationId, isCreate) {
-    try {
-      const dishPrice = Number(docData.dishPrice) || 0
-      const existing = await db.queryAll(COLLECTIONS.PURCHASE, {
-        sourceReservationId: reservationId
-      })
-      const hasExisting = existing.data && existing.data.length > 0
-      const first = hasExisting ? existing.data[0] : null
-
-      if (dishPrice > 0) {
-        const app = getApp()
-        const userInfo = app.globalData.userInfo || {}
-        const remark = (docData.customerName || '') + ' - ' + (docData.roomName || '')
-        const purchaseData = {
-          amount: dishPrice, category: 'banquet',
-          date: formatDate(docData.date), remark, item: '',
-          purchaseBy: userInfo._id || '', purchaseByName: userInfo.name || userInfo.nickName || '',
-          sourceReservationId: reservationId, autoGenerated: true
-        }
-        if (!purchaseData.purchaseBy) delete purchaseData.purchaseBy
-
-        if (hasExisting) {
-          if (!isCreate) await db.updateDoc(COLLECTIONS.PURCHASE, first._id, purchaseData)
-        } else {
-          await db.addDoc(COLLECTIONS.PURCHASE, purchaseData)
-        }
-      } else {
-        // dishPrice is 0 — delete autoGenerated record only
-        if (first && first.autoGenerated) {
-          await db.deleteDoc(COLLECTIONS.PURCHASE, first._id)
-        }
-      }
-    } catch (err) {
-      console.warn('[banquet-sync] 同步宴会菜价失败:', err)
+  onFieldInput(e) {
+    const fieldId = e.currentTarget.dataset.fieldid
+    const key = 'formData.' + fieldId
+    this.setData({ [key]: e.detail.value })
+    if (fieldId !== 'remark') {
+      this.clearError(fieldId)
     }
   },
 
-  async syncIncome(docData, reservationId, isCreate) {
-    try {
-      const dishPrice = Number(docData.dishPrice) || 0
-      if (dishPrice <= 0) return
-      const time = docData.time || '中午'
-
-      // Load service charge settings (cached on page instance to avoid duplicate queries)
-      const settings = await this._getSettingsCache()
-      const chargeNoon = Number(settings.serviceChargeNoon) || 0
-      const chargeNight = Number(settings.serviceChargeNight) || 0
-      const charge = time === '中午' ? chargeNoon : chargeNight
-      const amount = dishPrice + charge
-
-      const existing = await db.queryAll(COLLECTIONS.INCOME, { reservationId })
-      const hasExisting = existing.data && existing.data.length > 0
-      const first = hasExisting ? existing.data[0] : null
-
-      const app = getApp()
-      const userInfo = app.globalData.userInfo || {}
-
-      const incomeData = {
-        type: 'dining',
-        amount,
-        date: formatDate(docData.date),
-        source: docData.customerName || '',
-        reservationId,
-        remark: '',
-        collectedBy: userInfo._id || '',
-        collectedByName: userInfo.name || '',
-        calcMode: 'dishPrice',
-        dishPrice,
-        serviceCharge: charge,
-        guestCount: docData.guestCount || 0,
-        standard: docData.standard || 0,
-        roomName: docData.roomName || '',
-        autoGenerated: true
-      }
-
-      if (hasExisting) {
-        if (!isCreate) await db.updateDoc(COLLECTIONS.INCOME, first._id, incomeData)
-      } else {
-        await db.addDoc(COLLECTIONS.INCOME, incomeData)
-        await db.updateDoc(COLLECTIONS.RESERVATION, reservationId, { hasIncome: true })
-      }
-    } catch (err) {
-      console.warn('[banquet-sync] 同步收入失败:', err)
+  onSelectOptionToggle(e) {
+    const fieldId = e.currentTarget.dataset.fieldid
+    const option = e.currentTarget.dataset.option
+    const current = this.data.formData[fieldId] || ''
+    const selected = current ? current.split(',') : []
+    const idx = selected.indexOf(option)
+    if (idx >= 0) {
+      selected.splice(idx, 1)
+    } else {
+      selected.push(option)
     }
+    this.setData({ ['formData.' + fieldId]: selected.join(',') })
   },
 
-  async deleteBanquetPurchase(reservationId) {
-    try {
-      const purchases = await db.queryAll(COLLECTIONS.PURCHASE, {
-        sourceReservationId: reservationId
-      })
-      for (const p of (purchases.data || [])) {
-        await db.deleteDoc(COLLECTIONS.PURCHASE, p._id)
-      }
-      const incomes = await db.queryAll(COLLECTIONS.INCOME, {
-        reservationId: reservationId
-      })
-      for (const inc of (incomes.data || [])) {
-        await db.deleteDoc(COLLECTIONS.INCOME, inc._id)
-      }
-    } catch (err) {
-      console.warn('[banquet-sync] 删除关联记录失败:', err)
+  onSelectOptionAdd(e) {
+    const fieldId = e.currentTarget.dataset.fieldid
+    const value = e.detail.value.trim()
+    if (!value) return
+    const current = this.data.formData[fieldId] || ''
+    const selected = current ? current.split(',') : []
+    if (!selected.includes(value)) {
+      selected.push(value)
     }
+    this.setData({ ['formData.' + fieldId]: selected.join(',') })
   },
 
-  showSyncConfirmDialog() {
-    return new Promise((resolve, reject) => {
-      wx.showModal({
-        title: '同步确认',
-        content: '该预约已有采购和收入记录，修改将同步更新，是否继续？',
-        success: (res) => {
-          if (res.confirm) resolve()
-          else reject(new Error('用户取消同步'))
-        }
-      })
-    })
-  },
-
-  isPastDate(dateStr) {
-    const today = new Date()
-    const todayStr = today.getFullYear() + '-' +
-      String(today.getMonth() + 1).padStart(2, '0') + '-' +
-      String(today.getDate()).padStart(2, '0')
-    return dateStr < todayStr
-  },
+  // ── Settings cache wrappers ─────────────────────────────────────
 
   async loadDishPriceRequired() {
     const required = await this.isDishPriceRequired(this.data.date)
     this.setData({ _dishPriceRequired: required })
   },
 
-  async _getSettingsCache() {
-    if (!this._settingsCache) {
-      const res = await db.queryAll(COLLECTIONS.SETTINGS, {})
-      const settings = {}
-      ;(res.data || []).forEach(s => { if (!(s.key in settings)) settings[s.key] = s.value })
-      this._settingsCache = settings
-    }
-    return this._settingsCache
-  },
-
   async shouldSync(dateStr) {
     try {
-      const settings = await this._getSettingsCache()
+      const settings = await this._settingsCache.get()
       if (!settings.serviceChargeEnabled) return false
       if (!settings.serviceChargeEnabledDate) return false
       if (dateStr < settings.serviceChargeEnabledDate) return false
@@ -443,15 +475,21 @@ Page({
     }
   },
 
-  clearError(field) {
-    if (this.data.errors[field]) {
-      this.setData({ errors: { ...this.data.errors, [field]: '' } })
+  async isAutoPurchaseEnabled() {
+    try {
+      const settings = await this._settingsCache.get()
+      const rules = settings.approval_rules
+      if (!rules) return true
+      return rules.autoPurchaseEnabled !== false
+    } catch (err) {
+      console.warn('[isAutoPurchaseEnabled] 检查失败:', err)
+      return true
     }
   },
 
   async isDishPriceRequired(dateStr) {
     try {
-      const settings = await this._getSettingsCache()
+      const settings = await this._settingsCache.get()
       if (!settings.serviceChargeEnabled) return false
       if (!settings.serviceChargeEnabledDate) return false
       return dateStr >= settings.serviceChargeEnabledDate
@@ -461,70 +499,50 @@ Page({
     }
   },
 
+  clearError(field) {
+    if (this.data.errors[field]) {
+      this.setData({ errors: { ...this.data.errors, [field]: '' } })
+    }
+  },
+
+  isPastDate(dateStr) {
+    return dateStr < getChinaToday()
+  },
+
+  // ── Validation & submit ─────────────────────────────────────────
+
   validate() {
-    const errors = {}
-    const data = this.data
-
-    const dateResult = validateRequired(data.date, '日期')
-    if (!dateResult.valid) errors.date = dateResult.message
-
-    if (!errors.date && data.date < formatDate(new Date())) {
-      errors.date = '不能选择过去的日期'
-    }
-
-    const nameResult = validateRequired(data.customerName, '客户姓名')
-    if (!nameResult.valid) errors.customerName = nameResult.message
-
-    // Phone is optional; only validate format if provided
-    if (data.phone && data.phone.trim()) {
-      const phoneRegex = /^1[3-9]\d{9}$/
-      if (!phoneRegex.test(String(data.phone).trim())) {
-        errors.phone = '请输入正确的手机号'
-      }
-    }
-
-    const guestResult = validateGuestCount(data.guestCount)
-    if (!guestResult.valid) errors.guestCount = guestResult.message
-
-    if (data.exclusiveType === 'none' && !data.room) {
-      errors.room = '请选择包厢'
-    }
-
-    if (!data.allowNoStandard && !data.standardPicked) {
-      errors.standard = '请选择餐标'
-    }
-
-    // Service fee mode: dishPrice is required
-    if (this.data._dishPriceRequired) {
-      const dp = Number(data.dishPrice) || 0
-      if (dp <= 0) {
-        errors.dishPrice = '服务费模式下菜价必须填写'
-      }
-    }
-
-    this.setData({ errors })
+    const errors = validateReservationForm({
+      date: this.data.date,
+      exclusiveType: this.data.exclusiveType,
+      room: this.data.room,
+      formData: this.data.formData,
+      formFields: this.data.formFields,
+      allowNoStandard: this.data.allowNoStandard,
+      standardPicked: this.data.standardPicked,
+      dishPriceRequired: this.data._dishPriceRequired
+    })
+    this.setData({ errors: errors })
     return Object.keys(errors).length === 0
   },
 
   async onSubmit() {
     if (this.data.submitting) return
 
-    // Block editing past reservations
-    if (this.data.isEdit && this.isPastDate(this.data.date)) {
+    if (this.isPastDate(this.data.date)) {
       wx.showModal({
-        title: '无法修改',
-        content: '预约已经过期无法修改',
+        title: '无法操作',
+        content: this.data.isEdit ? '预约已经过期无法修改' : '不能创建过去日期的预约',
         showCancel: false
       })
       this.setData({ submitting: false })
       return
     }
 
-    // Direct check: if allowNoStandard is off and no standard selected, block with modal
     if (!this.data.allowNoStandard && !this.data.standardPicked) {
       wx.showModal({
         title: '餐标未选择',
-        content: '当前设置要求预约时必须选择餐标，请在「餐标」区域点击选择一项',
+        content: '当前的房间设置要求必须选择餐标，请在「餐标」区域点击选择一项',
         showCancel: false
       })
       return
@@ -552,86 +570,22 @@ Page({
     wx.showLoading({ title: '保存中' })
 
     try {
-      // Check for conflicts
-      await this.checkReservationConflict()
-
-      const app = getApp()
-      const userInfo = app.globalData.userInfo || {}
-
-      const et = this.data.exclusiveType
-      const roomName = getExclusiveTypeName(et, this.data.room)
-
-      const docData = {
-        date: new Date(this.data.date + 'T00:00:00'),
+      await checkReservationConflict({
+        dateStr: this.data.date,
         time: this.data.time,
+        room: this.data.room,
         exclusiveType: this.data.exclusiveType,
-        isPartner: this.data.isPartner,
-        room: et === 'none' ? this.data.room : 'big',
-        roomName: roomName,
-        standard: Number(this.data.standard),
-        customerName: this.data.customerName.trim(),
-        phone: this.data.phone.trim(),
-        guestCount: Number(this.data.guestCount),
-        remark: this.data.remark.trim(),
-        dishPrice: Number(this.data.dishPrice) || 0,
-        hasIncome: false
-      }
+        isEdit: this.data.isEdit,
+        id: this.data.id
+      })
+
+      const docData = this._buildDocData()
 
       if (this.data.isEdit) {
-        // Load old data for change tracking
-        const oldData = await db.getDoc(COLLECTIONS.RESERVATION, this.data.id)
-        await db.updateDoc(COLLECTIONS.RESERVATION, this.data.id, docData)
-
-        // Sync banquet purchase and income — create if today & missing, otherwise only update existing
-        const dateStr = formatDate(docData.date)
-        if (await this.shouldSync(dateStr)) {
-          const oldDishPrice = oldData ? (Number(oldData.dishPrice) || 0) : 0
-          const newDishPrice = Number(docData.dishPrice) || 0
-          const oldCustomerName = oldData ? (oldData.customerName || '') : ''
-          const oldRoomName = oldData ? (oldData.roomName || '') : ''
-          const hasDishPriceChanged = newDishPrice !== oldDishPrice
-          const hasRemarkChanged = docData.customerName !== oldCustomerName || docData.roomName !== oldRoomName
-
-          if (hasDishPriceChanged || hasRemarkChanged) {
-            if (this.isPastDate(dateStr)) {
-              await this.showSyncConfirmDialog()
-            }
-            const isToday = dateStr === formatDate(new Date())
-            await this.syncBanquetPurchase(docData, this.data.id, isToday)
-            if (hasDishPriceChanged) {
-              await this.syncIncome(docData, this.data.id, isToday)
-            }
-          }
-        }
-        // Log changes with before/after details
-        if (oldData) {
-          const changes = {}
-          const trackedFields = { standard: '餐标', roomName: '包厢', time: '时段', customerName: '客户', phone: '电话', guestCount: '人数', date: '日期', exclusiveType: '包场类型', remark: '备注', isPartner: '股东', dishPrice: '菜价' }
-          Object.keys(trackedFields).forEach(function(f) {
-            const oldVal = oldData[f]
-            const newVal = docData[f]
-            if (String(oldVal) !== String(newVal)) {
-              changes[trackedFields[f]] = { from: oldVal, to: newVal }
-            }
-          })
-          log(LOG_TYPES.RESERVATION_UPDATE, docData.customerName + ' 修改预约', { id: this.data.id, changes: changes })
-        } else {
-          log(LOG_TYPES.RESERVATION_UPDATE, '更新预约: ' + docData.customerName, { id: this.data.id })
-        }
+        await this._updateReservation(docData)
         wx.showToast({ title: '更新成功', icon: 'success' })
       } else {
-        docData.status = 'confirmed'
-        docData.createdBy = userInfo._id || ''
-        docData.createdByName = userInfo.name || userInfo.nickName || ''
-        const result = await db.addDoc(COLLECTIONS.RESERVATION, docData)
-        // 预约当天才立即创建采购和收入，未来日期由云函数在当天自动生成
-        const dateStr = formatDate(docData.date)
-        const isToday = dateStr === formatDate(new Date())
-        if (isToday && await this.shouldSync(dateStr)) {
-          await this.syncBanquetPurchase(docData, result._id, true)
-          await this.syncIncome(docData, result._id, true)
-        }
-        log(LOG_TYPES.RESERVATION_CREATE, '创建预约: ' + docData.customerName, { id: result._id })
+        await this._createReservation(docData)
         wx.showToast({ title: '创建成功', icon: 'success' })
       }
 
@@ -647,68 +601,166 @@ Page({
     }
   },
 
-  async checkReservationConflict() {
-    try {
-      const dbInstance = db.getDb()
-      const _ = dbInstance.command
+  _buildDocData() {
+    const formData = this.data.formData
+    const roomConfig = this.data.currentRoomConfig || {}
+    const docData = {}
+    const customFields = {}
 
-      const parts = this.data.date.split('-')
-      const dayStart = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 0, 0, 0)
-      const dayEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 23, 59, 59)
-
-      const et = this.data.exclusiveType
-
-      // Build conditions
-      const conditions = [
-        { date: _.gte(dayStart).and(_.lte(dayEnd)) },
-        { status: 'confirmed' }
-      ]
-
-      // When editing, exclude self
-      if (this.data.isEdit) {
-        conditions.push({ _id: _.neq(this.data.id) })
-      }
-
-      if (et === 'none') {
-        // Regular room: same time + same room, OR any full-day exclusive
-        conditions.push(_.or([
-          { time: this.data.time, room: this.data.room },
-          { exclusiveType: 'full' }
-        ]))
-      } else if (et === 'noon') {
-        // Noon exclusive: same time slot, OR any full-day exclusive
-        conditions.push(_.or([
-          { time: '中午' },
-          { exclusiveType: 'full' }
-        ]))
-      } else if (et === 'night') {
-        // Night exclusive: same time slot, OR any full-day exclusive
-        conditions.push(_.or([
-          { time: '晚上' },
-          { exclusiveType: 'full' }
-        ]))
-      }
-      // 'full': check ALL reservations on this date (no extra filter needed)
-
-      const where = _.and(conditions)
-
-      const res = await db.queryAll(COLLECTIONS.RESERVATION, where)
-      if (res.data && res.data.length > 0) {
-        if (et === 'full') {
-          throw new Error('该时段已被包场（全天），请更换时间')
-        } else if (et === 'noon') {
-          throw new Error('该时段已被包场（中午），请更换时间')
-        } else if (et === 'night') {
-          throw new Error('该时段已被包场（晚上），请更换时间')
+    this.data.formFields.forEach(function(f) {
+      const raw = formData[f.id]
+      if (f.builtin) {
+        if (f.id === 'guestCount') {
+          docData.guestCount = Number(raw) || 0
+        } else if (f.id === 'dishPrice') {
+          docData.dishPrice = Number(raw) || 0
+        } else {
+          docData[f.id] = typeof raw === 'string' ? raw.trim() : raw
         }
-        throw new Error('该时段【' + getRoomName(this.data.room) + '】已有预约，请更换时间或包厢')
+      } else {
+        customFields[f.id] = f.type === 'number' ? (Number(raw) || 0) :
+                             (typeof raw === 'string' ? raw.trim() : raw)
       }
-    } catch (err) {
-      if (err.message && (err.message.indexOf('已被包场') !== -1 || err.message.indexOf('已有预约') !== -1)) {
-        throw err
+    })
+
+    const et = this.data.exclusiveType
+    docData.date = createChinaDate(this.data.date)
+    docData.time = this.data.time
+    docData.exclusiveType = et
+    docData.isPartner = this.data.isPartner
+    docData.room = this.data.room
+    docData.roomName = getExclusiveTypeName(et, this.data.room)
+    docData.standard = Number(this.data.standard) || 0
+    docData.customFields = customFields
+    docData.hasIncome = false
+
+    if (roomConfig.standards && roomConfig.standards.length === 0 && et === 'none') {
+      docData.standard = 0
+    }
+
+    return docData
+  },
+
+  async _createReservation(docData) {
+    const app = getApp()
+    const userInfo = app.globalData.userInfo || {}
+    const appUser = app.globalData.userInfo || {}
+    docData.status = 'confirmed'
+    docData.createdBy = userInfo._id || ''
+    docData.createdByName = userInfo.name || userInfo.nickName || ''
+
+    const result = await db.addDoc(COLLECTIONS.RESERVATION, docData)
+    // 创建成功后，调用云函数写入变动日志（仅写日志，不影响预约记录的 _openid）
+    try {
+      await wx.cloud.callFunction({
+        name: 'sendMessage',
+        data: {
+          action: 'logReservationCreated',
+          reservationId: result._id,
+          docData: docData,
+          callerWechatId: appUser.wechatId || ''
+        }
+      })
+    } catch (e) {
+      console.warn('写入预约变动日志失败:', e)
+    }
+    this.refreshCustomerNameTop()
+    const dateStr = formatDate(docData.date)
+    const isToday = dateStr === getChinaToday()
+
+    if (isToday && await this.shouldSync(dateStr)) {
+      const settings = await this._settingsCache.get()
+      const autoPurchaseEnabled = await this.isAutoPurchaseEnabled()
+      if (autoPurchaseEnabled) {
+        // syncBanquetPurchase now also generates income from the purchase + service charge
+        await syncBanquetPurchase({
+          docData: docData, reservationId: result._id, isCreate: true,
+          roomConfig: this.data.currentRoomConfig, settings: settings, userInfo: userInfo
+        })
       }
     }
+    log(LOG_TYPES.RESERVATION_CREATE, '创建预约: ' + docData.customerName, { id: result._id })
   },
+
+  async _updateReservation(docData) {
+    const app = getApp()
+    const userInfo = app.globalData.userInfo || {}
+    const appUser = getApp().globalData.userInfo || {}
+    const updateRes = await wx.cloud.callFunction({
+      name: 'sendMessage',
+      data: {
+        action: 'updateReservationAmountWithChange',
+        reservationId: this.data.id,
+        docData: docData,
+        callerWechatId: appUser.wechatId || ''
+      }
+    })
+    if (!updateRes.result || !updateRes.result.success) {
+      throw new Error((updateRes.result && updateRes.result.message) || '更新预约失败')
+    }
+    this.refreshCustomerNameTop()
+    const oldData = updateRes.result.before
+
+    const dateStr = formatDate(docData.date)
+    if (await this.shouldSync(dateStr)) {
+      const oldDishPrice = oldData ? (Number(oldData.dishPrice) || 0) : 0
+      const newDishPrice = Number(docData.dishPrice) || 0
+      const oldCustomerName = oldData ? (oldData.customerName || '') : ''
+      const oldRoomName = oldData ? (oldData.roomName || '') : ''
+      const hasDishPriceChanged = newDishPrice !== oldDishPrice
+      const hasRemarkChanged = docData.customerName !== oldCustomerName || docData.roomName !== oldRoomName
+
+      if (hasDishPriceChanged || hasRemarkChanged) {
+        if (this.isPastDate(dateStr)) {
+          await this.showSyncConfirmDialog()
+        }
+        const isTodayOrPast = dateStr <= getChinaToday()
+        if (isTodayOrPast) {
+          const settings = await this._settingsCache.get()
+          const autoPurchaseEnabled = await this.isAutoPurchaseEnabled()
+          if (autoPurchaseEnabled) {
+            // syncBanquetPurchase now also generates income from the purchase + service charge
+            await syncBanquetPurchase({
+              docData: docData, reservationId: this.data.id, isCreate: false,
+              roomConfig: this.data.currentRoomConfig, settings: settings, userInfo: userInfo
+            })
+          }
+        }
+      }
+    }
+
+    if (oldData) {
+      const changes = {}
+      const trackedFields = {
+        standard: '餐标', roomName: '包厢', time: '时段', customerName: '客户',
+        phone: '电话', guestCount: '人数', date: '日期', exclusiveType: '包场类型',
+        remark: '备注', isPartner: '股东', dishPrice: '菜价'
+      }
+      Object.keys(trackedFields).forEach(function(f) {
+        if (String(oldData[f]) !== String(docData[f])) {
+          changes[trackedFields[f]] = { from: oldData[f], to: docData[f] }
+        }
+      })
+      log(LOG_TYPES.RESERVATION_UPDATE, docData.customerName + ' 修改预约', { id: this.data.id, changes: changes })
+    } else {
+      log(LOG_TYPES.RESERVATION_UPDATE, '更新预约: ' + docData.customerName, { id: this.data.id })
+    }
+  },
+
+  showSyncConfirmDialog() {
+    return new Promise(function(resolve, reject) {
+      wx.showModal({
+        title: '同步确认',
+        content: '该预约已有采购和收入记录，修改将同步更新，是否继续？',
+        success: function(res) {
+          if (res.confirm) resolve()
+          else reject(new Error('用户取消同步'))
+        }
+      })
+    })
+  },
+
+  // ── Delete ──────────────────────────────────────────────────────
 
   onDelete() {
     if (!hasPermission('reservation', ACTIONS.DELETE)) {
@@ -726,8 +778,19 @@ Page({
     this.setData({ showDeleteModal: false })
     try {
       wx.showLoading({ title: '删除中' })
-      await this.deleteBanquetPurchase(this.data.id)
-      await db.deleteDoc(COLLECTIONS.RESERVATION, this.data.id)
+      const app = getApp()
+      const userInfo = app.globalData.userInfo || {}
+      const deleteRes = await wx.cloud.callFunction({
+        name: 'sendMessage',
+        data: {
+          action: 'deleteReservationWithChange',
+          reservationId: this.data.id,
+          callerWechatId: userInfo.wechatId || ''
+        }
+      })
+      if (!deleteRes.result || !deleteRes.result.success) {
+        throw new Error((deleteRes.result && deleteRes.result.message) || '删除预约失败')
+      }
       log(LOG_TYPES.RESERVATION_DELETE, '删除预约: ' + this.data.customerName, { id: this.data.id })
       wx.hideLoading()
       wx.showToast({ title: '已删除', icon: 'success' })

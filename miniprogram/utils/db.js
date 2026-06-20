@@ -23,7 +23,8 @@ const COLLECTIONS = {
   NOTIFICATION_LOG: 'notification_log',
   SETTINGS: 'settings',
   PERMISSIONS: 'permissions',
-  APPROVAL_LOG: 'purchase_approval_log'
+  APPROVAL_LOG: 'purchase_approval_log',
+  RESERVATION_CHANGE_LOG: 'reservation_change_log'
 }
 
 /**

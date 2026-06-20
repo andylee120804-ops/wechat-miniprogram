@@ -26,7 +26,7 @@ const INK_GOLD_THEME = {
   gradient: {
     header: 'linear-gradient(135deg, #1A1A2E 0%, #252540 100%)',
     button: 'linear-gradient(135deg, #C9A96E 0%, #E8D5A8 100%)',
-    fab: 'linear-gradient(135deg, #C9A96E 0%, #D4B87A 100%)',
+    fab: 'linear-gradient(145deg, #E8D5A8 0%, #C9A96E 40%, #A68B4B 100%)',
     avatar: 'linear-gradient(135deg, #C9A96E 0%, #8B6F3A 100%)',
     profit: 'linear-gradient(135deg, #2D6A4F 0%, #40916C 100%)',
     loss: 'linear-gradient(135deg, #9B2335 0%, #C1404D 100%)'
@@ -97,7 +97,7 @@ const INK_GOLD_THEME = {
   // Shadows
   shadows: {
     sm: '0 2rpx 8rpx rgba(0, 0, 0, 0.20)',
-    md: '0 8rpx 24rpx rgba(0, 0, 0, 0.28)',
+    md: '0 8rpx 24rpx rgba(0, 0, 0, 0.28), 0 4rpx 16rpx rgba(201, 169, 110, 0.20)',
     lg: '0 16rpx 48rpx rgba(0, 0, 0, 0.36)'
   },
 

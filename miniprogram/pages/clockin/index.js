@@ -1,5 +1,12 @@
 const app = getApp()
-const { formatDate, formatTime, calcWorkDuration, isLate } = require('../../utils/helpers')
+var _h = require('../../utils/helpers')
+var formatDate = _h.formatDate
+var formatTime = _h.formatTime
+var calcWorkDuration = _h.calcWorkDuration
+var isLate = _h.isLate
+var getChinaToday = _h.getChinaToday
+var createChinaDate = _h.createChinaDate
+var getChinaDateParts = _h.getChinaDateParts
 const { log, LOG_TYPES } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
@@ -12,6 +19,7 @@ Page({
     loading: true,
     selectedDate: '',
     isToday: true,
+    makeupMode: false,
     hasClockedIn: false,
     hasClockedOut: false,
     clockInTime: '',
@@ -29,23 +37,62 @@ Page({
   },
 
   onLoad() {
-    const today = formatDate(new Date())
-    this.setData({ selectedDate: today, maxDate: today, isToday: true })
+    var today = getChinaToday()
+    // Calculate yesterday in China timezone by parsing today's string
+    var parts = today.split('-')
+    var yesterdayDate = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2] - 1))
+    var yesterday = formatDate(yesterdayDate)
+    this.setData({ selectedDate: today, maxDate: today, maxMakeupDate: yesterday, isToday: true })
   },
 
   onShow() {
     const theme = app.getThemePageData()
     this.setData({ theme, statusBarHeight: app.globalData.statusBarHeight || 44 })
+    // If in makeup mode with a past date, keep it; otherwise reset to today
+    if (!this.data.makeupMode) {
+      const today = getChinaToday()
+      this.setData({ selectedDate: today, isToday: true })
+    }
     this.checkStatusByDate(this.data.selectedDate)
     this.loadMonthlyRecords()
   },
 
   onDateChange(e) {
     const date = e.detail.value
-    const today = formatDate(new Date())
-    const isToday = date === today
-    this.setData({ selectedDate: date, isToday }, () => {
+    const today = getChinaToday()
+    if (date === today) {
+      wx.showToast({ title: '补打卡不能选择今天', icon: 'none' })
+      return
+    }
+    this.setData({
+      selectedDate: date,
+      isToday: false,
+      makeupClockInTime: '',
+      makeupClockOutTime: '',
+      makeupReason: '',
+      makeupCanSubmit: false
+    }, () => {
       this.checkStatusByDate(date)
+    })
+  },
+
+  onEnterMakeupMode() {
+    wx.vibrateShort({ type: 'light' })
+    this.setData({ makeupMode: true })
+  },
+
+  onBackToToday() {
+    const today = getChinaToday()
+    this.setData({
+      makeupMode: false,
+      selectedDate: today,
+      isToday: true,
+      makeupClockInTime: '',
+      makeupClockOutTime: '',
+      makeupReason: '',
+      makeupCanSubmit: false
+    }, () => {
+      this.checkStatusByDate(today)
     })
   },
 
@@ -60,8 +107,8 @@ Page({
       const dbInstance = db.getDb()
       const _ = dbInstance.command
 
-      const dayStart = new Date(dateStr + 'T00:00:00')
-      const dayEnd = new Date(dateStr + 'T23:59:59')
+      const dayStart = createChinaDate(dateStr)
+      const dayEnd = createChinaDate(dateStr, 23, 59, 59)
 
       const res = await db.queryAll(COLLECTIONS.CLOCKIN, {
         staffId: userInfo._id,
@@ -112,8 +159,11 @@ Page({
       if (!userInfo) return
 
       const now = new Date()
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0)
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+      const chinaParts = getChinaDateParts(now)
+      const monthStr = chinaParts.year + '-' + String(chinaParts.month).padStart(2, '0')
+      const monthStart = createChinaDate(monthStr + '-01')
+      const lastDay = new Date(chinaParts.year, chinaParts.month, 0).getDate()
+      const monthEnd = createChinaDate(monthStr + '-' + String(lastDay).padStart(2, '0'), 23, 59, 59)
 
       const dbInstance = db.getDb()
       const _ = dbInstance.command
@@ -153,21 +203,6 @@ Page({
     } else {
       this.onClockIn()
     }
-  },
-
-  async onMakeUpClock() {
-    const { selectedDate } = this.data
-    wx.showModal({
-      title: '确认补打卡',
-      content: `确定要为 ${selectedDate} 提交补打卡申请吗？`,
-      confirmText: '确认',
-      cancelText: '取消',
-      success: async (res) => {
-        if (res.confirm) {
-          await this.doClockIn(true)
-        }
-      }
-    })
   },
 
   onMakeUpClockInTimeChange(e) {
@@ -234,7 +269,7 @@ Page({
       const res = await db.addDoc(COLLECTIONS.CLOCKIN, {
         staffId: userInfo._id,
         staffName: userInfo.name || '',
-        date: new Date(selectedDate + 'T12:00:00'),
+        date: createChinaDate(selectedDate, 12, 0, 0),
         clockInTime: clockTime,
         clockInLocation: locationData.location,
         clockInLocationText: locationData.locationText,
@@ -272,13 +307,13 @@ Page({
       if (recordId) {
         const updateData = {}
         if (!hasClockedIn && makeupClockInTime) {
-          const clockInDate = new Date(selectedDate + 'T' + makeupClockInTime + ':00')
+          const clockInDate = createChinaDate(selectedDate, parseInt(makeupClockInTime.split(':')[0]), parseInt(makeupClockInTime.split(':')[1] || '0'), 0)
           updateData.clockInTime = clockInDate
           updateData.clockInLocation = ''
           updateData.clockInLocationText = '补打卡（' + makeupReason.trim() + '）'
         }
         if (!hasClockedOut && makeupClockOutTime) {
-          const clockOutDate = new Date(selectedDate + 'T' + makeupClockOutTime + ':00')
+          const clockOutDate = createChinaDate(selectedDate, parseInt(makeupClockOutTime.split(':')[0]), parseInt(makeupClockOutTime.split(':')[1] || '0'), 0)
           updateData.clockOutTime = clockOutDate
           updateData.clockOutLocation = ''
           updateData.clockOutLocationText = '补打卡（' + makeupReason.trim() + '）'
@@ -290,13 +325,15 @@ Page({
         log(LOG_TYPES.ATTENDANCE_CLOCK_IN, userInfo.name + ' 补打卡 ' + selectedDate + ' 更新记录')
       } else {
         // 场景B: 无记录（新建完整记录）
-        const clockInDate = new Date(selectedDate + 'T' + (makeupClockInTime || '09:00') + ':00')
-        const clockOutDate = new Date(selectedDate + 'T' + (makeupClockOutTime || '18:00') + ':00')
+        const clockInTime = makeupClockInTime || '09:00'
+        const clockOutTime = makeupClockOutTime || '18:00'
+        const clockInDate = createChinaDate(selectedDate, parseInt(clockInTime.split(':')[0]), parseInt(clockInTime.split(':')[1] || '0'), 0)
+        const clockOutDate = createChinaDate(selectedDate, parseInt(clockOutTime.split(':')[0]), parseInt(clockOutTime.split(':')[1] || '0'), 0)
 
         const newData = {
           staffId: userInfo._id,
           staffName: userInfo.name || '',
-          date: new Date(selectedDate + 'T12:00:00'),
+          date: createChinaDate(selectedDate, 12, 0, 0),
           clockInTime: clockInDate,
           clockOutTime: clockOutDate,
           clockInLocation: '',

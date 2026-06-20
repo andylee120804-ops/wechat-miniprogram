@@ -35,7 +35,7 @@
     </view>
 
     <view wx:else style="padding: 16rpx 24rpx 8rpx;">
-      <!-- Status Cards Row — single line compact (4 status + 1 all = 5 in one row) -->
+      <!-- Status Cards Row — sorted by current-month count -->
       <view style="display: flex; gap: 10rpx; margin-bottom: 16rpx;">
         <view
           wx:for="{{statusCards}}"
@@ -45,14 +45,6 @@
           style="flex:1; background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 2rpx solid {{activeStatus === item.key ? item.color : (theme.borderColor || 'rgba(255,255,255,0.08)')}}; border-radius: 14rpx; padding: 12rpx 6rpx; display: flex; flex-direction: column; align-items: center; min-width: 0;">
           <text style="color: {{activeStatus === item.key ? item.color : (theme.textMuted || '#9A9AB0')}}; font-size: 22rpx;">{{item.label}}</text>
           <text style="color: {{activeStatus === item.key ? item.color : (theme.textPrimary || '#F5F0E8')}}; font-size: 32rpx; font-weight: 700; margin-top: 2rpx;">{{item.count}}</text>
-        </view>
-        <!-- All button -->
-        <view
-          data-key=""
-          bindtap="onCardTap"
-          style="flex:1; background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 2rpx solid {{activeStatus === '' ? (theme.accent || '#C9A96E') : (theme.borderColor || 'rgba(255,255,255,0.08)')}}; border-radius: 14rpx; padding: 12rpx 6rpx; display: flex; flex-direction: column; align-items: center; min-width: 0;">
-          <text style="color: {{activeStatus === '' ? (theme.accent || '#C9A96E') : (theme.textMuted || '#9A9AB0')}}; font-size: 22rpx;">全部</text>
-          <text style="color: {{activeStatus === '' ? (theme.accent || '#C9A96E') : (theme.textPrimary || '#F5F0E8')}}; font-size: 32rpx; font-weight: 700; margin-top: 2rpx;">{{allList.length}}</text>
         </view>
       </view>
 

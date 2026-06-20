@@ -1,0 +1,62 @@
+<view class="card">
+  <view class="card-header">
+    <text class="title">{{mode === 'expense' ? '支出明细' : '收入明细'}}</text>
+    <text class="period">{{period}}</text>
+  </view>
+
+  <!-- Income mode -->
+  <view wx:if="{{mode === 'income'}}">
+    <view class="stat-row">
+      <view class="stat">
+        <text class="stat-value positive">¥{{totalIncome}}</text>
+        <text class="stat-label">总收入</text>
+      </view>
+      <view class="stat">
+        <text class="stat-value">{{count}}</text>
+        <text class="stat-label">笔数</text>
+      </view>
+    </view>
+    <view class="section-title">收入分类</view>
+    <view class="category-list">
+      <view class="cat-item" wx:for="{{byType}}" wx:key="index">
+        <text class="cat-name">{{item[0]}}</text>
+        <text class="cat-amount">¥{{item[1]}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Expense mode -->
+  <view wx:if="{{mode === 'expense'}}">
+    <view class="stat-row">
+      <view class="stat">
+        <text class="stat-value negative">¥{{totalExpense}}</text>
+        <text class="stat-label">一次性支出</text>
+      </view>
+      <view class="stat">
+        <text class="stat-value negative">¥{{totalFixed}}</text>
+        <text class="stat-label">固定月支出</text>
+      </view>
+    </view>
+    <view class="section-title">支出分类</view>
+    <view class="category-list">
+      <view class="cat-item" wx:for="{{byType}}" wx:key="index">
+        <text class="cat-name">{{item[0]}}</text>
+        <text class="cat-amount">¥{{item[1]}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Recent records -->
+  <view class="section-title" wx:if="{{recentIncomes.length}}">最近记录</view>
+  <view class="recent-list">
+    <view class="recent-item" wx:for="{{recentIncomes}}" wx:key="index">
+      <text class="recent-date">{{item.date}}</text>
+      <text class="recent-type">{{item.type || item.category}}</text>
+      <text class="recent-amount {{mode === 'income' ? 'positive' : 'negative'}}">¥{{item.amount}}</text>
+    </view>
+  </view>
+
+  <view class="error" wx:if="{{error}}">
+    <text>{{errorMsg}}</text>
+  </view>
+</view>

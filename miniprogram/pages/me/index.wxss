@@ -143,6 +143,19 @@
   font-weight: 300;
 }
 
+/* Todo Badge */
+.todo-badge {
+  padding: 2rpx 16rpx;
+  border-radius: 99rpx;
+  min-width: 36rpx;
+  text-align: center;
+}
+
+.todo-badge-text {
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
 /* Logout Section */
 .logout-section {
   padding-bottom: 64rpx;

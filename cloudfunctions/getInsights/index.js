@@ -3,10 +3,41 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+const BEIJING_OFFSET = 8 * 60 * 60 * 1000
+const ADMIN_ONLY_MODULES = ['staff', 'venueSettings', 'minAmount']
+const ACTION_PERMISSIONS = {
+  busiestDays: { module: 'dashboard', action: 'view' },
+  customerFrequency: { module: 'dashboard', action: 'view' },
+  revenueTrend: { module: 'dashboard', action: 'view' },
+  topIncomeSources: { module: 'dashboard', action: 'view' },
+  dashboardSummary: { module: 'dashboard', action: 'view' }
+}
+
+// ===== 北京时间工具函数（与 autoSyncReservation、prefetchData 保持同步） =====
+
+// 将 Date 对象转为北京时间日期字符串 YYYY-MM-DD
+function formatDateStr(d) {
+  const local = new Date(d.getTime() + BEIJING_OFFSET)
+  return local.getUTCFullYear() + '-' + String(local.getUTCMonth() + 1).padStart(2, '0') + '-' + String(local.getUTCDate()).padStart(2, '0')
+}
+
+// 北京时间 dateStr 的 00:00:00 → 对应的 UTC Date 对象
+function beijingStart(dateStr) {
+  return new Date(new Date(dateStr + 'T00:00:00').getTime() - BEIJING_OFFSET)
+}
+
+// 北京时间 dateStr 的 23:59:59.999 → 对应的 UTC Date 对象
+function beijingEnd(dateStr) {
+  return new Date(new Date(dateStr + 'T23:59:59.999').getTime() - BEIJING_OFFSET)
+}
+
 exports.main = async (event, context) => {
   const { action } = event
 
   try {
+    const auth = await authorizeAction(action)
+    if (!auth.success) return auth
+
     switch (action) {
       case 'busiestDays':
         return await busiestDays(event)
@@ -27,6 +58,32 @@ exports.main = async (event, context) => {
   }
 }
 
+async function authorizeAction(action) {
+  const required = ACTION_PERMISSIONS[action]
+  if (!required) return { success: true }
+
+  const wxContext = cloud.getWXContext()
+  const openid = wxContext && wxContext.OPENID
+  if (!openid) return { success: false, message: '无权限访问经营洞察' }
+
+  const staffRes = await db.collection('staff')
+    .where({ boundOpenid: openid, status: 'active' })
+    .limit(1)
+    .get()
+  const staff = staffRes.data && staffRes.data[0]
+  if (!staff) return { success: false, message: '无权限访问经营洞察' }
+  if (staff.role === 'admin') return { success: true, staff: staff }
+  if (staff.role === 'boss' && !ADMIN_ONLY_MODULES.includes(required.module)) return { success: true, staff: staff }
+
+  const permRes = await db.collection('permissions').where({ staffId: staff._id }).get()
+  const permissions = permRes.data && permRes.data[0] && permRes.data[0].permissions ? permRes.data[0].permissions : []
+  const perm = permissions.find(function(item) { return item.module === required.module })
+  const actions = perm && perm.actions ? perm.actions : []
+  if (actions.includes(required.action) || actions.includes('*')) return { success: true, staff: staff }
+
+  return { success: false, message: '无权限访问经营洞察' }
+}
+
 async function fetchAll(collection, where) {
   const MAX = 100
   let all = []
@@ -45,8 +102,11 @@ async function fetchAll(collection, where) {
 
 async function busiestDays(event) {
   const { startDate, endDate, top = 5 } = event
-  const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-  const end = endDate ? new Date(endDate + 'T23:59:59') : new Date()
+  const todayStr = formatDateStr(new Date())
+  const startStr = startDate || todayStr.substring(0, 7) + '-01'
+  const endStr = endDate || todayStr
+  const start = beijingStart(startStr)
+  const end = beijingEnd(endStr)
 
   const reservations = await fetchAll('reservation', {
     date: _.gte(start).and(_.lte(end)),
@@ -55,7 +115,7 @@ async function busiestDays(event) {
 
   const dayCount = {}
   reservations.forEach(r => {
-    const day = r.date instanceof Date ? r.date.toISOString().split('T')[0] : String(r.date).split('T')[0]
+    const day = r.date instanceof Date ? formatDateStr(r.date) : String(r.date).split('T')[0]
     dayCount[day] = (dayCount[day] || 0) + 1
   })
 
@@ -69,21 +129,22 @@ async function busiestDays(event) {
 
 async function revenueTrend(event) {
   const { period = 'month', months = 6 } = event
-  const now = new Date()
   const data = []
 
-  for (let i = months - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const start = d
-    const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59)
-    const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  const bjNow = new Date(new Date().getTime() + BEIJING_OFFSET)
+  const bjYear = bjNow.getUTCFullYear()
+  const bjMonth = bjNow.getUTCMonth()
 
-    // income dates are "YYYY-MM-DD" strings — format as strings
-    const startStr = start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0') + '-01'
-    var endMonth = end.getMonth() + 1
-    var endYear = end.getFullYear()
-    if (endMonth > 12) { endMonth = 1; endYear++ }
-    const endStr = endYear + '-' + String(endMonth).padStart(2, '0') + '-' + String(end.getDate()).padStart(2, '0')
+  for (let i = months - 1; i >= 0; i--) {
+    let m = bjMonth - i
+    let y = bjYear
+    while (m < 0) { m += 12; y-- }
+    const monthStr = y + '-' + String(m + 1).padStart(2, '0')
+    const startStr = monthStr + '-01'
+    // 月末日期
+    const endOfM = new Date(y, m + 1, 0)
+    const endStr = endOfM.getFullYear() + '-' + String(endOfM.getMonth() + 1).padStart(2, '0') + '-' + String(endOfM.getDate()).padStart(2, '0')
+
     const incomes = await fetchAll('income', { date: _.gte(startStr).and(_.lte(endStr)) })
     const total = incomes.reduce((s, inc) => s + (inc.amount || 0), 0)
 
@@ -95,10 +156,11 @@ async function revenueTrend(event) {
 
 async function topIncomeSources(event) {
   const { startDate, endDate } = event
-  const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-  const end = endDate ? new Date(endDate + 'T23:59:59') : new Date()
+  const todayStr = formatDateStr(new Date())
+  const startStr = startDate || todayStr.substring(0, 7) + '-01'
+  const endStr = endDate || todayStr
 
-  const incomes = await fetchAll('income', { date: _.gte(start).and(_.lte(end)) })
+  const incomes = await fetchAll('income', { date: _.gte(startStr).and(_.lte(endStr)) })
 
   const byType = {}
   incomes.forEach(i => {
@@ -114,8 +176,15 @@ async function topIncomeSources(event) {
 
 async function customerFrequency(event) {
   const { months = 3 } = event
-  const since = new Date()
-  since.setMonth(since.getMonth() - months)
+  const now = new Date()
+  const todayStr = formatDateStr(now)
+  // 使用纯字符串计算 months 个月前的日期
+  const [year, month] = todayStr.split('-').map(Number)
+  let sinceMonth = month - months
+  let sinceYear = year
+  while (sinceMonth <= 0) { sinceMonth += 12; sinceYear-- }
+  const sinceStr = sinceYear + '-' + String(sinceMonth).padStart(2, '0') + '-01'
+  const since = beijingStart(sinceStr)
 
   const reservations = await fetchAll('reservation', {
     date: _.gte(since),
@@ -137,14 +206,16 @@ async function customerFrequency(event) {
 }
 
 async function dashboardSummary(event) {
-  const today = new Date()
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+  const todayStr = formatDateStr(new Date())
+  // 本月1号的北京时间范围
+  const monthStartStr = todayStr.substring(0, 7) + '-01'
+  const monthStart = beijingStart(monthStartStr)
+  const todayEnd = beijingEnd(todayStr)
 
   const [todayIncome, monthIncome, todayReservations, monthReservations] = await Promise.all([
     fetchAll('income', { date: todayStr }),
-    fetchAll('income', { date: _.gte(monthStart) }),
-    fetchAll('reservation', { date: todayStr, status: _.neq('cancelled') }),
+    fetchAll('income', { date: _.gte(monthStartStr).and(_.lte(todayStr)) }),
+    fetchAll('reservation', { date: _.gte(beijingStart(todayStr)).and(_.lte(todayEnd)), status: _.neq('cancelled') }),
     fetchAll('reservation', { date: _.gte(monthStart), status: _.neq('cancelled') })
   ])
 

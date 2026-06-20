@@ -1,5 +1,5 @@
 const app = getApp()
-const { getWeekRange, getMonthRange, getYearRange, getIncomeTypeText, getWeekNumber } = require('../../../utils/helpers')
+const { getWeekRange, getMonthRange, getYearRange, getWeekNumber, getIncomeTypeText, getCategoryName, getExpenseCategoryName, formatDate } = require('../../../utils/helpers')
 const { handleCloudError } = require('../../../utils/error-handler')
 const { getRingChartConfig, getIncomeTypeColors, getExpenseTypeColors } = require('../../../utils/chart-config')
 const { checkPermission, ACTIONS } = require('../../../utils/permission')
@@ -35,6 +35,7 @@ Page({
     pickerYear: 2026,
     pickerMonth: 1,
     pickerWeek: 1,
+    canExportReport: false,
     pickerYears: [],
     pickerMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     pickerWeeks: []
@@ -62,7 +63,10 @@ Page({
       wx.navigateBack()
       return
     }
-    this.setData({ theme: app.getThemePageData() })
+    this.setData({
+      theme: app.getThemePageData(),
+      canExportReport: app.globalData.userInfo && (app.globalData.userInfo.role === 'admin' || app.globalData.userInfo.role === 'boss')
+    })
     this.setPeriodRange()
     this.loadData()
   },
@@ -266,139 +270,52 @@ Page({
     const startDate = that.data.startDate
     const endDate = that.data.endDate
 
-    // Query current period data
-    const incomePromise = db.queryAll(COLLECTIONS.INCOME, {
-      date: db.getDb().command.gte(startDate).and(db.getDb().command.lte(endDate))
-    })
-
-    const purchasePromise = db.queryAll(COLLECTIONS.PURCHASE, {
-      date: db.getDb().command.gte(startDate).and(db.getDb().command.lte(endDate))
-    })
-
-    const expensePromise = db.queryAll(COLLECTIONS.EXPENSE, {
-      date: db.getDb().command.gte(startDate).and(db.getDb().command.lte(endDate))
-    })
-
-    // Fixed expenses: new format (monthlyAmount items) + old format (date-based records)
-    const fixedExpensePromise = db.queryAll(COLLECTIONS.FIXED_EXPENSE, { active: true })
-
-    const salaryPromise = db.queryAll(COLLECTIONS.STAFF, {
-      status: 'active'
-    })
-
-    Promise.all([
-      incomePromise, purchasePromise, expensePromise, fixedExpensePromise, salaryPromise
-    ]).then(function(results) {
-      const incomeData = results[0].data || []
-      const purchaseData = results[1].data || []
-      const expenseData = results[2].data || []
-      const fixedExpenseData = results[3].data || []
-      const staffData = results[4].data || []
-
-      // Calculate income totals
-      let totalIncome = 0
-      const incomeByType = {}
-      incomeData.forEach(function(item) {
-        const amount = Number(item.amount) || 0
-        totalIncome += amount
-        const type = item.type || 'other'
-        incomeByType[type] = (incomeByType[type] || 0) + amount
-      })
-
-      // Calculate purchase totals (only count reimbursed or unset status)
-      let totalPurchase = 0
-      purchaseData.forEach(function(item) {
-        if (!item.status || item.status === 'reimbursed') {
-          totalPurchase += Number(item.amount) || 0
+    // 调用云函数获取财务统计（与 AI Skill 共用唯一计算源，口径永远一致）
+    wx.cloud.callFunction({
+      name: 'getFinanceStats',
+      data: {
+        startDate: startDate,
+        endDate: endDate,
+        periodType: that.data.periodType
+      },
+      success: function(res) {
+        const result = res.result
+        if (!result || !result.success) {
+          that.setData({ loading: false })
+          handleCloudError(new Error((result && result.message) || '加载失败'), '加载仪表盘数据')
+          return
         }
-      })
+        const f = result.data
+        const totalIncome = f.totalIncome
+        const totalExpenseAll = f.totalExpenseAll // 采购 + 运营支出 + 工资
+        const profit = f.netProfit
 
-      // Calculate expense totals (expense + fixed_expense)
-      let totalExpense = 0
-      const expenseByCategory = {}
-      expenseData.forEach(function(item) {
-        const amount = Number(item.amount) || 0
-        totalExpense += amount
-        const category = item.category || 'other'
-        expenseByCategory[category] = (expenseByCategory[category] || 0) + amount
-      })
+        const incomeResult = that.prepareIncomeChart(f.incomeByType)
+        const expenseResult = that.prepareExpenseChart(f.expenseByCategory, f.totalPurchase, f.totalSalary, f.fixedByName)
 
-      // Fixed expenses: new format (monthlyAmount) scaled to period; old format (date) matched by range
-      // Calculate months in the period — month=1, year=computed from dates (handles YTD correctly)
-      let periodMonths = 1
-      if (that.data.periodType === 'year') {
-        const dStart = new Date(startDate + 'T00:00:00')
-        const dEnd = new Date(endDate + 'T23:59:59')
-        periodMonths = (dEnd - dStart) / (1000 * 60 * 60 * 24) / 30.4375
-      } else if (that.data.periodType === 'week') {
-        periodMonths = 7 / 30.4375
+        const incomeChartData = incomeResult.chartConfig
+        const incomeBreakdown = incomeResult.breakdown
+        const expenseChartData = expenseResult.chartConfig
+        const expenseBreakdown = expenseResult.breakdown
+
+        that.setData({
+          totalIncome: totalIncome.toFixed(2),
+          totalExpense: totalExpenseAll.toFixed(2),
+          profit: profit.toFixed(2),
+          profitAbs: Math.abs(profit).toFixed(2),
+          incomeChartData: incomeChartData,
+          expenseChartData: expenseChartData,
+          incomeBreakdown: incomeBreakdown,
+          expenseBreakdown: expenseBreakdown,
+          currentChartData: that.data.chartMode === 'income' ? incomeChartData : expenseChartData,
+          currentBreakdown: that.data.chartMode === 'income' ? incomeBreakdown : expenseBreakdown,
+          loading: false
+        })
+      },
+      fail: function(err) {
+        that.setData({ loading: false })
+        handleCloudError(err, '加载仪表盘数据')
       }
-
-      const fixedByName = {}
-
-      fixedExpenseData.forEach(function(item) {
-        if (item.monthlyAmount) {
-          // New format: recurring item with monthly amount — prorate by active period
-          const monthlyVal = Number(item.monthlyAmount) || 0
-          const proratedMonths = that.calcProratedMonths(item.startDate, item.endDate, startDate, endDate, periodMonths)
-          if (proratedMonths <= 0) return
-
-          const amount = monthlyVal * proratedMonths
-          totalExpense += amount
-          const name = item.name || '固定成本'
-          fixedByName[name] = (fixedByName[name] || 0) + amount
-        } else if (item.date && item.date >= startDate && item.date <= endDate) {
-          // Old format: date-range matched record — use original category
-          const amount = Number(item.amount || 0)
-          totalExpense += amount
-          const cat = item.category || 'other'
-          expenseByCategory[cat] = (expenseByCategory[cat] || 0) + amount
-        }
-      })
-
-      // Calculate salary totals (respect hireDate and prorate by active period)
-      let totalSalary = 0
-      staffData.forEach(function(item) {
-        // Only include salary if staff was hired on or before the period end date
-        if (item.hireDate && item.hireDate > endDate) return
-
-        const proratedMonths = that.calcProratedMonths(item.hireDate, null, startDate, endDate, periodMonths)
-        totalSalary += (Number(item.salary) || 0) * proratedMonths
-      })
-
-      let totalExpenseAll = totalPurchase + totalExpense + totalSalary
-      // Guard against NaN from bad data — prevents crash in .toFixed()
-      if (isNaN(totalExpenseAll)) totalExpenseAll = 0
-      const profit = totalIncome - totalExpenseAll
-
-      // Prepare chart data — pass purchase and salary for expense chart
-      const incomeResult = that.prepareIncomeChart(incomeByType)
-      const expenseResult = that.prepareExpenseChart(expenseByCategory, totalPurchase, totalSalary, fixedByName)
-
-      const incomeChartData = incomeResult.chartConfig
-      const incomeBreakdown = incomeResult.breakdown
-      const expenseChartData = expenseResult.chartConfig
-      const expenseBreakdown = expenseResult.breakdown
-
-      const currentChartData = that.data.chartMode === 'income' ? incomeChartData : expenseChartData
-      const currentBreakdown = that.data.chartMode === 'income' ? incomeBreakdown : expenseBreakdown
-
-      that.setData({
-        totalIncome: totalIncome.toFixed(2),
-        totalExpense: totalExpenseAll.toFixed(2),
-        profit: profit.toFixed(2),
-        profitAbs: Math.abs(profit).toFixed(2),
-        incomeChartData: incomeChartData,
-        expenseChartData: expenseChartData,
-        incomeBreakdown: incomeBreakdown,
-        expenseBreakdown: expenseBreakdown,
-        currentChartData: currentChartData,
-        currentBreakdown: currentBreakdown,
-        loading: false
-      })
-    }).catch(function(err) {
-      that.setData({ loading: false })
-      handleCloudError(err, '加载仪表盘数据')
     })
   },
 
@@ -451,7 +368,7 @@ Page({
     // Expense composition: 采购 + 各类支出 + 工资
     const expenseItems = [
       { key: 'purchase', name: '采购', value: totalPurchase || 0 },
-      { key: 'salary', name: '工资', value: totalSalary || 0 },
+      { key: 'salary', name: '工资', value: Math.ceil(totalSalary || 0) },
       { key: 'rent', name: '房租', value: expenseByCategory['rent'] || 0 },
       { key: 'utilities', name: '水电', value: expenseByCategory['utilities'] || 0 },
       { key: 'supplies', name: '物资', value: expenseByCategory['supplies'] || 0 },
@@ -503,6 +420,74 @@ Page({
     return { chartConfig: chartConfig, breakdown: breakdown }
   },
 
+  // ==================== Export Excel ====================
+
+  onExportExcel: function() {
+    const that = this
+    if (that.data.loading) return
+    if (!app.globalData.userInfo || (app.globalData.userInfo.role !== 'admin' && app.globalData.userInfo.role !== 'boss')) {
+      wx.showToast({ title: '仅老板和管理员可导出', icon: 'none' })
+      return
+    }
+    wx.showLoading({ title: '导出中...' })
+
+    wx.cloud.callFunction({
+      name: 'exportReportXlsx',
+      data: {
+        startDate: that.data.startDate,
+        endDate: that.data.endDate,
+        periodType: that.data.periodType,
+        periodLabel: that.data.periodLabel
+      },
+      success: function(res) {
+          const result = res.result
+          if (!result.success) {
+            wx.hideLoading()
+            wx.showToast({ title: result.message || '导出失败', icon: 'none' })
+            return
+          }
+          // Download the file from cloud storage
+          const fileID = result.fileID
+          wx.cloud.downloadFile({
+            fileID: fileID,
+            success: function(downloadRes) {
+              wx.hideLoading()
+              // Open the file directly — user can share/save from the viewer
+              wx.openDocument({
+                filePath: downloadRes.tempFilePath,
+                fileType: 'xls',
+                showMenu: true,
+                success: function() {
+                  wx.showToast({ title: '打开成功', icon: 'success' })
+                },
+                fail: function(err) {
+                  console.error('openDocument失败:', err)
+                  // Fallback: share file to chat
+                  wx.shareFileMessage({
+                    filePath: downloadRes.tempFilePath,
+                    fileName: result.fileName || '报表.xlsx',
+                    fail: function() {
+                      wx.showToast({ title: '打开文件失败', icon: 'none' })
+                    }
+                  })
+                }
+              })
+            },
+            fail: function(err) {
+              wx.hideLoading()
+              console.error('downloadFile失败:', err)
+              wx.showToast({ title: '下载文件失败', icon: 'none' })
+            }
+          })
+        },
+        fail: function(err) {
+          wx.hideLoading()
+          console.error('exportReportXlsx调用失败:', err)
+          wx.showToast({ title: '导出失败', icon: 'none' })
+        }
+      })
+  },
+
   // ==================== Navigation ====================
 
   onStaffManage: function() {
@@ -550,5 +535,27 @@ Page({
     const activeDays = (activeEnd - activeStart) / (1000 * 60 * 60 * 24)
 
     return periodMonths * (activeDays / totalDays)
+  },
+
+  /**
+   * Check if a fixed expense item is active (overlaps) during the report period.
+   * Used for fixed expenses which are counted by whole months rather than prorated by day.
+   * @param {string|null} itemStart - Item start date (YYYY-MM-DD) or null
+   * @param {string|null} itemEnd - Item end date (YYYY-MM-DD) or null
+   * @param {string} periodStart - Report period start (YYYY-MM-DD)
+   * @param {string} periodEnd - Report period end (YYYY-MM-DD)
+   * @returns {boolean} True if the item overlaps with the report period
+   */
+  isFixedExpenseActive: function(itemStart, itemEnd, periodStart, periodEnd) {
+    const pStart = new Date(periodStart + 'T00:00:00')
+    const pEnd = new Date(periodEnd + 'T23:59:59')
+
+    const start = itemStart ? new Date(itemStart + 'T00:00:00') : pStart
+    const end = itemEnd ? new Date(itemEnd + 'T23:59:59') : pEnd
+
+    // No overlap if item ends before period starts, or item starts after period ends
+    if (end < pStart || start > pEnd) return false
+
+    return true
   }
 })

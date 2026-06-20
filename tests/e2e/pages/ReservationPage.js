@@ -16,7 +16,8 @@ class ReservationPage extends BasePage {
   }
 
   async getGroupedReservations() {
-    return this.getData('groupedReservations')
+    // Returns array of { key, label, items, color, textColor }
+    return this.getData('groupedReservationsDynamic')
   }
 
   async isLoading() {

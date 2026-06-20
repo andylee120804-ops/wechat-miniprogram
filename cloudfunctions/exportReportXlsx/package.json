@@ -1,0 +1,9 @@
+{
+  "name": "exportReportXlsx",
+  "version": "1.0.0",
+  "description": "导出经营报表为XLSX格式",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "3.0.4"
+  }
+}

@@ -6,17 +6,17 @@ const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 
 const ALL_CATEGORIES = [
-  { id: '', name: '全部', count: 0 },
-  { id: 'banquet', name: '宴会菜价', count: 0 },
-  { id: 'meat', name: '肉类', count: 0 },
-  { id: 'seafood', name: '海鲜', count: 0 },
-  { id: 'vegetable', name: '蔬菜', count: 0 },
-  { id: 'fruit', name: '水果', count: 0 },
-  { id: 'drink', name: '饮品', count: 0 },
-  { id: 'seasoning', name: '调味品', count: 0 },
-  { id: 'supplies', name: '日用品', count: 0 },
-  { id: 'equipment', name: '设备', count: 0 },
-  { id: 'other', name: '其他', count: 0 }
+  { id: '', name: '全部' },
+  { id: 'banquet', name: '宴会菜价' },
+  { id: 'meat', name: '肉类' },
+  { id: 'seafood', name: '海鲜' },
+  { id: 'vegetable', name: '蔬菜' },
+  { id: 'fruit', name: '水果' },
+  { id: 'drink', name: '饮品' },
+  { id: 'seasoning', name: '调味品' },
+  { id: 'supplies', name: '日用品' },
+  { id: 'equipment', name: '设备' },
+  { id: 'other', name: '其他' }
 ]
 
 Page({
@@ -33,7 +33,7 @@ Page({
     totalFormatted: '0.00',
     totalCount: 0,
     activeCategory: '',
-    categories: ALL_CATEGORIES.map(function(c) { return Object.assign({}, c) }),
+    categories: [{ id: '', name: '全部', count: 0 }],
     searchKeyword: '',
     // Sort
     sortField: 'createdAt', // 'date' = 采购日期, 'createdAt' = 创建日期
@@ -55,8 +55,18 @@ Page({
 
   onShow: function() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ active: 2 })
+      this.getTabBar().setActiveByPage('/pages/purchase/index')
     }
+    const range = getMonthRange(0)
+    this.setData({
+      currentMonth: 0,
+      filterDate: '',
+      filterDateDisplay: '',
+      activeCategory: '',
+      searchKeyword: '',
+      monthLabel: range.label,
+      monthStr: range.monthStr
+    })
     this.loadData()
   },
 
@@ -113,12 +123,23 @@ Page({
       })
       categoryCounts[''] = allData.length
 
-      // Only show categories that have records, plus "全部" (all)
-      const updatedCategories = ALL_CATEGORIES.filter(function(cat) {
-        return cat.id === '' || (categoryCounts[cat.id] || 0) > 0
-      }).map(function(cat) {
-        return { ...cat, count: categoryCounts[cat.id] || 0 }
-      })
+      // Only show categories that have records, plus "全部", sorted by count descending
+      // Only "全部" keeps count property, others don't show numbers
+      const updatedCategories = ALL_CATEGORIES
+        .filter(function(cat) {
+          return cat.id === '' || (categoryCounts[cat.id] || 0) > 0
+        })
+        .map(function(cat) {
+          return { id: cat.id, name: cat.name, count: categoryCounts[cat.id] || 0 }
+        })
+        .sort(function(a, b) {
+          if (a.id === '') return -1
+          if (b.id === '') return 1
+          return b.count - a.count
+        })
+        .map(function(cat) {
+          return cat.id === '' ? cat : { id: cat.id, name: cat.name }
+        })
 
       const range = filterDate ? null : getMonthRange(that.data.currentMonth)
 
@@ -258,7 +279,7 @@ Page({
   },
 
   onSortToggle: function() {
-    const newField = this.data.sortField === 'date' ? 'createdAt' : 'date'
+    const newField = this.data.sortField === 'createdAt' ? 'date' : 'createdAt'
     this.setData({ sortField: newField })
     this.loadData()
   },

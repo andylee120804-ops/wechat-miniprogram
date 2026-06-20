@@ -159,6 +159,16 @@
           </view>
         </view>
       </view>
+
+      <!-- Export Button -->
+      <view class="export-section mx-lg mb-xl" wx:if="{{canExportReport}}" style="margin-top: 48rpx;">
+        <view class="export-btn press-scale" bindtap="onExportExcel"
+          style="background: {{theme.accentColor || '#C9A96E'}}; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; padding: 26rpx 0; gap: 12rpx; box-shadow: 0 4rpx 16rpx rgba(201,169,110,0.25);">
+          <text style="font-size: 28rpx; color: {{theme.textInverse || '#0F0F1A'}};">⬇</text>
+          <text style="color: {{theme.textInverse || '#0F0F1A'}}; font-size: 28rpx; font-weight: 600;">导出明细</text>
+        </view>
+        <text class="export-hint" style="display: block; text-align: center; margin-top: 12rpx; color: {{theme.textMuted || '#5C5C72'}}; font-size: 22rpx;">导出 {{startDate}} ~ {{endDate}} 收支明细为 Excel 文件</text>
+      </view>
     </view>
 
     <!-- Bottom Spacer -->
