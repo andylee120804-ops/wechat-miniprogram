@@ -44,30 +44,79 @@ function loadStoredValueFunction(options) {
   const whereCalls = []
   const adds = []
   const updates = []
+  const outsideAdds = []
+  const outsideUpdates = []
+  const transactionAdds = []
+  const transactionUpdates = []
+  const accountDataQueue = Array.isArray(options.accountDataSequence) ? options.accountDataSequence.slice() : null
 
-  const hooks = {
-    onWhere: (name, where) => whereCalls.push({ name, where }),
-    onAdd: (name, payload) => adds.push({ name, payload }),
-    onUpdate: (id, payload) => updates.push({ id, payload })
+  function getAccountResult() {
+    if (accountDataQueue && accountDataQueue.length > 0) {
+      return { data: accountDataQueue.shift() }
+    }
+
+    return { data: options.accountData || [] }
   }
 
-  const db = {
-    collection: jest.fn((name) => {
-      if (name === 'staff') return createCollection(name, { data: options.staffData || [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate })
-      if (name === 'permissions') return createCollection(name, { data: options.permissionsData || [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate })
-      if (name === 'stored_value_account') {
-        return createCollection(name, { data: options.accountData || [] }, {
-          onWhere: (where) => {
-            accountReads.push(where)
-            hooks.onWhere(name, where)
-          },
-          onAdd: hooks.onAdd,
-          onUpdate: hooks.onUpdate
-        })
+  function createHooks(isTransaction) {
+    return {
+      onWhere: (name, where) => whereCalls.push({ name, where }),
+      onAdd: (name, payload) => {
+        const entry = { name, payload }
+        adds.push(entry)
+        if (isTransaction) {
+          transactionAdds.push(entry)
+          return
+        }
+        outsideAdds.push(entry)
+      },
+      onUpdate: (id, payload) => {
+        const entry = { id, payload }
+        updates.push(entry)
+        if (isTransaction) {
+          transactionUpdates.push(entry)
+          return
+        }
+        outsideUpdates.push(entry)
       }
-      return createCollection(name, { data: [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate })
-    })
+    }
   }
+
+  function createDb(isTransaction) {
+    const hooks = createHooks(isTransaction)
+    return {
+      collection: jest.fn((name) => {
+        if (name === 'staff') return createCollection(name, { data: options.staffData || [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate })
+        if (name === 'permissions') return createCollection(name, { data: options.permissionsData || [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate })
+        if (name === 'stored_value_account') {
+          return createCollection(name, getAccountResult(), {
+            onWhere: (where) => {
+              accountReads.push(where)
+              hooks.onWhere(name, where)
+            },
+            onAdd: hooks.onAdd,
+            onUpdate: hooks.onUpdate
+          })
+        }
+        return createCollection(name, { data: [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate })
+      })
+    }
+  }
+
+  const transactionDb = createDb(true)
+  const db = createDb(false)
+  db.runTransaction = jest.fn(async (callback) => {
+    if (options.rejectRunTransaction) {
+      return Promise.reject(new Error(options.rejectRunTransaction))
+    }
+
+    const result = await callback(transactionDb)
+    if (options.rejectRunTransactionAfterCallback) {
+      throw new Error(options.rejectRunTransactionAfterCallback)
+    }
+
+    return result
+  })
 
   const cloud = {
     DYNAMIC_CURRENT_ENV: 'cloud1-d9gwvttcr864f8021',
@@ -79,7 +128,7 @@ function loadStoredValueFunction(options) {
   jest.doMock('wx-server-sdk', () => cloud, { virtual: true })
 
   const mod = require('../../cloudfunctions/storedValue/index')
-  return { main: mod.main, testApi: mod.__test__, db, cloud, accountReads, whereCalls, adds, updates }
+  return { main: mod.main, testApi: mod.__test__, db, cloud, accountReads, whereCalls, adds, updates, outsideAdds, outsideUpdates, transactionAdds, transactionUpdates }
 }
 
 describe('stored value settlement helpers', () => {
@@ -101,6 +150,13 @@ describe('stored value settlement helpers', () => {
   test('builds readable reservation snapshot', () => {
     const snapshot = storedValue.__test__.buildReservationSnapshot({ customerName: '张三', phone: '13800000000', date: '2026-06-20', time: '晚上', roomName: '大包厢' })
     expect(snapshot).toEqual({ customerName: '张三', phone: '13800000000', date: '2026-06-20', time: '晚上', roomName: '大包厢' })
+  })
+
+  test('builds deterministic customer keys from normalized phone before name', () => {
+    expect(storedValue.__test__.getCustomerKey({ phone: ' 13800000000 ', customerName: '张三' })).toBe('phone:13800000000')
+    expect(storedValue.__test__.getCustomerKey({ phone: '', customerName: ' 张三 ' })).toBe('name:张三')
+    expect(storedValue.__test__.getCustomerKey({ name: ' 李四 ' })).toBe('name:李四')
+    expect(storedValue.__test__.getCustomerKey({ phone: '', customerName: '' })).toBe('')
   })
 
   test('builds stored-value recharge income payload', () => {
@@ -174,7 +230,13 @@ describe('stored value recharge action', () => {
     })
 
     expect(result.success).toBe(true)
-    expect(accountReads).toEqual([{ customerKey: '13800000000' }, { customerKey: '张三' }])
+    expect(accountReads).toEqual([
+      { customerKey: 'phone:13800000000', status: 'active' },
+      { customerKey: '13800000000', status: 'active' },
+      { customerKey: '张三', status: 'active' },
+      { phone: '13800000000', status: 'active' },
+      { customerName: '张三', status: 'active' }
+    ])
     expect(adds).toEqual(expect.arrayContaining([
       expect.objectContaining({
         name: 'stored_value_account',
@@ -182,7 +244,7 @@ describe('stored value recharge action', () => {
           data: expect.objectContaining({
             customerName: '张三',
             phone: '13800000000',
-            customerKey: '13800000000',
+            customerKey: 'phone:13800000000',
             balance: 1000,
             totalRecharge: 1000,
             totalConsume: 0,
@@ -235,14 +297,14 @@ describe('stored value recharge action', () => {
     }))
   })
 
-  test('updates existing account with correct balanceBefore and optimistic version', async () => {
-    const { main, accountReads, whereCalls, adds, updates } = loadStoredValueFunction({
+  test('updates existing account transactionally with correct balanceBefore', async () => {
+    const { main, accountReads, adds, updates } = loadStoredValueFunction({
       staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
       accountData: [{
         _id: 'account-1',
         customerName: '张三',
         phone: '13800000000',
-        customerKey: '13800000000',
+        customerKey: 'phone:13800000000',
         balance: 200,
         totalRecharge: 500,
         totalConsume: 300,
@@ -261,18 +323,17 @@ describe('stored value recharge action', () => {
     })
 
     expect(result.success).toBe(true)
-    expect(accountReads[0]).toEqual({ customerKey: '13800000000' })
+    expect(accountReads[0]).toEqual({ customerKey: 'phone:13800000000', status: 'active' })
     expect(updates).toEqual(expect.arrayContaining([
       {
-        id: null,
-        payload: { data: expect.objectContaining({ balance: 1200, totalRecharge: 1500, _version: 4, updatedBy: 'staff-1' }) }
+        id: 'account-1',
+        payload: { data: expect.objectContaining({ balance: 1200, totalRecharge: 1500, _version: 4, customerKey: 'phone:13800000000', updatedBy: 'staff-1' }) }
       },
       {
         id: 'income-new-id',
         payload: { data: { storedValueTransactionId: 'stored_value_transaction-new-id' } }
       }
     ]))
-    expect(whereCalls).toContainEqual({ name: 'stored_value_account', where: { _id: 'account-1', _version: 3 } })
     expect(adds).toEqual(expect.arrayContaining([
       expect.objectContaining({
         name: 'stored_value_transaction',
@@ -286,6 +347,84 @@ describe('stored value recharge action', () => {
         })
       })
     ]))
+  })
+
+  test('returns failure and performs no outside writes when transaction rollback is reported after attempted writes', async () => {
+    const { main, db, outsideAdds, outsideUpdates, transactionAdds, transactionUpdates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      rejectRunTransactionAfterCallback: 'transaction rollback'
+    })
+
+    const result = await main({ action: 'recharge', customerName: '张三', phone: '13800000000', amount: 1000 })
+
+    expect(result).toEqual({ success: false, message: 'transaction rollback' })
+    expect(db.runTransaction).toHaveBeenCalledTimes(1)
+    expect(transactionAdds.map((entry) => entry.name)).toEqual(['stored_value_account', 'income', 'stored_value_transaction'])
+    expect(transactionUpdates).toEqual([{ id: 'income-new-id', payload: { data: { storedValueTransactionId: 'stored_value_transaction-new-id' } } }])
+    expect(outsideAdds).toEqual([])
+    expect(outsideUpdates).toEqual([])
+  })
+
+  test('updates legacy account found by phone and backfills customerKey', async () => {
+    const { main, accountReads, adds, updates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountDataSequence: [[], [], [], [{
+        _id: 'legacy-account',
+        customerName: '张三',
+        phone: '13800000000',
+        balance: 100,
+        totalRecharge: 100,
+        totalConsume: 0,
+        status: 'active',
+        _version: 2
+      }]]
+    })
+
+    const result = await main({ action: 'recharge', customerName: '张三', phone: '13800000000', amount: 500 })
+
+    expect(result.success).toBe(true)
+    expect(accountReads).toEqual([
+      { customerKey: 'phone:13800000000', status: 'active' },
+      { customerKey: '13800000000', status: 'active' },
+      { customerKey: '张三', status: 'active' },
+      { phone: '13800000000', status: 'active' }
+    ])
+    expect(adds.filter((entry) => entry.name === 'stored_value_account')).toEqual([])
+    expect(updates).toEqual(expect.arrayContaining([
+      {
+        id: 'legacy-account',
+        payload: { data: expect.objectContaining({ balance: 600, totalRecharge: 600, customerKey: 'phone:13800000000', _version: 3 }) }
+      }
+    ]))
+  })
+
+  test('updates account found by in-transaction re-check instead of creating duplicate first account', async () => {
+    const { main, adds, updates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountDataSequence: [[{
+        _id: 'account-concurrent',
+        customerName: '张三',
+        phone: '13800000000',
+        customerKey: 'phone:13800000000',
+        balance: 300,
+        totalRecharge: 300,
+        totalConsume: 0,
+        status: 'active',
+        _version: 1
+      }]]
+    })
+
+    const result = await main({ action: 'recharge', customerName: '张三', phone: '13800000000', amount: 700 })
+
+    expect(result.success).toBe(true)
+    expect(adds.filter((entry) => entry.name === 'stored_value_account')).toEqual([])
+    expect(updates).toEqual(expect.arrayContaining([
+      {
+        id: 'account-concurrent',
+        payload: { data: expect.objectContaining({ balance: 1000, totalRecharge: 1000, customerKey: 'phone:13800000000' }) }
+      }
+    ]))
+    expect(result.data.account).toEqual(expect.objectContaining({ _id: 'account-concurrent', balance: 1000, totalRecharge: 1000 }))
   })
 })
 
@@ -348,7 +487,7 @@ describe('stored value query authorization', () => {
     })
 
     expect(result.success).toBe(true)
-    expect(accountReads).toEqual([{ customerKey: '13800000000' }, { customerKey: '李四' }])
+    expect(accountReads).toEqual([{ customerKey: 'phone:13800000000', status: 'active' }, { customerKey: 'name:李四', status: 'active' }])
     expect(whereCalls).toContainEqual({ name: 'permissions', where: { staffId: 'newer-cashier' } })
   })
 
@@ -368,7 +507,7 @@ describe('stored value query authorization', () => {
     })
 
     expect(result.success).toBe(true)
-    expect(accountReads).toEqual([{ customerKey: '13800000000' }, { customerKey: '李四' }])
+    expect(accountReads).toEqual([{ customerKey: 'phone:13800000000', status: 'active' }, { customerKey: 'name:李四', status: 'active' }])
   })
 
   test('rejects queryAccountsByCustomers when more than 50 unique customers are requested', async () => {
@@ -399,9 +538,9 @@ describe('stored value customer input normalization', () => {
 
     expect(result).toEqual({
       customers: [
-        { key: '13800000000', customer: { phone: '13800000000', customerName: '张三' } },
-        { key: '李四', customer: { customerName: '李四' } },
-        { key: '王五', customer: { name: '王五' } }
+        { key: 'phone:13800000000', customer: { phone: '13800000000', customerName: '张三' } },
+        { key: 'name:李四', customer: { customerName: '李四' } },
+        { key: 'name:王五', customer: { name: '王五' } }
       ],
       isTooMany: false
     })

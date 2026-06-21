@@ -12,7 +12,6 @@ const COLLECTIONS = {
 }
 
 const MAX_CUSTOMER_BATCH_SIZE = 50
-const MAX_LOCK_RETRIES = 3
 
 function loadCloud() {
   try {
@@ -102,10 +101,18 @@ function buildReservationSnapshot(reservation = {}) {
 function getCustomerKey(customer = {}) {
   const phone = String(customer.phone || '').trim()
   if (phone) {
-    return phone
+    return `phone:${phone}`
   }
 
-  return String(customer.customerName || customer.name || '').trim()
+  const name = String(customer.customerName || customer.name || '').trim()
+  return name ? `name:${name}` : ''
+}
+
+function getLegacyCustomerKeys(customer = {}) {
+  return [
+    String(customer.phone || '').trim(),
+    String(customer.customerName || customer.name || '').trim()
+  ].filter(Boolean)
 }
 
 function normalizeCustomer(customer = {}) {
@@ -244,30 +251,72 @@ async function queryAccountsByCustomers(event = {}) {
 
 async function findSingleAccount(customerKey) {
   const db = cloud.database()
-  const result = await db.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
-    .where({ customerKey })
+  return findSingleAccountInCollection(db, customerKey)
+}
+
+async function findSingleAccountInCollection(collectionProvider, customerKey) {
+  const result = await collectionProvider.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
+    .where({ customerKey, status: 'active' })
     .limit(1)
     .get()
 
   return result.data[0] || null
 }
 
-async function findAccountByRechargeEvent(event = {}) {
-  const phone = String(event.phone || '').trim()
-  const customerName = String(event.customerName || '').trim()
+async function findLegacyAccountInCollection(collectionProvider, event = {}) {
+  const legacyKeys = getLegacyCustomerKeys(event)
 
-  if (phone) {
-    const account = await findSingleAccount(phone)
-    if (account) {
-      return account
+  for (let index = 0; index < legacyKeys.length; index += 1) {
+    const legacyKey = legacyKeys[index]
+    const result = await collectionProvider.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
+      .where({ customerKey: legacyKey, status: 'active' })
+      .limit(1)
+      .get()
+
+    if (result.data[0]) {
+      return result.data[0]
     }
   }
 
+  const phone = String(event.phone || '').trim()
+  if (phone) {
+    const phoneResult = await collectionProvider.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
+      .where({ phone, status: 'active' })
+      .limit(1)
+      .get()
+
+    if (phoneResult.data[0]) {
+      return phoneResult.data[0]
+    }
+  }
+
+  const customerName = String(event.customerName || event.name || '').trim()
   if (customerName) {
-    return findSingleAccount(customerName)
+    const nameResult = await collectionProvider.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
+      .where({ customerName, status: 'active' })
+      .limit(1)
+      .get()
+
+    if (nameResult.data[0]) {
+      return nameResult.data[0]
+    }
   }
 
   return null
+}
+
+async function findAccountByRechargeEventInCollection(collectionProvider, event = {}) {
+  const customerKey = getCustomerKey(event)
+  if (!customerKey) {
+    return null
+  }
+
+  const keyedAccount = await findSingleAccountInCollection(collectionProvider, customerKey)
+  if (keyedAccount) {
+    return keyedAccount
+  }
+
+  return findLegacyAccountInCollection(collectionProvider, event)
 }
 
 function formatDateString(date) {
@@ -303,43 +352,12 @@ function buildRechargeIncomeData(event, account, staff) {
   }
 }
 
-async function updateAccountWithRetry(accountId, buildUpdate) {
-  const db = cloud.database()
-  let lastError = null
-
-  for (let attempt = 0; attempt < MAX_LOCK_RETRIES; attempt += 1) {
-    const latestResult = await db.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
-      .where({ _id: accountId })
-      .limit(1)
-      .get()
-    const latestAccount = latestResult.data[0]
-
-    if (!latestAccount) {
-      throw new Error('储值账户不存在')
-    }
-
-    const currentVersion = Number(latestAccount._version || 0)
-    const updateData = buildUpdate(latestAccount)
-    const updateResult = await db.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
-      .where({ _id: accountId, _version: currentVersion })
-      .update({ data: Object.assign({}, updateData, { _version: currentVersion + 1 }) })
-    const updatedCount = updateResult.stats && updateResult.stats.updated
-
-    if (updatedCount === 1) {
-      return Object.assign({}, latestAccount, updateData, { _version: currentVersion + 1 })
-    }
-
-    lastError = new Error('储值账户版本冲突')
-  }
-
-  throw lastError || new Error('储值账户更新失败')
-}
-
 async function recharge(event = {}) {
   const staff = await authorize('income', 'add')
   const customerName = String(event.customerName || '').trim()
   const phone = String(event.phone || '').trim()
   const amount = toAmount(event.amount)
+  const customerKey = getCustomerKey({ phone, customerName })
 
   if (!customerName) {
     return fail('客户姓名不能为空')
@@ -351,65 +369,79 @@ async function recharge(event = {}) {
 
   const db = cloud.database()
   const now = new Date()
-  const existingAccount = await findAccountByRechargeEvent({ phone, customerName })
-  let account = null
-  let balanceBefore = 0
 
-  if (existingAccount) {
-    balanceBefore = toAmount(existingAccount.balance)
-    account = await updateAccountWithRetry(existingAccount._id, (latestAccount) => ({
-      balance: toAmount(toAmount(latestAccount.balance) + amount),
-      totalRecharge: toAmount(toAmount(latestAccount.totalRecharge) + amount),
-      updatedBy: staff._id,
-      updatedByName: staff.name || '',
-      updateTime: now
-    }))
-    balanceBefore = toAmount(account.balance - amount)
-  } else {
-    const accountData = {
-      customerName,
-      phone,
-      customerKey: phone || customerName,
-      balance: amount,
-      totalRecharge: amount,
-      totalConsume: 0,
+  const result = await db.runTransaction(async (transaction) => {
+    const existingAccount = await findAccountByRechargeEventInCollection(transaction, { phone, customerName })
+    let account = null
+    let balanceBefore = 0
+
+    if (existingAccount) {
+      balanceBefore = toAmount(existingAccount.balance)
+      const currentVersion = Number(existingAccount._version || 0)
+      const updateData = {
+        customerName: existingAccount.customerName || customerName,
+        phone: existingAccount.phone || phone,
+        customerKey,
+        balance: toAmount(balanceBefore + amount),
+        totalRecharge: toAmount(toAmount(existingAccount.totalRecharge) + amount),
+        updatedBy: staff._id,
+        updatedByName: staff.name || '',
+        updateTime: now,
+        _version: currentVersion + 1
+      }
+
+      await transaction.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
+        .doc(existingAccount._id)
+        .update({ data: updateData })
+      account = Object.assign({}, existingAccount, updateData)
+    } else {
+      const accountData = {
+        customerName,
+        phone,
+        customerKey,
+        balance: amount,
+        totalRecharge: amount,
+        totalConsume: 0,
+        status: 'active',
+        _version: 1,
+        createdBy: staff._id,
+        createdByName: staff.name || '',
+        updatedBy: staff._id,
+        updatedByName: staff.name || '',
+        createTime: now,
+        updateTime: now
+      }
+      const accountResult = await transaction.collection(COLLECTIONS.STORED_VALUE_ACCOUNT).add({ data: accountData })
+      account = Object.assign({}, accountData, { _id: accountResult._id })
+    }
+
+    const incomeData = buildRechargeIncomeData(event, account, staff)
+    const incomeResult = await transaction.collection(COLLECTIONS.INCOME).add({ data: incomeData })
+    const transactionData = {
+      type: 'recharge',
       status: 'active',
-      _version: 1,
-      createdBy: staff._id,
-      createdByName: staff.name || '',
-      updatedBy: staff._id,
-      updatedByName: staff.name || '',
+      accountId: account._id,
+      amount,
+      balanceBefore,
+      balanceAfter: toAmount(balanceBefore + amount),
+      incomeId: incomeResult._id,
+      operatorId: staff._id,
+      operatorName: staff.name || '',
+      remark: String(event.remark || '').trim(),
       createTime: now,
       updateTime: now
     }
-    const accountResult = await db.collection(COLLECTIONS.STORED_VALUE_ACCOUNT).add({ data: accountData })
-    account = Object.assign({}, accountData, { _id: accountResult._id })
-  }
+    const transactionResult = await transaction.collection(COLLECTIONS.STORED_VALUE_TRANSACTION).add({ data: transactionData })
+    const rechargeTransaction = Object.assign({}, transactionData, { _id: transactionResult._id })
 
-  const incomeData = buildRechargeIncomeData(event, account, staff)
-  const incomeResult = await db.collection(COLLECTIONS.INCOME).add({ data: incomeData })
-  const transactionData = {
-    type: 'recharge',
-    status: 'active',
-    accountId: account._id,
-    amount,
-    balanceBefore,
-    balanceAfter: toAmount(balanceBefore + amount),
-    incomeId: incomeResult._id,
-    operatorId: staff._id,
-    operatorName: staff.name || '',
-    remark: String(event.remark || '').trim(),
-    createTime: now,
-    updateTime: now
-  }
-  const transactionResult = await db.collection(COLLECTIONS.STORED_VALUE_TRANSACTION).add({ data: transactionData })
-  const transaction = Object.assign({}, transactionData, { _id: transactionResult._id })
+    await transaction.collection(COLLECTIONS.INCOME)
+      .doc(incomeResult._id)
+      .update({ data: { storedValueTransactionId: transactionResult._id } })
 
-  await db.collection(COLLECTIONS.INCOME)
-    .doc(incomeResult._id)
-    .update({ data: { storedValueTransactionId: transactionResult._id } })
+    return { account, transaction: rechargeTransaction, incomeId: incomeResult._id }
+  })
 
-  return ok({ account, transaction, incomeId: incomeResult._id })
+  return ok(result)
 }
 
 async function settleIncomeWithStoredValue() {
@@ -449,6 +481,5 @@ exports.__test__ = {
   normalizeCustomerInputs,
   authorize,
   buildRechargeIncomeData,
-  formatDateString,
-  updateAccountWithRetry
+  formatDateString
 }
