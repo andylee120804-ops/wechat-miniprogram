@@ -198,13 +198,18 @@ Page({
       const accountsByKey = {}
       const conflictsByKey = {}
       ;(result.data || []).forEach((account) => {
-        const key = this.getStoredValueAccountKey(account)
-        if (!key) return
-        if (accountsByKey[key]) {
-          conflictsByKey[key] = true
-          return
-        }
-        accountsByKey[key] = account
+        const keys = Array.isArray(account.matchKeys) && account.matchKeys.length
+          ? account.matchKeys.map((key) => String(key || '').trim()).filter(Boolean)
+          : [this.getStoredValueAccountKey(account)]
+        keys.forEach((rawKey) => {
+          const key = rawKey.indexOf('phone:') === 0 ? rawKey.slice(6) : (rawKey.indexOf('name:') === 0 ? rawKey.slice(5) : rawKey)
+          if (!key) return
+          if (accountsByKey[key] && accountsByKey[key]._id !== account._id) {
+            conflictsByKey[key] = true
+            return
+          }
+          accountsByKey[key] = account
+        })
       })
       return { accountsByKey, conflictsByKey }
     } catch (err) {

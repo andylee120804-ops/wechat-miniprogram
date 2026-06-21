@@ -114,6 +114,41 @@ describe('income-add stored value settlement', () => {
     expect(result.conflictsByKey['李四']).toBe(true)
   })
 
+  test('maps cloud returned matchKeys so phone reservations can use name-matched accounts and vice versa', async () => {
+    const page = loadIncomeAddPage()
+    mockCallFunction.mockResolvedValue({
+      result: {
+        success: true,
+        data: [
+          {
+            _id: 'account-1',
+            customerName: '张三',
+            phone: '13800000000',
+            balance: 500,
+            matchKeys: ['phone:13800000000', '13800000000', 'name:张三', '张三']
+          }
+        ]
+      }
+    })
+
+    const result = await page.loadStoredValueAccountsForReservations([
+      { customerName: '张三' },
+      { phone: '13800000000', customerName: '张三' }
+    ])
+
+    expect(result.accountsByKey['张三']._id).toBe('account-1')
+    expect(result.accountsByKey['13800000000']._id).toBe('account-1')
+    page.data.selectedReservation = { customerName: '张三' }
+    page.data.amount = '800'
+    page.data.storedValueAccountsByKey = result.accountsByKey
+    page.data.storedValueConflictsByKey = result.conflictsByKey
+
+    page.updateStoredValuePreview()
+
+    expect(page.data.selectedStoredValueAccount._id).toBe('account-1')
+    expect(page.data.storedValuePreview.deducted).toBe(500)
+  })
+
   test('computes stored-value preview from selected reservation and amount input', () => {
     const page = loadIncomeAddPage()
     page.data.selectedReservation = { phone: '13800000000', customerName: '张三' }

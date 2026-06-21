@@ -881,6 +881,65 @@ describe('stored value recharge action', () => {
     expect(adds).toEqual([])
   })
 
+  test('rejects recharge without requestId before opening a transaction', async () => {
+    const { main, db, accountReads, adds, updates, sets } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }]
+    })
+
+    const result = await main({ action: 'recharge', customerName: '张三', phone: '13800000000', amount: 1000 })
+
+    expect(result).toEqual({ success: false, message: '请求标识不能为空' })
+    expect(db.runTransaction).not.toHaveBeenCalled()
+    expect(accountReads).toEqual([])
+    expect(adds).toEqual([])
+    expect(updates).toEqual([])
+    expect(sets).toEqual([])
+  })
+
+  test('returns existing recharge result for duplicate requestId without repeating writes', async () => {
+    const { main, transactionAdds, transactionUpdates, transactionSets } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      collectionData: {
+        stored_value_transaction: [{
+          _id: 'tx-existing',
+          type: 'recharge',
+          requestId: 'req-existing',
+          accountId: 'account-1',
+          incomeId: 'income-1',
+          amount: 1000,
+          balanceBefore: 200,
+          balanceAfter: 1200,
+          status: 'active',
+          createTime: '2026-06-21T10:00:00.000Z'
+        }]
+      },
+      transactionDocData: {
+        stored_value_account: {
+          'account-1': { _id: 'account-1', customerName: '张三', phone: '13800000000', customerKey: 'phone:13800000000', balance: 1200, totalRecharge: 1500, totalConsume: 300, status: 'active' }
+        },
+        income: {
+          'income-1': { _id: 'income-1', amount: 1000, settlementMode: 'stored_value_recharge', storedValueAccountId: 'account-1' }
+        }
+      }
+    })
+
+    const result = await main({ action: 'recharge', requestId: 'req-existing', customerName: '张三', phone: '13800000000', amount: 1000 })
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        account: expect.objectContaining({ _id: 'account-1', balance: 1200 }),
+        transaction: expect.objectContaining({ _id: 'tx-existing', requestId: 'req-existing', balanceAfter: 1200 }),
+        income: expect.objectContaining({ _id: 'income-1', settlementMode: 'stored_value_recharge' }),
+        incomeId: 'income-1',
+        idempotent: true
+      }
+    })
+    expect(transactionAdds).toEqual([])
+    expect(transactionUpdates).toEqual([])
+    expect(transactionSets).toEqual([])
+  })
+
   test('creates account, income and recharge transaction for new customer', async () => {
     const expectedAccountId = storedValue.__test__.buildStoredValueAccountId('phone:13800000000')
     const { main, accountReads, adds, sets, updates } = loadStoredValueFunction({
@@ -889,6 +948,7 @@ describe('stored value recharge action', () => {
 
     const result = await main({
       action: 'recharge',
+      requestId: 'req-new-customer',
       customerName: '张三',
       phone: '13800000000',
       amount: 1000,
@@ -985,6 +1045,7 @@ describe('stored value recharge action', () => {
 
     const result = await main({
       action: 'recharge',
+      requestId: 'req-existing-account',
       customerName: '张三',
       phone: '13800000000',
       amount: 1000,
@@ -1026,7 +1087,7 @@ describe('stored value recharge action', () => {
       rejectRunTransactionAfterCallback: 'transaction rollback'
     })
 
-    const result = await main({ action: 'recharge', customerName: '张三', phone: '13800000000', amount: 1000 })
+    const result = await main({ action: 'recharge', requestId: 'req-rollback', customerName: '张三', phone: '13800000000', amount: 1000 })
 
     expect(result).toEqual({ success: false, message: 'transaction rollback' })
     expect(db.runTransaction).toHaveBeenCalledTimes(1)
@@ -1053,7 +1114,7 @@ describe('stored value recharge action', () => {
       }]]
     })
 
-    const result = await main({ action: 'recharge', customerName: '张三', phone: '13800000000', amount: 500 })
+    const result = await main({ action: 'recharge', requestId: 'req-legacy-phone', customerName: '张三', phone: '13800000000', amount: 500 })
 
     expect(result.success).toBe(true)
     expect(accountReads).toEqual([
@@ -1087,7 +1148,7 @@ describe('stored value recharge action', () => {
       }]]
     })
 
-    const result = await main({ action: 'recharge', customerName: '张三', phone: '13800000000', amount: 700 })
+    const result = await main({ action: 'recharge', requestId: 'req-concurrent-account', customerName: '张三', phone: '13800000000', amount: 700 })
 
     expect(result.success).toBe(true)
     expect(adds.filter((entry) => entry.name === 'stored_value_account')).toEqual([])
@@ -1107,7 +1168,7 @@ describe('stored value recharge action', () => {
       rejectSetIds: [conflictAccountId]
     })
 
-    const result = await main({ action: 'recharge', customerName: '张三', phone: '13800000000', amount: 700 })
+    const result = await main({ action: 'recharge', requestId: 'req-conflict-account', customerName: '张三', phone: '13800000000', amount: 700 })
 
     expect(result).toEqual({ success: false, message: '储值账户正在创建，请重试' })
     expect(adds.filter((entry) => entry.name === 'stored_value_account')).toEqual([])
@@ -1119,6 +1180,110 @@ describe('stored value recharge action', () => {
     ])
     expect(outsideAdds).toEqual([])
     expect(outsideSets).toEqual([])
+  })
+})
+
+describe('stored value query matching and minimized responses', () => {
+  test('queryAccountByCustomer falls back from name to a unique active account and returns recent minimized transactions', async () => {
+    const { main, accountReads } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '客服', role: 'waiter', status: 'active', boundOpenid: 'openid-user' }],
+      permissionsData: [{ staffId: 'staff-1', permissions: [{ module: 'customer', actions: ['view'] }] }],
+      accountDataSequence: [[], [{
+        _id: 'account-1',
+        customerName: '张三',
+        phone: '13800000000',
+        customerKey: 'phone:13800000000',
+        balance: 800,
+        totalRecharge: 1000,
+        totalConsume: 200,
+        status: 'active',
+        createdBy: 'staff-secret',
+        _version: 9
+      }]],
+      collectionData: {
+        stored_value_transaction: [
+          { _id: 'tx-1', type: 'recharge', amount: 1000, balanceAfter: 1000, createTime: '2026-06-21T10:00:00.000Z', operatorId: 'staff-secret', status: 'active' },
+          { _id: 'tx-2', type: 'consume', amount: 200, balanceAfter: 800, createTime: '2026-06-22T10:00:00.000Z', reservationSnapshot: { date: '2026-06-22' }, operatorId: 'staff-secret', status: 'active' }
+        ]
+      }
+    })
+
+    const result = await main({ action: 'queryAccountByCustomer', customerName: '张三' })
+
+    expect(result.success).toBe(true)
+    expect(accountReads).toEqual([
+      { customerKey: 'name:张三', status: 'active' },
+      { customerName: '张三', status: 'active' }
+    ])
+    expect(result.data.account).toEqual(expect.objectContaining({ _id: 'account-1', customerKey: 'phone:13800000000', phone: '13800000000', balance: 800 }))
+    expect(result.data.account).not.toHaveProperty('createdBy')
+    expect(result.data.account).not.toHaveProperty('_version')
+    expect(result.data.transactions).toEqual([
+      expect.objectContaining({ _id: 'tx-1', type: 'recharge', amount: 1000, balanceAfter: 1000 }),
+      expect.objectContaining({ _id: 'tx-2', type: 'consume', amount: 200, balanceAfter: 800, reservationSnapshot: { date: '2026-06-22' } })
+    ])
+    expect(result.data.transactions[0]).not.toHaveProperty('operatorId')
+  })
+
+  test('queryAccountByCustomer rejects ambiguous same-name active accounts when phone is missing', async () => {
+    const { main } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '客服', role: 'waiter', status: 'active', boundOpenid: 'openid-user' }],
+      permissionsData: [{ staffId: 'staff-1', permissions: [{ module: 'customer', actions: ['view'] }] }],
+      accountDataSequence: [[], [
+        { _id: 'account-1', customerName: '张三', phone: '13800000000', customerKey: 'phone:13800000000', status: 'active' },
+        { _id: 'account-2', customerName: '张三', phone: '13900000000', customerKey: 'phone:13900000000', status: 'active' }
+      ]]
+    })
+
+    const result = await main({ action: 'queryAccountByCustomer', customerName: '张三' })
+
+    expect(result).toEqual({ success: false, message: '同名客户存在多个储值账户，请补充手机号' })
+  })
+
+  test('queryAccountsByCustomers uses fallback matching and returns minimized accounts with all match keys', async () => {
+    const { main, accountReads } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '收银', role: 'waiter', status: 'active', boundOpenid: 'openid-user' }],
+      permissionsData: [{ staffId: 'staff-1', permissions: [{ module: 'income', actions: ['add'] }] }],
+      accountDataSequence: [[], [], [{
+        _id: 'account-1',
+        customerName: '张三',
+        phone: '13800000000',
+        customerKey: 'phone:13800000000',
+        balance: 500,
+        totalRecharge: 1000,
+        totalConsume: 500,
+        createdBy: 'staff-secret',
+        updatedAt: 'secret',
+        status: 'active',
+        _version: 3
+      }], [{
+        _id: 'account-2',
+        customerName: '李四',
+        phone: '13900000000',
+        customerKey: 'phone:13900000000',
+        balance: 300,
+        status: 'active'
+      }]]
+    })
+
+    const result = await main({
+      action: 'queryAccountsByCustomers',
+      customers: [
+        { customerName: '张三' },
+        { phone: '13900000000', customerName: '李四' }
+      ]
+    })
+
+    expect(result.success).toBe(true)
+    expect(accountReads).toEqual(expect.arrayContaining([
+      { customerKey: 'name:张三', status: 'active' },
+      { customerKey: 'phone:13900000000', status: 'active' },
+      { customerName: '张三', status: 'active' }
+    ]))
+    expect(result.data).toEqual([
+      { _id: 'account-1', customerKey: 'phone:13800000000', customerName: '张三', phone: '13800000000', balance: 500, status: 'active', matchKeys: ['phone:13800000000', '13800000000', 'name:张三', '张三'] },
+      { _id: 'account-2', customerKey: 'phone:13900000000', customerName: '李四', phone: '13900000000', balance: 300, status: 'active', matchKeys: ['phone:13900000000', '13900000000', 'name:李四', '李四'] }
+    ])
   })
 })
 
@@ -1181,7 +1346,7 @@ describe('stored value query authorization', () => {
     })
 
     expect(result.success).toBe(true)
-    expect(accountReads).toEqual([{ customerKey: 'phone:13800000000', status: 'active' }, { customerKey: 'name:李四', status: 'active' }])
+    expect(accountReads.slice(0, 2)).toEqual([{ customerKey: 'phone:13800000000', status: 'active' }, { customerKey: 'name:李四', status: 'active' }])
     expect(whereCalls).toContainEqual({ name: 'permissions', where: { staffId: 'newer-cashier' } })
   })
 
@@ -1201,7 +1366,7 @@ describe('stored value query authorization', () => {
     })
 
     expect(result.success).toBe(true)
-    expect(accountReads).toEqual([{ customerKey: 'phone:13800000000', status: 'active' }, { customerKey: 'name:李四', status: 'active' }])
+    expect(accountReads.slice(0, 2)).toEqual([{ customerKey: 'phone:13800000000', status: 'active' }, { customerKey: 'name:李四', status: 'active' }])
   })
 
   test('rejects queryAccountsByCustomers when more than 50 unique customers are requested', async () => {

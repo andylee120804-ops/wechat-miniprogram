@@ -14,6 +14,8 @@ const COLLECTIONS = {
 }
 
 const MAX_CUSTOMER_BATCH_SIZE = 50
+const RECENT_TRANSACTION_LIMIT = 20
+const CHINA_TIME_OFFSET_MS = 8 * 60 * 60 * 1000
 
 function loadCloud() {
   try {
@@ -244,8 +246,20 @@ async function queryAccountByCustomer(event = {}) {
     return fail('缺少客户信息')
   }
 
-  const account = await findSingleAccount(customerKey)
-  return ok(account)
+  const db = cloud.database()
+  const match = await findAccountByCustomerInCollection(db, event)
+  if (match.error) {
+    return fail(match.error)
+  }
+  if (!match.account) {
+    return ok({ account: null, transactions: [] })
+  }
+
+  const transactions = await findRecentTransactions(db, match.account._id)
+  return ok({
+    account: minimizeAccount(match.account),
+    transactions: transactions.map(minimizeTransaction)
+  })
 }
 
 async function queryAccountsByCustomers(event = {}) {
@@ -256,11 +270,22 @@ async function queryAccountsByCustomers(event = {}) {
     return fail(`一次最多查询${MAX_CUSTOMER_BATCH_SIZE}个客户`)
   }
 
-  const accounts = await Promise.all(
-    normalized.customers.map(async (customer) => findSingleAccount(customer.key))
+  const db = cloud.database()
+  const matches = await Promise.all(
+    normalized.customers.map(async (customer) => findAccountByCustomerInCollection(db, customer.customer))
   )
 
-  return ok(accounts.filter(Boolean))
+  const accounts = []
+  const seenIds = {}
+  matches.forEach((match) => {
+    if (!match || match.error || !match.account || seenIds[match.account._id]) {
+      return
+    }
+    seenIds[match.account._id] = true
+    accounts.push(minimizeAccount(match.account))
+  })
+
+  return ok(accounts)
 }
 
 async function findSingleAccount(customerKey) {
@@ -275,6 +300,131 @@ async function findSingleAccountInCollection(collectionProvider, customerKey) {
     .get()
 
   return result.data[0] || null
+}
+
+async function findAccountsByNameInCollection(collectionProvider, customerName) {
+  if (!customerName) {
+    return []
+  }
+
+  const result = await collectionProvider.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
+    .where({ customerName, status: 'active' })
+    .limit(2)
+    .get()
+
+  return Array.isArray(result.data) ? result.data : []
+}
+
+async function findAccountByCustomerInCollection(collectionProvider, customer = {}) {
+  const customerKey = getCustomerKey(customer)
+  if (customerKey) {
+    const keyedAccount = await findSingleAccountInCollection(collectionProvider, customerKey)
+    if (keyedAccount) {
+      return { account: keyedAccount }
+    }
+  }
+
+  const phone = String(customer.phone || '').trim()
+  const customerName = String(customer.customerName || customer.name || '').trim()
+  const legacyAccount = phone
+    ? await findLegacyAccountInCollection(collectionProvider, Object.assign({}, customer, { skipNameFallback: true }))
+    : null
+  if (legacyAccount) {
+    return { account: legacyAccount }
+  }
+
+  if (!phone && customerName) {
+    const nameAccounts = await findAccountsByNameInCollection(collectionProvider, customerName)
+    if (nameAccounts.length > 1) {
+      return { error: '同名客户存在多个储值账户，请补充手机号' }
+    }
+    if (nameAccounts.length === 1) {
+      return { account: nameAccounts[0] }
+    }
+  }
+
+  return { account: null }
+}
+
+function buildAccountMatchKeys(account = {}) {
+  const keys = []
+  const customerKey = String(account.customerKey || '').trim()
+  const phone = String(account.phone || '').trim()
+  const customerName = String(account.customerName || account.name || '').trim()
+
+  if (customerKey) keys.push(customerKey)
+  if (phone) {
+    keys.push(phone)
+    keys.push(`phone:${phone}`)
+  }
+  if (customerName) {
+    keys.push(`name:${customerName}`)
+    keys.push(customerName)
+  }
+
+  return keys.filter((key, index) => key && keys.indexOf(key) === index)
+}
+
+function minimizeAccount(account = {}) {
+  return {
+    _id: account._id,
+    customerKey: account.customerKey || '',
+    customerName: account.customerName || account.name || '',
+    phone: account.phone || '',
+    balance: toAmount(account.balance),
+    status: account.status || 'active',
+    matchKeys: buildAccountMatchKeys(account)
+  }
+}
+
+function minimizeTransaction(transaction = {}) {
+  return {
+    _id: transaction._id,
+    type: transaction.type || '',
+    amount: toAmount(transaction.amount || transaction.deductedAmount),
+    balanceAfter: toAmount(transaction.balanceAfter),
+    date: transaction.date || '',
+    createTime: transaction.createTime || '',
+    updateTime: transaction.updateTime || '',
+    remark: transaction.remark || '',
+    reservationSnapshot: transaction.reservationSnapshot || null,
+    status: transaction.status || 'active'
+  }
+}
+
+async function findRecentTransactions(collectionProvider, accountId) {
+  if (!accountId) {
+    return []
+  }
+
+  let query = collectionProvider.collection(COLLECTIONS.STORED_VALUE_TRANSACTION)
+    .where({ accountId, status: 'active' })
+  if (typeof query.orderBy === 'function') {
+    query = query.orderBy('createTime', 'desc')
+  }
+  if (typeof query.limit === 'function') {
+    query = query.limit(RECENT_TRANSACTION_LIMIT)
+  }
+  const result = await query.get()
+  return Array.isArray(result.data) ? result.data.slice(0, RECENT_TRANSACTION_LIMIT) : []
+}
+
+async function findRechargeByRequestId(collectionProvider, requestId) {
+  const result = await collectionProvider.collection(COLLECTIONS.STORED_VALUE_TRANSACTION)
+    .where({ requestId, type: 'recharge' })
+    .limit(1)
+    .get()
+
+  return result.data[0] || null
+}
+
+async function getDocumentById(collectionProvider, collectionName, id) {
+  if (!id) {
+    return null
+  }
+
+  const result = await collectionProvider.collection(collectionName).doc(id).get()
+  return result.data || null
 }
 
 async function findLegacyAccountInCollection(collectionProvider, event = {}) {
@@ -305,7 +455,7 @@ async function findLegacyAccountInCollection(collectionProvider, event = {}) {
   }
 
   const customerName = String(event.customerName || event.name || '').trim()
-  if (customerName) {
+  if (customerName && !event.skipNameFallback) {
     const nameResult = await collectionProvider.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
       .where({ customerName, status: 'active' })
       .limit(1)
@@ -337,6 +487,14 @@ function formatDateString(date) {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function formatChinaDateString(date) {
+  const shifted = new Date(date.getTime() + CHINA_TIME_OFFSET_MS)
+  const year = shifted.getUTCFullYear()
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(shifted.getUTCDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
 
@@ -499,15 +657,22 @@ function normalizeDateString(value) {
   }
 
   if (typeof value === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return value.slice(0, 10)
+    }
+    const parsed = new Date(value)
+    if (Number.isFinite(parsed.getTime())) {
+      return formatChinaDateString(parsed)
+    }
     return value.slice(0, 10)
   }
 
   if (value instanceof Date) {
-    return formatDateString(value)
+    return formatChinaDateString(value)
   }
 
   if (value && typeof value.toDate === 'function') {
-    return formatDateString(value.toDate())
+    return formatChinaDateString(value.toDate())
   }
 
   return String(value).slice(0, 10)
@@ -578,6 +743,7 @@ async function recharge(event = {}) {
   const customerName = String(event.customerName || '').trim()
   const phone = String(event.phone || '').trim()
   const amount = toAmount(event.amount)
+  const requestId = String(event.requestId || event.idempotencyKey || '').trim()
   const customerKey = getCustomerKey({ phone, customerName })
 
   if (!customerName) {
@@ -588,10 +754,27 @@ async function recharge(event = {}) {
     return fail('充值金额必须大于0')
   }
 
+  if (!requestId) {
+    return fail('请求标识不能为空')
+  }
+
   const db = cloud.database()
   const now = new Date()
 
   const result = await db.runTransaction(async (transaction) => {
+    const existingRecharge = await findRechargeByRequestId(transaction, requestId)
+    if (existingRecharge) {
+      const existingAccount = await getDocumentById(transaction, COLLECTIONS.STORED_VALUE_ACCOUNT, existingRecharge.accountId)
+      const existingIncome = await getDocumentById(transaction, COLLECTIONS.INCOME, existingRecharge.incomeId)
+      return {
+        account: existingAccount,
+        transaction: existingRecharge,
+        income: existingIncome,
+        incomeId: existingRecharge.incomeId || '',
+        idempotent: true
+      }
+    }
+
     const existingAccount = await findAccountByRechargeEventInCollection(transaction, { phone, customerName })
     let account = null
     let balanceBefore = 0
@@ -651,6 +834,7 @@ async function recharge(event = {}) {
     const transactionData = {
       type: 'recharge',
       status: 'active',
+      requestId,
       accountId: account._id,
       amount,
       balanceBefore,

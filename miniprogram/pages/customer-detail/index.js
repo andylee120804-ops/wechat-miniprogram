@@ -27,6 +27,10 @@ function getPaymentMethodLabel(value) {
   return option ? option.label : '微信'
 }
 
+function createRequestId() {
+  return 'recharge_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10)
+}
+
 function formatStoredValueAccount(account) {
   if (!account) return null
   return {
@@ -80,6 +84,7 @@ Page({
     rechargePaymentMethod: 'wechat',
     rechargePaymentMethodLabel: '微信',
     rechargeRemark: '',
+    rechargeRequestId: '',
     rechargeSubmitting: false,
     paymentMethodOptions: PAYMENT_METHOD_OPTIONS
   },
@@ -165,32 +170,15 @@ Page({
       }
 
       const payload = response.data || null
-      const rawAccount = payload && payload.account ? payload.account : payload
+      const hasAccountEnvelope = !!(payload && Object.prototype.hasOwnProperty.call(payload, 'account'))
+      const rawAccount = hasAccountEnvelope ? payload.account : payload
       const account = formatStoredValueAccount(rawAccount)
       const cloudTransactions = payload && Array.isArray(payload.transactions) ? payload.transactions : []
-      const transactions = account ? await this.loadStoredValueTransactions(account._id, cloudTransactions) : []
+      const transactions = account ? cloudTransactions.map(formatStoredValueTransaction) : []
 
       return { account, transactions }
     } catch (err) {
       return { account: null, transactions: [] }
-    }
-  },
-
-  async loadStoredValueTransactions(accountId, fallbackTransactions) {
-    if (fallbackTransactions.length) {
-      return fallbackTransactions.map(formatStoredValueTransaction)
-    }
-
-    if (!accountId) return []
-
-    try {
-      const result = await db.queryAll(COLLECTIONS.STORED_VALUE_TRANSACTION, {
-        accountId,
-        status: 'active'
-      }, 'createTime', 'desc')
-      return (result.data || []).slice(0, 20).map(formatStoredValueTransaction)
-    } catch (err) {
-      return []
     }
   },
 
@@ -209,6 +197,7 @@ Page({
       rechargePaymentMethod: 'wechat',
       rechargePaymentMethodLabel: '微信',
       rechargeRemark: '',
+      rechargeRequestId: createRequestId(),
       rechargeSubmitting: false
     })
   },
@@ -254,7 +243,8 @@ Page({
       return
     }
 
-    this.setData({ rechargeSubmitting: true })
+    const requestId = this.data.rechargeRequestId || createRequestId()
+    this.setData({ rechargeSubmitting: true, rechargeRequestId: requestId })
 
     try {
       const result = await wx.cloud.callFunction({
@@ -264,6 +254,7 @@ Page({
           customerName: this.data.customerName,
           phone: String(this.data.rechargePhone || '').trim(),
           amount,
+          requestId,
           paymentMethod: this.data.rechargePaymentMethod,
           remark: String(this.data.rechargeRemark || '').trim()
         }
@@ -284,7 +275,8 @@ Page({
         showRechargeModal: false,
         rechargeSubmitting: false,
         rechargeAmount: '',
-        rechargeRemark: ''
+        rechargeRemark: '',
+        rechargeRequestId: ''
       })
       wx.showToast({ title: '充值成功', icon: 'success' })
     } catch (err) {

@@ -137,6 +137,61 @@ describe('customer detail stored-value recharge UI', () => {
     expect(page.data.rechargePaymentMethodLabel).toBe('现金')
   })
 
+  test('uses cloud function returned transactions and never directly reads stored-value transaction collection', async () => {
+    const page = loadCustomerDetailPage({ canAddIncome: true })
+    page.data.customerName = '张三'
+    mockCallFunction.mockResolvedValue({
+      result: {
+        success: true,
+        data: {
+          account: { _id: 'account-1', balance: 100 },
+          transactions: [
+            { _id: 'tx-1', type: 'recharge', amount: 100, balanceAfter: 100, createTime: '2026-06-21T10:00:00.000Z' }
+          ]
+        }
+      }
+    })
+
+    const result = await page.loadStoredValueData()
+
+    expect(mockQueryAll).not.toHaveBeenCalledWith('stored_value_transaction', expect.anything(), expect.anything(), expect.anything())
+    expect(result.transactions).toEqual([expect.objectContaining({ _id: 'tx-1', title: '储值充值' })])
+  })
+
+  test('does not fall back to direct stored-value transaction reads when cloud response has only account', async () => {
+    const page = loadCustomerDetailPage({ canAddIncome: true })
+    page.data.customerName = '张三'
+    mockCallFunction.mockResolvedValue({
+      result: {
+        success: true,
+        data: {
+          account: { _id: 'account-1', balance: 100 },
+          transactions: []
+        }
+      }
+    })
+
+    const result = await page.loadStoredValueData()
+
+    expect(mockQueryAll).not.toHaveBeenCalledWith('stored_value_transaction', expect.anything(), expect.anything(), expect.anything())
+    expect(result.transactions).toEqual([])
+  })
+
+  test('submits recharge with a non-empty requestId for server idempotency', async () => {
+    const page = loadCustomerDetailPage({ canAddIncome: true })
+    page.data.customerName = '张三'
+    page.data.rechargeAmount = '100'
+    page.data.rechargePhone = '13800000000'
+    page.loadStoredValueData = jest.fn(() => Promise.resolve({ account: null, transactions: [] }))
+    mockCallFunction.mockResolvedValue({ result: { success: true, data: { account: { phone: '13800000000' } } } })
+
+    await page.submitRecharge()
+
+    const rechargeCall = mockCallFunction.mock.calls.find((call) => call[0].data.action === 'recharge')
+    expect(rechargeCall[0].data.requestId).toEqual(expect.any(String))
+    expect(rechargeCall[0].data.requestId.length).toBeGreaterThan(10)
+  })
+
   test('reloads stored-value account by returned account phone after successful recharge', async () => {
     const page = loadCustomerDetailPage({ canAddIncome: true })
     page.data.customerName = '张三'

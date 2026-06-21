@@ -102,6 +102,25 @@ function loadFunction(dataByCollection) {
   return { main: mod.main, collectionCalls }
 }
 
+describe('getFinanceStats input validation', () => {
+  test.each([
+    ['bad format', { startDate: '2026/06/01', endDate: '2026-06-30', periodType: 'month' }, '日期格式必须为YYYY-MM-DD'],
+    ['nonexistent date', { startDate: '2026-02-30', endDate: '2026-06-30', periodType: 'month' }, '日期格式必须为YYYY-MM-DD'],
+    ['inverted range', { startDate: '2026-07-01', endDate: '2026-06-30', periodType: 'month' }, '开始日期不能晚于结束日期'],
+    ['too long range', { startDate: '2025-01-01', endDate: '2026-06-30', periodType: 'custom' }, '日期跨度不能超过366天'],
+    ['bad period type', { startDate: '2026-06-01', endDate: '2026-06-30', periodType: 'quarter' }, 'periodType不合法']
+  ])('rejects %s before querying database', async (name, event, message) => {
+    const { main, collectionCalls } = loadFunction({
+      staff: [{ _id: 'staff-admin', role: 'admin', status: 'active', boundOpenid: 'openid-admin' }]
+    })
+
+    const result = await main(event, {})
+
+    expect(result).toEqual({ success: false, message })
+    expect(collectionCalls).toEqual([])
+  })
+})
+
 describe('getFinanceStats stored value stats', () => {
   test('returns active stored value recharge, consume, and current balance without double counting income', async () => {
     const activeRechargeRows = Array.from({ length: 101 }, (_, index) => ({

@@ -31,11 +31,14 @@ const COLLECTIONS = {
 
 const ADMIN_ONLY_MODULES = ['staff', 'venueSettings', 'minAmount']
 const CHINA_TIME_OFFSET_MS = 8 * 60 * 60 * 1000
+const MAX_DATE_RANGE_DAYS = 366
+const ALLOWED_PERIOD_TYPES = ['week', 'month', 'year', 'custom']
 
 exports.main = async (event, context) => {
   const { startDate, endDate, periodType } = event
-  if (!startDate || !endDate) {
-    return { success: false, message: '缺少 startDate 或 endDate' }
+  const validationError = validateFinanceStatsInput(startDate, endDate, periodType || 'month')
+  if (validationError) {
+    return { success: false, message: validationError }
   }
   try {
     const auth = await authorizeDashboardView()
@@ -47,6 +50,42 @@ exports.main = async (event, context) => {
     console.error('getFinanceStats错误:', err)
     return { success: false, message: '财务统计失败: ' + (err.message || err) }
   }
+}
+
+function parseStrictDateText(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) {
+    return null
+  }
+
+  const date = new Date(value + 'T00:00:00.000Z')
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+    return null
+  }
+
+  return date
+}
+
+function validateFinanceStatsInput(startDate, endDate, periodType) {
+  const start = parseStrictDateText(startDate)
+  const end = parseStrictDateText(endDate)
+  if (!start || !end) {
+    return '日期格式必须为YYYY-MM-DD'
+  }
+
+  if (start.getTime() > end.getTime()) {
+    return '开始日期不能晚于结束日期'
+  }
+
+  const rangeDays = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1
+  if (rangeDays > MAX_DATE_RANGE_DAYS) {
+    return '日期跨度不能超过366天'
+  }
+
+  if (!ALLOWED_PERIOD_TYPES.includes(periodType)) {
+    return 'periodType不合法'
+  }
+
+  return ''
 }
 
 async function authorizeDashboardView() {
