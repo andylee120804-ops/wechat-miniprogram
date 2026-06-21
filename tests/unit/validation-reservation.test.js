@@ -7,6 +7,7 @@
 
 // Mock dependencies before requiring
 jest.mock('../../miniprogram/utils/helpers', () => ({
+  getChinaToday: jest.fn(() => '2099-06-01'),
   formatDate: jest.fn((d) => {
     if (!d) return ''
     const date = d instanceof Date ? d : new Date(d)

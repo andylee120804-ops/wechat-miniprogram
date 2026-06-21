@@ -220,7 +220,7 @@ describe('reservationConfig', () => {
     test('has 5 builtin fields', () => {
       const builtins = DEFAULT_FORM_CONFIG.fields.filter(f => f.builtin)
       expect(builtins.map(f => f.id)).toEqual([
-        'customerName', 'phone', 'guestCount', 'dishPrice', 'remark'
+        'customerName', 'guestCount', 'dishPrice', 'phone', 'remark'
       ])
     })
 

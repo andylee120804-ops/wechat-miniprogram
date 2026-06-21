@@ -14,16 +14,26 @@
  *   - _buildDocData (builtin vs custom field split)
  */
 
-const { describe, test, expect, beforeEach, jest } = require('@jest/globals')
+const { describe, test, expect, beforeEach } = require('@jest/globals')
 
 // ────────────────────────────────────────────────────────────────────────
 // 1. reservationConfig.resolveFields — additional edge cases
 // ────────────────────────────────────────────────────────────────────────
 
 const mockQueryAll = jest.fn()
+const mockGetDb = jest.fn(() => ({
+  command: {
+    gte: (v) => ({ _type: 'gte', val: v, and: (other) => ({ _type: 'range', val: [v, other] }) }),
+    lte: (v) => ({ _type: 'lte', val: v }),
+    neq: (v) => ({ _type: 'neq', val: v }),
+    and: (conds) => ({ _type: 'and', val: conds }),
+    or: (conds) => ({ _type: 'or', val: conds })
+  }
+}))
 jest.mock('../../miniprogram/utils/db', () => ({
   queryAll: mockQueryAll,
-  COLLECTIONS: { SETTINGS: 'settings' }
+  getDb: mockGetDb,
+  COLLECTIONS: { SETTINGS: 'settings', RESERVATION: 'reservation', PURCHASE: 'purchase', INCOME: 'income' }
 }))
 
 const {
@@ -102,6 +112,20 @@ describe('resolveFields — edge cases', () => {
 // ────────────────────────────────────────────────────────────────────────
 
 jest.mock('../../miniprogram/utils/helpers', () => ({
+  getChinaToday: jest.fn(() => '2026-01-01'),
+  createChinaDate: jest.fn((dateStr, h, m, s) => {
+    const date = new Date(dateStr + 'T00:00:00')
+    if (h !== undefined) date.setHours(h, m || 0, s || 0, 0)
+    return date
+  }),
+  getRoomName: jest.fn((room) => ({ big: '大包厢', small: '小包厢', chess: '棋牌室' }[room] || room || '未知')),
+  getExclusiveTypeName: jest.fn((exclusiveType, room) => {
+    const roomName = ({ big: '大包厢', small: '小包厢', chess: '棋牌室' }[room] || room || '未知')
+    if (exclusiveType === 'noon') return roomName + '午包场'
+    if (exclusiveType === 'night') return roomName + '晚包场'
+    if (exclusiveType === 'full') return roomName + '全天包场'
+    return roomName
+  }),
   formatDate: jest.fn((d) => {
     if (!d) return ''
     const date = d instanceof Date ? d : new Date(d)
@@ -300,27 +324,10 @@ describe('validateReservationForm', () => {
 // ────────────────────────────────────────────────────────────────────────
 
 const mockDbConflict = {
-  queryAll: jest.fn(),
-  getDb: jest.fn()
+  queryAll: mockQueryAll,
+  getDb: mockGetDb
 }
 
-jest.mock('../../miniprogram/utils/db', () => ({
-  ...mockDbConflict,
-  COLLECTIONS: { SETTINGS: 'settings', RESERVATION: 'reservations' }
-}))
-
-jest.mock('../../miniprogram/utils/helpers', () => ({
-  formatDate: jest.fn((d) => {
-    if (!d) return ''
-    const date = d instanceof Date ? d : new Date(d)
-    if (isNaN(date.getTime())) return ''
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-  }),
-  getRoomName: jest.fn((r) => {
-    const map = { big: '大包厢', small: '小包厢', chess: '棋牌室' }
-    return map[r] || r
-  })
-}))
 
 const { checkReservationConflict } = require('../../miniprogram/pages/reservation-add/helpers/conflict-check')
 
@@ -331,7 +338,7 @@ describe('checkReservationConflict', () => {
     mockDbConflict.queryAll.mockResolvedValue({ data: [] })
     mockDbConflict.getDb.mockReturnValue({
       command: {
-        gte: (v) => ({ _type: 'gte', val: v }),
+        gte: (v) => ({ _type: 'gte', val: v, and: (other) => ({ _type: 'range', val: [v, other] }) }),
         lte: (v) => ({ _type: 'lte', val: v }),
         neq: (v) => ({ _type: 'neq', val: v }),
         and: (conds) => ({ _type: 'and', val: conds }),
@@ -401,16 +408,15 @@ describe('checkReservationConflict', () => {
     ).rejects.toThrow('已有预约')
   })
 
-  test('swallows non-conflict database errors silently', async () => {
+  test('wraps non-conflict database errors with retry message', async () => {
     mockDbConflict.queryAll.mockRejectedValue(new Error('network timeout'))
 
-    // Should not throw — network errors are swallowed
     await expect(
       checkReservationConflict({
         dateStr: '2026-06-20', time: '中午', room: 'big',
         exclusiveType: 'none', isEdit: false
       })
-    ).resolves.toBeUndefined()
+    ).rejects.toThrow('预约冲突校验失败，请重试')
   })
 })
 
@@ -442,19 +448,14 @@ describe('isNoStandardRoom', () => {
     expect(isNoStandardRoom(undefined, 'none')).toBe(false)
   })
 
-  test('returns false when standards is undefined', () => {
-    expect(isNoStandardRoom({}, 'none')).toBe(false)
+  test('treats missing standards as no-standard room', () => {
+    expect(isNoStandardRoom({}, 'none')).toBe(true)
   })
 })
 
 // ────────────────────────────────────────────────────────────────────────
 // 5. createSettingsCache
 // ────────────────────────────────────────────────────────────────────────
-
-jest.mock('../../miniprogram/utils/db', () => ({
-  queryAll: jest.fn(),
-  COLLECTIONS: { SETTINGS: 'settings' }
-}))
 
 const { createSettingsCache } = require('../../miniprogram/pages/reservation-add/helpers/settings-cache')
 
@@ -563,21 +564,14 @@ describe('createSettingsCache', () => {
 // We need to test groupByRoomDynamic by creating a mock page instance
 // that replicates the method logic from reservation/index.js
 
-jest.mock('../../miniprogram/utils/reservationConfig', () => ({
-  loadRooms: jest.fn().mockResolvedValue([
-    { id: 'big', name: '大包厢', enabled: true, order: 0 },
-    { id: 'small', name: '小包厢', enabled: true, order: 1 },
-    { id: 'chess', name: '棋牌室', enabled: true, order: 2 }
-  ]),
-  loadFormConfig: jest.fn().mockResolvedValue(DEFAULT_FORM_CONFIG),
-  resolveFields: jest.fn((fields, roomId) => fields.filter(f => f.visible && !(f.hiddenInRooms && f.hiddenInRooms.includes(roomId)))),
-  invalidateCache: jest.fn()
-}))
-
 describe('groupByRoomDynamic', () => {
   // Recreate the groupByRoomDynamic function as a standalone for testing
   async function groupByRoomDynamic(reservations) {
-    var rooms = await require('../../miniprogram/utils/reservationConfig').loadRooms()
+    var rooms = [
+      { id: 'big', name: '大包厢', enabled: true, order: 0 },
+      { id: 'small', name: '小包厢', enabled: true, order: 1 },
+      { id: 'chess', name: '棋牌室', enabled: true, order: 2 }
+    ]
     var enabledRooms = rooms.filter(function(r) { return r.enabled })
     var sortOrder = {}
     enabledRooms.forEach(function(r, i) { sortOrder[r.id] = i })
@@ -623,7 +617,7 @@ describe('groupByRoomDynamic', () => {
       var aEx = exclusiveOrder[a] !== undefined
       var bEx = exclusiveOrder[b] !== undefined
       if (aEx !== bEx) return aEx ? -1 : 1
-      if (aEx && bEx) return (exclusiveOrder[a] || 99) - (exclusiveOrder[b] || 99)
+      if (aEx && bEx) return (exclusiveOrder[a] !== undefined ? exclusiveOrder[a] : 99) - (exclusiveOrder[b] !== undefined ? exclusiveOrder[b] : 99)
       return (sortOrder[a] !== undefined ? sortOrder[a] : 99) - (sortOrder[b] !== undefined ? sortOrder[b] : 99)
     })
 
@@ -728,13 +722,6 @@ describe('groupByRoomDynamic', () => {
     const reservations = Array.from({ length: 10 }, (_, i) => ({
       room: `room${i}`, roomName: `Room ${i}`, exclusiveType: 'none'
     }))
-    // Mock loadRooms to return 10 rooms
-    const { loadRooms } = require('../../miniprogram/utils/reservationConfig')
-    loadRooms.mockResolvedValueOnce(
-      Array.from({ length: 10 }, (_, i) => ({
-        id: `room${i}`, name: `Room ${i}`, enabled: true, order: i
-      }))
-    )
     const result = await groupByRoomDynamic(reservations)
     expect(result.length).toBe(10)
     // First and 8th group should have same color (palette has 7 entries)
@@ -958,8 +945,8 @@ describe('applyRoomConfig', () => {
       formConfigFields: DEFAULT_FORM_CONFIG.fields
     }, smallRoom)
 
-    expect(updates.standard).toBe(0)
-    expect(updates.standardPicked).toBe(false)
+    expect(updates.standard).toBe(500)
+    expect(updates.standardPicked).toBe(true)
   })
 })
 

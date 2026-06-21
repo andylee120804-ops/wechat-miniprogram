@@ -87,7 +87,8 @@ Page({
   },
 
   onCardTap: function (e) {
-    var key = e.currentTarget.dataset.key
+    var dataset = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset : {}
+    var key = dataset.key || ''
     var statusCards = this.data.statusCards
     var allList = this.data.allList || this.data.filteredList
 

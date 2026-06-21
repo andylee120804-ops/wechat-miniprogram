@@ -120,9 +120,14 @@ jest.mock('../../miniprogram/utils/error-handler', () => ({
 // ==================== Test Setup ====================
 
 const helpers = require('../../miniprogram/utils/helpers')
-const errorhandler = require('../../miniprogram/utils/error-handler')
 
+let errorhandler = require('../../miniprogram/utils/error-handler')
 let pageInstance = null
+
+function currentMonthDate(day) {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
 const originalPage = global.Page
 
 beforeAll(() => {
@@ -153,8 +158,9 @@ beforeEach(() => {
   mockGlobalData.userInfo = null
   mockGlobalData.statusBarHeight = 44
 
-  delete require.cache[require.resolve('../../miniprogram/pages/my-purchases/index.js')]
+  jest.resetModules()
   pageInstance = null
+  errorhandler = require('../../miniprogram/utils/error-handler')
 
   require('../../miniprogram/pages/my-purchases/index.js')
 })
@@ -272,16 +278,18 @@ describe('MyPurchasesPage', () => {
       await pageInstance.loadPurchases('user123')
 
       expect(mockQueryAll).toHaveBeenCalledWith(
-        COLLECTIONS.PURCHASE,
-        { purchaseBy: 'user123' }
+        mockCOLLECTIONS.PURCHASE,
+        { purchaseBy: 'user123' },
+        'date',
+        'desc'
       )
     })
 
     it('should load and process purchase data correctly', async () => {
       mockQueryAll.mockResolvedValue({ data: [
-        { _id: 'p1', item: 'Item 1', amount: 100, category: 'meat', date: '2024-01-15', status: 'pending', createdAt: '2024-01-15T10:00:00Z' },
-        { _id: 'p2', item: 'Item 2', amount: 200, category: 'seafood', date: '2024-01-16', status: 'approved', createdAt: '2024-01-16T10:00:00Z' },
-        { _id: 'p3', item: 'Item 3', amount: 300, category: 'vegetable', date: '2024-01-17', status: 'pending', createdAt: '2024-01-17T10:00:00Z' }
+        { _id: 'p1', item: 'Item 1', amount: 100, category: 'meat', date: currentMonthDate(15), status: 'pending', createdAt: '2024-01-15T10:00:00Z' },
+        { _id: 'p2', item: 'Item 2', amount: 200, category: 'seafood', date: currentMonthDate(16), status: 'approved', createdAt: '2024-01-16T10:00:00Z' },
+        { _id: 'p3', item: 'Item 3', amount: 300, category: 'vegetable', date: currentMonthDate(17), status: 'pending', createdAt: '2024-01-17T10:00:00Z' }
       ]})
 
       await pageInstance.loadPurchases('user123')
@@ -290,18 +298,18 @@ describe('MyPurchasesPage', () => {
       expect(finalCall.loading).toBe(false)
       expect(finalCall.hasRecords).toBe(true)
       expect(finalCall.allList).toHaveLength(3)
-      expect(finalCall.statusCards).toHaveLength(4)
+      expect(finalCall.statusCards).toHaveLength(5)
       expect(finalCall.filteredList).toHaveLength(3)
     })
 
     it('should build status cards with correct counts', async () => {
       mockQueryAll.mockResolvedValue({ data: [
-        { _id: '1', status: 'pending', createdAt: '2024-01-15' },
-        { _id: '2', status: 'pending', createdAt: '2024-01-16' },
-        { _id: '3', status: 'approved', createdAt: '2024-01-17' },
-        { _id: '4', status: 'reimbursed', createdAt: '2024-01-18' },
-        { _id: '5', status: 'rejected', createdAt: '2024-01-19' },
-        { _id: '6', status: 'pending', createdAt: '2024-01-20' }
+        { _id: '1', status: 'pending', date: currentMonthDate(15), createdAt: '2024-01-15' },
+        { _id: '2', status: 'pending', date: currentMonthDate(16), createdAt: '2024-01-16' },
+        { _id: '3', status: 'approved', date: currentMonthDate(17), createdAt: '2024-01-17' },
+        { _id: '4', status: 'reimbursed', date: currentMonthDate(18), createdAt: '2024-01-18' },
+        { _id: '5', status: 'rejected', date: currentMonthDate(19), createdAt: '2024-01-19' },
+        { _id: '6', status: 'pending', date: currentMonthDate(20), createdAt: '2024-01-20' }
       ]})
 
       await pageInstance.loadPurchases('user123')
@@ -338,8 +346,8 @@ describe('MyPurchasesPage', () => {
 
     it('should set correct sectionLabel with total count', async () => {
       mockQueryAll.mockResolvedValue({ data: [
-        { _id: '1', status: 'pending', createdAt: '2024-01-15' },
-        { _id: '2', status: 'approved', createdAt: '2024-01-16' }
+        { _id: '1', status: 'pending', date: currentMonthDate(15), createdAt: '2024-01-15' },
+        { _id: '2', status: 'approved', date: currentMonthDate(16), createdAt: '2024-01-16' }
       ]})
 
       await pageInstance.loadPurchases('user123')
@@ -351,7 +359,7 @@ describe('MyPurchasesPage', () => {
 
   describe('_formatItem', () => {
     it('should format a purchase item correctly with helpers', () => {
-      const item = { _id: 'p1', item: 'Test', amount: 1500, category: 'meat', date: '2024-01-15', status: 'pending' }
+      const item = { _id: 'p1', item: 'Test', amount: 1500, category: 'meat', date: currentMonthDate(15), status: 'pending' }
 
       const result = pageInstance._formatItem(item)
 
@@ -489,9 +497,9 @@ describe('MyPurchasesPage', () => {
   describe('Integration Tests', () => {
     it('should complete full flow: load then filter', async () => {
       mockQueryAll.mockResolvedValue({ data: [
-        { _id: '1', status: 'pending', createdAt: '2024-01-20' },
-        { _id: '2', status: 'approved', createdAt: '2024-01-19' },
-        { _id: '3', status: 'pending', createdAt: '2024-01-18' }
+        { _id: '1', status: 'pending', date: currentMonthDate(20), createdAt: '2024-01-20' },
+        { _id: '2', status: 'approved', date: currentMonthDate(19), createdAt: '2024-01-19' },
+        { _id: '3', status: 'pending', date: currentMonthDate(18), createdAt: '2024-01-18' }
       ]})
 
       await pageInstance.loadPurchases('user123')

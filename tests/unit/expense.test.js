@@ -83,7 +83,8 @@ jest.mock('../../miniprogram/utils/helpers', () => ({
   formatAmount: jest.fn((amount) => {
     if (amount === null || amount === undefined || amount === '') return '0.00'
     return Number(amount).toFixed(2)
-  })
+  }),
+  buildChanges: jest.fn(() => ({}))
 }))
 
 // Mock logger
@@ -126,8 +127,10 @@ jest.mock('../../miniprogram/utils/permission', () => ({
 
 let pageInstance = null
 const originalPage = global.Page
+const originalSetTimeout = global.setTimeout
 
 beforeAll(() => {
+  global.setTimeout = jest.fn(() => 0)
   global.Page = jest.fn((pageDef) => {
     pageInstance = Object.assign({}, pageDef)
     pageInstance._setDataCalls = []
@@ -140,6 +143,7 @@ beforeAll(() => {
 })
 
 afterAll(() => {
+  global.setTimeout = originalSetTimeout
   global.Page = originalPage
 })
 
@@ -154,7 +158,7 @@ beforeEach(() => {
   mockGlobalData.userInfo = { _id: 'user1', name: 'Admin', nickName: 'Admin' }
   mockGlobalData.statusBarHeight = 44
 
-  delete require.cache[require.resolve('../../miniprogram/pages/admin/expense/index.js')]
+  jest.resetModules()
   pageInstance = null
 
   require('../../miniprogram/pages/admin/expense/index.js')
@@ -670,7 +674,8 @@ describe('ExpensePage', () => {
       )
       expect(mockLog).toHaveBeenCalledWith(
         'expense_update',
-        expect.stringContaining('更新固定成本')
+        expect.stringContaining('更新固定成本'),
+        expect.any(Object)
       )
       expect(mockShowToast).toHaveBeenCalledWith({ title: '保存成功', icon: 'success' })
     })
@@ -815,7 +820,7 @@ describe('ExpensePage', () => {
       pageInstance.onStartDateChange({ detail: { value: '2026-12-31' } })
 
       expect(mockShowToast).toHaveBeenCalledWith({ title: '起始日期不能晚于结束日期', icon: 'none' })
-      expect(pageInstance.data.startDate).toBeUndefined()
+      expect(pageInstance.data.startDate).toBe('')
     })
 
     it('onStartDateChange should skip date validation when endDate is empty', () => {
@@ -840,7 +845,7 @@ describe('ExpensePage', () => {
       pageInstance.onEndDateChange({ detail: { value: '2026-01-01' } })
 
       expect(mockShowToast).toHaveBeenCalledWith({ title: '结束日期不能早于起始日期', icon: 'none' })
-      expect(pageInstance.data.endDate).toBeUndefined()
+      expect(pageInstance.data.endDate).toBe('')
     })
 
     it('onEndDateChange should skip validation when startDate is empty', () => {
@@ -919,7 +924,7 @@ describe('ExpensePage', () => {
           amount: 6000
         })
       )
-      expect(mockLog).toHaveBeenCalledWith('expense_update', expect.stringContaining('新名称'))
+      expect(mockLog).toHaveBeenCalledWith('expense_update', expect.stringContaining('新名称'), expect.any(Object))
     })
   })
 

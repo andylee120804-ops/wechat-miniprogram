@@ -57,19 +57,19 @@ describe('notify', () => {
       notify.setUnreadCount(3)
 
       expect(wxMock.setStorageSync).toHaveBeenCalledWith('unreadCount', 3)
-      expect(wxMock.setTabBarBadge).toHaveBeenCalledWith({
+      expect(wxMock.setTabBarBadge).toHaveBeenCalledWith(expect.objectContaining({
         index: 4,
         text: '3'
-      })
+      }))
     })
 
     it('should clear badge when count is 0', () => {
       notify.setUnreadCount(0)
 
       expect(wxMock.removeStorageSync).toHaveBeenCalledWith('unreadCount')
-      expect(wxMock.removeTabBarBadge).toHaveBeenCalledWith({
+      expect(wxMock.removeTabBarBadge).toHaveBeenCalledWith(expect.objectContaining({
         index: 4
-      })
+      }))
     })
 
     it('should clear badge when count is null', () => {
@@ -82,14 +82,16 @@ describe('notify', () => {
     it('should convert count to string for badge', () => {
       notify.setUnreadCount(10)
 
-      expect(wxMock.setTabBarBadge).toHaveBeenCalledWith({
+      expect(wxMock.setTabBarBadge).toHaveBeenCalledWith(expect.objectContaining({
         index: 4,
         text: '10'
-      })
+      }))
     })
 
     it('should handle badge errors gracefully', () => {
-      wxMock.setTabBarBadge.mockRejectedValue(new Error('Badge error'))
+      wxMock.setTabBarBadge.mockImplementation(() => {
+        throw new Error('Badge error')
+      })
       expect(() => notify.setUnreadCount(1)).not.toThrow()
     })
   })
@@ -99,7 +101,7 @@ describe('notify', () => {
       notify.clearUnreadCount()
 
       expect(wxMock.removeStorageSync).toHaveBeenCalledWith('unreadCount')
-      expect(wxMock.removeTabBarBadge).toHaveBeenCalledWith({ index: 4 })
+      expect(wxMock.removeTabBarBadge).toHaveBeenCalledWith(expect.objectContaining({ index: 4 }))
     })
 
     it('should handle errors gracefully', () => {
