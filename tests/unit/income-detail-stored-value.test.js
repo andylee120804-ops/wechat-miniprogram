@@ -64,7 +64,7 @@ describe('income-detail stored value edit/delete protection', () => {
     global.getApp = originalGetApp
   })
 
-  test.each(['stored_partial', 'stored_value_recharge'])('blocks direct edit for %s income', (settlementMode) => {
+  test.each(['stored_partial', 'stored_value_recharge', 'stored_empty'])('blocks direct edit for %s income', (settlementMode) => {
     const page = loadIncomeDetailPage()
     page.data.id = 'income-1'
     page.data.income = { _id: 'income-1', settlementMode }
@@ -75,7 +75,7 @@ describe('income-detail stored value edit/delete protection', () => {
     expect(global.wx.showToast).toHaveBeenCalledWith({ title: '储值关联收入不可直接编辑', icon: 'none' })
   })
 
-  test.each(['stored_partial', 'stored_value_recharge'])('blocks delete modal for %s income', (settlementMode) => {
+  test.each(['stored_partial', 'stored_value_recharge', 'stored_empty'])('blocks delete modal for %s income', (settlementMode) => {
     const page = loadIncomeDetailPage()
     page.data.income = { _id: 'income-1', settlementMode }
 
@@ -85,7 +85,7 @@ describe('income-detail stored value edit/delete protection', () => {
     expect(global.wx.showToast).toHaveBeenCalledWith({ title: '储值关联收入不可直接删除', icon: 'none' })
   })
 
-  test.each(['stored_partial', 'stored_value_recharge'])('blocks confirmed delete for %s income and does not reset reservation hasIncome', async (settlementMode) => {
+  test.each(['stored_partial', 'stored_value_recharge', 'stored_empty'])('blocks confirmed delete for %s income and does not reset reservation hasIncome', async (settlementMode) => {
     const page = loadIncomeDetailPage()
     page.data.id = 'income-1'
     page.data.showDeleteModal = true

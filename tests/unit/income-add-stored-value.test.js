@@ -203,7 +203,7 @@ describe('income-add stored value settlement', () => {
     expect(mockUpdateDoc).toHaveBeenCalledWith('income', 'income-1', expect.objectContaining({ amount: 800 }))
   })
 
-  test.each(['stored_partial', 'stored_value_recharge'])('loadExisting preserves %s trace fields and edit submit blocks update', async (settlementMode) => {
+  test.each(['stored_partial', 'stored_value_recharge', 'stored_empty'])('loadExisting preserves %s trace fields and edit submit blocks update', async (settlementMode) => {
     const page = loadIncomeAddPage()
     page.data.id = 'income-1'
     page.data.isEdit = true

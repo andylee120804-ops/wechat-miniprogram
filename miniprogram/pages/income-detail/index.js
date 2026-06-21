@@ -7,7 +7,7 @@ const { formatDate, formatAmount, getIncomeTypeText, getRoomName, getReservation
 const db = require('../../utils/db')
 
 function isStoredValueLinkedIncome(income) {
-  return income && (income.settlementMode === 'stored_partial' || income.settlementMode === 'stored_value_recharge')
+  return !!(income && String(income.settlementMode || '').indexOf('stored_') === 0)
 }
 
 Page({
