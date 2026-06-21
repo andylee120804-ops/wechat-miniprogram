@@ -125,10 +125,8 @@ function isAccountCreateConflictError(error) {
 }
 
 function getLegacyCustomerKeys(customer = {}) {
-  return [
-    String(customer.phone || '').trim(),
-    String(customer.customerName || customer.name || '').trim()
-  ].filter(Boolean)
+  const phone = String(customer.phone || '').trim()
+  return phone ? [phone] : []
 }
 
 function normalizeCustomer(customer = {}) {
@@ -324,23 +322,12 @@ async function findAccountByCustomerInCollection(collectionProvider, customer = 
     }
   }
 
-  const phone = String(customer.phone || '').trim()
-  const customerName = String(customer.customerName || customer.name || '').trim()
-  const legacyAccount = phone
-    ? await findLegacyAccountInCollection(collectionProvider, Object.assign({}, customer, { skipNameFallback: true }))
-    : null
-  if (legacyAccount) {
-    return { account: legacyAccount }
+  const legacyMatch = await findLegacyAccountInCollection(collectionProvider, customer)
+  if (legacyMatch.error) {
+    return { error: legacyMatch.error }
   }
-
-  if (!phone && customerName) {
-    const nameAccounts = await findAccountsByNameInCollection(collectionProvider, customerName)
-    if (nameAccounts.length > 1) {
-      return { error: '同名客户存在多个储值账户，请补充手机号' }
-    }
-    if (nameAccounts.length === 1) {
-      return { account: nameAccounts[0] }
-    }
+  if (legacyMatch.account) {
+    return { account: legacyMatch.account }
   }
 
   return { account: null }
@@ -438,7 +425,7 @@ async function findLegacyAccountInCollection(collectionProvider, event = {}) {
       .get()
 
     if (result.data[0]) {
-      return result.data[0]
+      return { account: result.data[0] }
     }
   }
 
@@ -450,37 +437,32 @@ async function findLegacyAccountInCollection(collectionProvider, event = {}) {
       .get()
 
     if (phoneResult.data[0]) {
-      return phoneResult.data[0]
+      return { account: phoneResult.data[0] }
     }
+    return { account: null }
   }
 
   const customerName = String(event.customerName || event.name || '').trim()
-  if (customerName && !event.skipNameFallback) {
-    const nameResult = await collectionProvider.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
-      .where({ customerName, status: 'active' })
-      .limit(1)
-      .get()
-
-    if (nameResult.data[0]) {
-      return nameResult.data[0]
+  if (customerName) {
+    const nameAccounts = await findAccountsByNameInCollection(collectionProvider, customerName)
+    if (nameAccounts.length > 1) {
+      return { error: '同名客户存在多个储值账户，请补充手机号' }
+    }
+    if (nameAccounts.length === 1) {
+      return { account: nameAccounts[0] }
     }
   }
 
-  return null
+  return { account: null }
 }
 
 async function findAccountByRechargeEventInCollection(collectionProvider, event = {}) {
-  const customerKey = getCustomerKey(event)
-  if (!customerKey) {
-    return null
+  const match = await findAccountByCustomerInCollection(collectionProvider, event)
+  if (match.error) {
+    throw new Error(match.error)
   }
 
-  const keyedAccount = await findSingleAccountInCollection(collectionProvider, customerKey)
-  if (keyedAccount) {
-    return keyedAccount
-  }
-
-  return findLegacyAccountInCollection(collectionProvider, event)
+  return match.account || null
 }
 
 function formatDateString(date) {
@@ -600,15 +582,12 @@ function getSettlementCustomer(reservation, event = {}) {
 
 async function findAccountBySettlementEventInCollection(collectionProvider, event = {}, reservation = null) {
   const customer = getSettlementCustomer(reservation, event)
-  const customerKey = getCustomerKey(customer)
-  if (customerKey) {
-    const keyedAccount = await findSingleAccountInCollection(collectionProvider, customerKey)
-    if (keyedAccount) {
-      return keyedAccount
-    }
+  const match = await findAccountByCustomerInCollection(collectionProvider, customer)
+  if (match.error) {
+    throw new Error(match.error)
   }
 
-  return findLegacyAccountInCollection(collectionProvider, customer)
+  return match.account || null
 }
 
 function markReservationSettled(collectionProvider, reservationId, settlementData) {

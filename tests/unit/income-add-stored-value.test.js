@@ -114,6 +114,42 @@ describe('income-add stored value settlement', () => {
     expect(result.conflictsByKey['李四']).toBe(true)
   })
 
+  test('does not map a phone reservation to a name-only legacy account returned for a name-only reservation', async () => {
+    const page = loadIncomeAddPage()
+    mockCallFunction.mockResolvedValue({
+      result: {
+        success: true,
+        data: [
+          {
+            _id: 'legacy-name-only-account',
+            customerName: '张三',
+            phone: '',
+            balance: 500,
+            matchKeys: ['name:张三', '张三']
+          }
+        ]
+      }
+    })
+
+    const result = await page.loadStoredValueAccountsForReservations([
+      { phone: '13800000000', customerName: '张三' },
+      { customerName: '张三' }
+    ])
+
+    expect(result.accountsByKey['张三']._id).toBe('legacy-name-only-account')
+    expect(result.accountsByKey['13800000000']).toBeUndefined()
+
+    page.data.selectedReservation = { phone: '13800000000', customerName: '张三' }
+    page.data.amount = '800'
+    page.data.storedValueAccountsByKey = result.accountsByKey
+    page.data.storedValueConflictsByKey = result.conflictsByKey
+
+    page.updateStoredValuePreview()
+
+    expect(page.data.selectedStoredValueAccount).toBeNull()
+    expect(page.data.storedValuePreview).toBeNull()
+  })
+
   test('maps cloud returned matchKeys so phone reservations can use name-matched accounts and vice versa', async () => {
     const page = loadIncomeAddPage()
     mockCallFunction.mockResolvedValue({

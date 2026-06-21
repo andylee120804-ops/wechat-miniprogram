@@ -291,6 +291,112 @@ describe('stored value settlement helpers', () => {
 })
 
 describe('stored value settlement action', () => {
+  test('settles as normal income when reservation has phone but only a name-only legacy account exists', async () => {
+    const { main, accountReads, transactionAdds, transactionUpdates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountDataSequence: [[], [], [], [], [{
+        _id: 'legacy-name-only-account',
+        customerName: '张三',
+        balance: 1000,
+        totalRecharge: 1000,
+        totalConsume: 0,
+        status: 'active',
+        _version: 1
+      }]],
+      docData: {
+        reservation: {
+          'res-1': { _id: 'res-1', hasIncome: false, customerName: '张三', phone: '13800000000', date: '2026-06-20' }
+        }
+      }
+    })
+
+    const result = await main({ action: 'settleIncomeWithStoredValue', amount: 800, reservationId: 'res-1', source: '张三', phone: '13800000000' })
+
+    expect(result.success).toBe(true)
+    expect(result.data).toEqual(expect.objectContaining({ settlementMode: 'normal', deductedAmount: 0, incomeAmount: 800 }))
+    expect(accountReads).toEqual([
+      { customerKey: 'phone:13800000000', status: 'active' },
+      { customerKey: '13800000000', status: 'active' },
+      { phone: '13800000000', status: 'active' }
+    ])
+    expect(transactionAdds.filter((entry) => entry.name === 'stored_value_transaction')).toEqual([])
+    expect(transactionAdds).toEqual([expect.objectContaining({
+      name: 'income',
+      payload: { data: expect.objectContaining({ settlementMode: 'normal', storedValueAccountId: '', amount: 800 }) }
+    })])
+    expect(transactionUpdates).toEqual([{ id: 'res-1', payload: { data: expect.objectContaining({ settlementMode: 'normal', deductedAmount: 0, incomeAmount: 800 }) } }])
+  })
+
+  test('rejects settlement when name-only matching is ambiguous instead of selecting the first account', async () => {
+    const { main, accountReads, transactionAdds, transactionUpdates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountDataSequence: [[], [{ _id: 'account-1', customerName: '李四', balance: 100 }, { _id: 'account-2', customerName: '李四', balance: 200 }]],
+      docData: {
+        reservation: {
+          'res-1': { _id: 'res-1', hasIncome: false, customerName: '李四', phone: '', date: '2026-06-20' }
+        }
+      }
+    })
+
+    const result = await main({ action: 'settleIncomeWithStoredValue', amount: 80, reservationId: 'res-1', source: '李四' })
+
+    expect(result).toEqual({ success: false, message: '同名客户存在多个储值账户，请补充手机号' })
+    expect(accountReads).toEqual([
+      { customerKey: 'name:李四', status: 'active' },
+      { customerName: '李四', status: 'active' }
+    ])
+    expect(transactionAdds).toEqual([])
+    expect(transactionUpdates).toEqual([])
+  })
+
+  test('settles with the same phone-matched account returned by batch preview matchKeys', async () => {
+    const { main: previewMain } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountDataSequence: [[{
+        _id: 'phone-account',
+        customerName: '王五',
+        phone: '13900000000',
+        customerKey: 'phone:13900000000',
+        balance: 600,
+        status: 'active',
+        _version: 1
+      }]]
+    })
+
+    const previewResult = await previewMain({ action: 'queryAccountsByCustomers', customers: [{ phone: '13900000000', customerName: '王五' }] })
+
+    expect(previewResult.success).toBe(true)
+    expect(previewResult.data).toEqual([expect.objectContaining({
+      _id: 'phone-account',
+      matchKeys: expect.arrayContaining(['phone:13900000000', '13900000000', 'name:王五', '王五'])
+    })])
+
+    const { main: settleMain } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountDataSequence: [[{
+        _id: 'phone-account',
+        customerName: '王五',
+        phone: '13900000000',
+        customerKey: 'phone:13900000000',
+        balance: 600,
+        totalRecharge: 600,
+        totalConsume: 0,
+        status: 'active',
+        _version: 1
+      }]],
+      docData: {
+        reservation: {
+          'res-1': { _id: 'res-1', hasIncome: false, customerName: '王五', phone: '13900000000', date: '2026-06-20' }
+        }
+      }
+    })
+
+    const settleResult = await settleMain({ action: 'settleIncomeWithStoredValue', amount: 500, reservationId: 'res-1', source: '王五', phone: '13900000000' })
+
+    expect(settleResult.success).toBe(true)
+    expect(settleResult.data).toEqual(expect.objectContaining({ settlementMode: 'stored_full', accountId: 'phone-account' }))
+  })
+
   test('rejects settlement without reservationId before writing income, transaction, or account', async () => {
     const { main, db, adds, updates, sets, accountReads } = loadStoredValueFunction({
       staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
@@ -857,6 +963,24 @@ describe('stored value stats action', () => {
 })
 
 describe('stored value recharge action', () => {
+  test('rejects recharge when name-only matching is ambiguous instead of selecting the first account', async () => {
+    const { main, accountReads, adds, updates, sets } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountDataSequence: [[], [{ _id: 'account-1', customerName: '李四', balance: 100 }, { _id: 'account-2', customerName: '李四', balance: 200 }]]
+    })
+
+    const result = await main({ action: 'recharge', requestId: 'req-ambiguous-name', customerName: '李四', amount: 1000 })
+
+    expect(result).toEqual({ success: false, message: '同名客户存在多个储值账户，请补充手机号' })
+    expect(accountReads).toEqual([
+      { customerKey: 'name:李四', status: 'active' },
+      { customerName: '李四', status: 'active' }
+    ])
+    expect(adds).toEqual([])
+    expect(updates).toEqual([])
+    expect(sets).toEqual([])
+  })
+
   test('rejects recharge when customerName is empty', async () => {
     const { main, accountReads, adds } = loadStoredValueFunction({
       staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }]
@@ -961,9 +1085,7 @@ describe('stored value recharge action', () => {
     expect(accountReads).toEqual([
       { customerKey: 'phone:13800000000', status: 'active' },
       { customerKey: '13800000000', status: 'active' },
-      { customerKey: '张三', status: 'active' },
-      { phone: '13800000000', status: 'active' },
-      { customerName: '张三', status: 'active' }
+      { phone: '13800000000', status: 'active' }
     ])
     expect(sets).toEqual([
       {
@@ -1102,7 +1224,7 @@ describe('stored value recharge action', () => {
   test('updates legacy account found by phone and backfills customerKey', async () => {
     const { main, accountReads, adds, updates } = loadStoredValueFunction({
       staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
-      accountDataSequence: [[], [], [], [{
+      accountDataSequence: [[], [], [{
         _id: 'legacy-account',
         customerName: '张三',
         phone: '13800000000',
@@ -1120,7 +1242,6 @@ describe('stored value recharge action', () => {
     expect(accountReads).toEqual([
       { customerKey: 'phone:13800000000', status: 'active' },
       { customerKey: '13800000000', status: 'active' },
-      { customerKey: '张三', status: 'active' },
       { phone: '13800000000', status: 'active' }
     ])
     expect(adds.filter((entry) => entry.name === 'stored_value_account')).toEqual([])
