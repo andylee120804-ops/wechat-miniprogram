@@ -34,6 +34,57 @@
     </view>
   </view>
 
+  <!-- Stored Value Account -->
+  <view class="stored-value-section">
+    <view class="section-title-row">
+      <text class="section-title" style="color: {{theme.textPrimary || '#F0F0F5'}};">储值账户</text>
+      <view class="recharge-entry" bindtap="openRechargeModal" style="background: {{theme.accentBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.accentColor || '#C9A96E'}};">充值</view>
+    </view>
+
+    <skeleton wx:if="{{loading}}" theme="{{theme}}" type="card" count="1" />
+
+    <view wx:else class="stored-value-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}};">
+      <view wx:if="{{storedValueAccount}}">
+        <view class="balance-block">
+          <text class="balance-label" style="color: {{theme.textMuted || '#5C5C72'}};">当前余额</text>
+          <text class="balance-amount" style="color: {{theme.amountPositive || '#4ADE80'}};">¥{{storedValueAccount.balanceText}}</text>
+        </view>
+        <view class="stored-value-metrics">
+          <view class="stored-value-metric">
+            <text class="metric-value" style="color: {{theme.textPrimary || '#F0F0F5'}};">¥{{storedValueAccount.totalRechargeText}}</text>
+            <text class="metric-label" style="color: {{theme.textMuted || '#5C5C72'}};">累计充值</text>
+          </view>
+          <view class="stored-value-metric">
+            <text class="metric-value" style="color: {{theme.textPrimary || '#F0F0F5'}};">¥{{storedValueAccount.totalConsumeText}}</text>
+            <text class="metric-label" style="color: {{theme.textMuted || '#5C5C72'}};">累计消费</text>
+          </view>
+        </view>
+
+        <view class="transaction-header">
+          <text class="transaction-title" style="color: {{theme.textPrimary || '#F0F0F5'}};">储值流水</text>
+        </view>
+        <view wx:if="{{storedValueTransactions.length}}" class="transaction-list">
+          <view class="transaction-item" wx:for="{{storedValueTransactions}}" wx:key="_id">
+            <view class="transaction-main">
+              <text class="transaction-name" style="color: {{theme.textPrimary || '#F0F0F5'}};">{{item.title}}</text>
+              <text class="transaction-time" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.formattedTime}}</text>
+            </view>
+            <view class="transaction-side">
+              <text class="transaction-amount {{item.amountClass}}">{{item.amountText}}</text>
+              <text class="transaction-balance" style="color: {{theme.textMuted || '#5C5C72'}};">{{item.balanceText}}</text>
+            </view>
+          </view>
+        </view>
+        <view wx:else class="empty-transactions" style="color: {{theme.textMuted || '#5C5C72'}};">暂无储值流水</view>
+      </view>
+
+      <view wx:else class="stored-value-empty">
+        <text class="empty-title" style="color: {{theme.textPrimary || '#F0F0F5'}};">暂无储值账户</text>
+        <text class="empty-desc" style="color: {{theme.textMuted || '#5C5C72'}};">为客户充值后将自动创建储值账户</text>
+      </view>
+    </view>
+  </view>
+
   <!-- Visit History -->
   <view style="padding: 32rpx;">
     <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 32rpx; font-weight: 600; display: block; margin-bottom: 20rpx;">来访记录</text>
@@ -53,4 +104,34 @@
       </view>
     </view>
   </view>
+
+  <theme-modal theme="{{theme}}" visible="{{showRechargeModal}}" title="储值充值" confirmText="{{rechargeSubmitting ? '充值中...' : '确认充值'}}" cancelText="取消" position="bottom" bind:confirm="submitRecharge" bind:close="closeRechargeModal">
+    <view class="recharge-form">
+      <view class="form-item">
+        <text class="form-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">客户</text>
+        <view class="form-readonly" style="background: {{theme.surface || '#1A1A2E'}}; color: {{theme.textPrimary || '#F0F0F5'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}};">{{customerName}}</view>
+      </view>
+      <view class="form-item">
+        <text class="form-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">充值金额</text>
+        <input class="form-input" style="background: {{theme.surface || '#1A1A2E'}}; color: {{theme.textPrimary || '#F0F0F5'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}};" type="digit" placeholder="请输入充值金额" placeholder-style="color: rgba(154,154,176,0.55);" value="{{rechargeAmount}}" bindinput="onRechargeAmountInput" />
+      </view>
+      <view class="form-item">
+        <text class="form-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">手机号</text>
+        <input class="form-input" style="background: {{theme.surface || '#1A1A2E'}}; color: {{theme.textPrimary || '#F0F0F5'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}};" type="number" maxlength="11" placeholder="可选，用于匹配客户账户" placeholder-style="color: rgba(154,154,176,0.55);" value="{{rechargePhone}}" bindinput="onRechargePhoneInput" />
+      </view>
+      <view class="form-item">
+        <text class="form-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">收款方式</text>
+        <picker mode="selector" range="{{paymentMethodOptions}}" range-key="label" bindchange="onRechargePaymentMethodChange">
+          <view class="form-picker" style="background: {{theme.surface || '#1A1A2E'}}; color: {{theme.textPrimary || '#F0F0F5'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}};">
+            <text>{{rechargePaymentMethodLabel}}</text>
+            <text class="picker-arrow" style="color: {{theme.textMuted || '#5C5C72'}};">›</text>
+          </view>
+        </picker>
+      </view>
+      <view class="form-item">
+        <text class="form-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">备注</text>
+        <textarea class="form-textarea" style="background: {{theme.surface || '#1A1A2E'}}; color: {{theme.textPrimary || '#F0F0F5'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}};" placeholder="可选" placeholder-style="color: rgba(154,154,176,0.55);" value="{{rechargeRemark}}" bindinput="onRechargeRemarkInput" maxlength="100" />
+      </view>
+    </view>
+  </theme-modal>
 </view>
