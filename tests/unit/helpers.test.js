@@ -216,6 +216,24 @@ describe('helpers', () => {
     })
   })
 
+  describe('getIncomeDisplayType', () => {
+    test('prefers categoryLabel when present', () => {
+      const { getIncomeDisplayType } = require('../../miniprogram/utils/helpers')
+
+      const text = getIncomeDisplayType({ type: 'other', categoryLabel: '储值充值' })
+
+      expect(text).toBe('储值充值')
+    })
+
+    test('falls back to existing income type text', () => {
+      const { getIncomeDisplayType } = require('../../miniprogram/utils/helpers')
+
+      const text = getIncomeDisplayType({ type: 'dining' })
+
+      expect(text).toBe('餐饮')
+    })
+  })
+
   describe('getReservationStatusText', () => {
     it('should return 已取消 for cancelled status', () => {
       expect(helpers.getReservationStatusText('cancelled')).toBe('已取消')

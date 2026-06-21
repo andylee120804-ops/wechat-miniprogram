@@ -24,7 +24,9 @@ const COLLECTIONS = {
   SETTINGS: 'settings',
   PERMISSIONS: 'permissions',
   APPROVAL_LOG: 'purchase_approval_log',
-  RESERVATION_CHANGE_LOG: 'reservation_change_log'
+  RESERVATION_CHANGE_LOG: 'reservation_change_log',
+  STORED_VALUE_ACCOUNT: 'stored_value_account',
+  STORED_VALUE_TRANSACTION: 'stored_value_transaction'
 }
 
 /**

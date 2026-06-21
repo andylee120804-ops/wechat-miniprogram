@@ -277,6 +277,11 @@ function getIncomeTypeText(type) {
   return typeMap[type] || type || '其他'
 }
 
+function getIncomeDisplayType(income) {
+  if (income && income.categoryLabel) return income.categoryLabel
+  return getIncomeTypeText(income && income.type)
+}
+
 /**
  * Get reservation status display text
  */
@@ -487,6 +492,7 @@ module.exports = {
   getRoleName,
   getCategoryName,
   getIncomeTypeText,
+  getIncomeDisplayType,
   getReservationStatusText,
   getExpenseCategoryName,
   getRoomName,
