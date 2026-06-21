@@ -273,10 +273,15 @@ async function queryAccountsByCustomers(event = {}) {
     normalized.customers.map(async (customer) => findAccountByCustomerInCollection(db, customer.customer))
   )
 
+  const errorMatch = matches.find((match) => match && match.error)
+  if (errorMatch) {
+    return fail(errorMatch.error)
+  }
+
   const accounts = []
   const seenIds = {}
   matches.forEach((match) => {
-    if (!match || match.error || !match.account || seenIds[match.account._id]) {
+    if (!match || !match.account || seenIds[match.account._id]) {
       return
     }
     seenIds[match.account._id] = true
