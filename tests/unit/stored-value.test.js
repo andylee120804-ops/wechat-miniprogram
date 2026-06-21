@@ -8,9 +8,33 @@ function createChain(getResult, hooks) {
     }),
     orderBy: jest.fn(() => chain),
     limit: jest.fn(() => chain),
-    get: jest.fn(() => Promise.resolve(getResult || { data: [] }))
+    get: jest.fn(() => Promise.resolve(getResult || { data: [] })),
+    update: jest.fn((payload) => {
+      if (hooks && hooks.onUpdate) hooks.onUpdate(null, payload)
+      return Promise.resolve({ stats: { updated: 1 } })
+    })
   }
   return chain
+}
+
+function createDocChain(id, hooks) {
+  const chain = {
+    update: jest.fn((payload) => {
+      if (hooks && hooks.onUpdate) hooks.onUpdate(id, payload)
+      return Promise.resolve({ stats: { updated: 1 } })
+    })
+  }
+  return chain
+}
+
+function createCollection(name, getResult, hooks) {
+  const collection = createChain(getResult, hooks)
+  collection.add = jest.fn((payload) => {
+    if (hooks && hooks.onAdd) hooks.onAdd(name, payload)
+    return Promise.resolve({ _id: `${name}-new-id` })
+  })
+  collection.doc = jest.fn((id) => createDocChain(id, hooks))
+  return collection
 }
 
 function loadStoredValueFunction(options) {
@@ -18,20 +42,30 @@ function loadStoredValueFunction(options) {
   options = options || {}
   const accountReads = []
   const whereCalls = []
+  const adds = []
+  const updates = []
+
+  const hooks = {
+    onWhere: (name, where) => whereCalls.push({ name, where }),
+    onAdd: (name, payload) => adds.push({ name, payload }),
+    onUpdate: (id, payload) => updates.push({ id, payload })
+  }
 
   const db = {
     collection: jest.fn((name) => {
-      if (name === 'staff') return createChain({ data: options.staffData || [] }, { onWhere: (where) => whereCalls.push({ name, where }) })
-      if (name === 'permissions') return createChain({ data: options.permissionsData || [] }, { onWhere: (where) => whereCalls.push({ name, where }) })
+      if (name === 'staff') return createCollection(name, { data: options.staffData || [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate })
+      if (name === 'permissions') return createCollection(name, { data: options.permissionsData || [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate })
       if (name === 'stored_value_account') {
-        return createChain({ data: options.accountData || [] }, {
+        return createCollection(name, { data: options.accountData || [] }, {
           onWhere: (where) => {
             accountReads.push(where)
-            whereCalls.push({ name, where })
-          }
+            hooks.onWhere(name, where)
+          },
+          onAdd: hooks.onAdd,
+          onUpdate: hooks.onUpdate
         })
       }
-      return createChain({ data: [] }, { onWhere: (where) => whereCalls.push({ name, where }) })
+      return createCollection(name, { data: [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate })
     })
   }
 
@@ -45,7 +79,7 @@ function loadStoredValueFunction(options) {
   jest.doMock('wx-server-sdk', () => cloud, { virtual: true })
 
   const mod = require('../../cloudfunctions/storedValue/index')
-  return { main: mod.main, testApi: mod.__test__, db, cloud, accountReads, whereCalls }
+  return { main: mod.main, testApi: mod.__test__, db, cloud, accountReads, whereCalls, adds, updates }
 }
 
 describe('stored value settlement helpers', () => {
@@ -67,6 +101,191 @@ describe('stored value settlement helpers', () => {
   test('builds readable reservation snapshot', () => {
     const snapshot = storedValue.__test__.buildReservationSnapshot({ customerName: '张三', phone: '13800000000', date: '2026-06-20', time: '晚上', roomName: '大包厢' })
     expect(snapshot).toEqual({ customerName: '张三', phone: '13800000000', date: '2026-06-20', time: '晚上', roomName: '大包厢' })
+  })
+
+  test('builds stored-value recharge income payload', () => {
+    const payload = storedValue.__test__.buildRechargeIncomeData({
+      customerName: '张三',
+      amount: 1000,
+      paymentMethod: 'wechat',
+      remark: '6月充值'
+    }, {
+      _id: 'account-1'
+    }, {
+      _id: 'staff-1',
+      name: '管理员'
+    })
+
+    expect(payload).toEqual(expect.objectContaining({
+      type: 'other',
+      categoryLabel: '储值充值',
+      settlementMode: 'stored_value_recharge',
+      storedValueAccountId: 'account-1',
+      originalAmount: 1000,
+      deductedAmount: 0,
+      amount: 1000,
+      source: '张三',
+      paymentMethod: 'wechat',
+      remark: '储值充值：6月充值',
+      collectedBy: 'staff-1',
+      collectedByName: '管理员'
+    }))
+  })
+})
+
+describe('stored value recharge action', () => {
+  test('rejects recharge when customerName is empty', async () => {
+    const { main, accountReads, adds } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }]
+    })
+
+    const result = await main({ action: 'recharge', customerName: '   ', amount: 1000 })
+
+    expect(result).toEqual({ success: false, message: '客户姓名不能为空' })
+    expect(accountReads).toEqual([])
+    expect(adds).toEqual([])
+  })
+
+  test('rejects recharge when amount is not positive', async () => {
+    const { main, accountReads, adds } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }]
+    })
+
+    const result = await main({ action: 'recharge', customerName: '张三', amount: 0 })
+
+    expect(result).toEqual({ success: false, message: '充值金额必须大于0' })
+    expect(accountReads).toEqual([])
+    expect(adds).toEqual([])
+  })
+
+  test('creates account, income and recharge transaction for new customer', async () => {
+    const { main, accountReads, adds, updates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }]
+    })
+
+    const result = await main({
+      action: 'recharge',
+      customerName: '张三',
+      phone: '13800000000',
+      amount: 1000,
+      paymentMethod: 'wechat',
+      remark: '6月充值',
+      staffId: 'spoofed-staff'
+    })
+
+    expect(result.success).toBe(true)
+    expect(accountReads).toEqual([{ customerKey: '13800000000' }, { customerKey: '张三' }])
+    expect(adds).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: 'stored_value_account',
+        payload: expect.objectContaining({
+          data: expect.objectContaining({
+            customerName: '张三',
+            phone: '13800000000',
+            customerKey: '13800000000',
+            balance: 1000,
+            totalRecharge: 1000,
+            totalConsume: 0,
+            status: 'active',
+            _version: 1,
+            createdBy: 'staff-1',
+            createdByName: '管理员',
+            updatedBy: 'staff-1',
+            updatedByName: '管理员'
+          })
+        })
+      }),
+      expect.objectContaining({
+        name: 'income',
+        payload: expect.objectContaining({
+          data: expect.objectContaining({
+            settlementMode: 'stored_value_recharge',
+            storedValueAccountId: 'stored_value_account-new-id',
+            amount: 1000,
+            source: '张三',
+            collectedBy: 'staff-1'
+          })
+        })
+      }),
+      expect.objectContaining({
+        name: 'stored_value_transaction',
+        payload: expect.objectContaining({
+          data: expect.objectContaining({
+            type: 'recharge',
+            status: 'active',
+            accountId: 'stored_value_account-new-id',
+            amount: 1000,
+            balanceBefore: 0,
+            balanceAfter: 1000,
+            incomeId: 'income-new-id',
+            operatorId: 'staff-1',
+            operatorName: '管理员'
+          })
+        })
+      })
+    ]))
+    expect(updates).toEqual([{
+      id: 'income-new-id',
+      payload: { data: { storedValueTransactionId: 'stored_value_transaction-new-id' } }
+    }])
+    expect(result.data).toEqual(expect.objectContaining({
+      account: expect.objectContaining({ _id: 'stored_value_account-new-id', balance: 1000, totalRecharge: 1000 }),
+      transaction: expect.objectContaining({ _id: 'stored_value_transaction-new-id', balanceBefore: 0, balanceAfter: 1000 }),
+      incomeId: 'income-new-id'
+    }))
+  })
+
+  test('updates existing account with correct balanceBefore and optimistic version', async () => {
+    const { main, accountReads, whereCalls, adds, updates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountData: [{
+        _id: 'account-1',
+        customerName: '张三',
+        phone: '13800000000',
+        customerKey: '13800000000',
+        balance: 200,
+        totalRecharge: 500,
+        totalConsume: 300,
+        status: 'active',
+        _version: 3
+      }]
+    })
+
+    const result = await main({
+      action: 'recharge',
+      customerName: '张三',
+      phone: '13800000000',
+      amount: 1000,
+      paymentMethod: 'cash',
+      remark: ''
+    })
+
+    expect(result.success).toBe(true)
+    expect(accountReads[0]).toEqual({ customerKey: '13800000000' })
+    expect(updates).toEqual(expect.arrayContaining([
+      {
+        id: null,
+        payload: { data: expect.objectContaining({ balance: 1200, totalRecharge: 1500, _version: 4, updatedBy: 'staff-1' }) }
+      },
+      {
+        id: 'income-new-id',
+        payload: { data: { storedValueTransactionId: 'stored_value_transaction-new-id' } }
+      }
+    ]))
+    expect(whereCalls).toContainEqual({ name: 'stored_value_account', where: { _id: 'account-1', _version: 3 } })
+    expect(adds).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: 'stored_value_transaction',
+        payload: expect.objectContaining({
+          data: expect.objectContaining({
+            accountId: 'account-1',
+            amount: 1000,
+            balanceBefore: 200,
+            balanceAfter: 1200
+          })
+        })
+      })
+    ]))
   })
 })
 
