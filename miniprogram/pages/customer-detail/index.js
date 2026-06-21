@@ -77,6 +77,7 @@ Page({
     visitHistory: [],
     storedValueAccount: null,
     storedValueTransactions: [],
+    storedValueErrorMessage: '',
     canRecharge: false,
     showRechargeModal: false,
     rechargeAmount: '',
@@ -144,7 +145,8 @@ Page({
           ...h, formattedDate: formatDate(h.date)
         })),
         storedValueAccount: storedValueData.account,
-        storedValueTransactions: storedValueData.transactions
+        storedValueTransactions: storedValueData.transactions,
+        storedValueErrorMessage: storedValueData.errorMessage
       })
     } catch (err) {
       this.setData({ loading: false })
@@ -166,7 +168,11 @@ Page({
 
       const response = result.result || {}
       if (!response.success) {
-        return { account: null, transactions: [] }
+        return {
+          account: null,
+          transactions: [],
+          errorMessage: response.message || '储值账户加载失败，请重试'
+        }
       }
 
       const payload = response.data || null
@@ -176,9 +182,9 @@ Page({
       const cloudTransactions = payload && Array.isArray(payload.transactions) ? payload.transactions : []
       const transactions = account ? cloudTransactions.map(formatStoredValueTransaction) : []
 
-      return { account, transactions }
+      return { account, transactions, errorMessage: '' }
     } catch (err) {
-      return { account: null, transactions: [] }
+      return { account: null, transactions: [], errorMessage: '储值账户加载失败，请重试' }
     }
   },
 
@@ -272,6 +278,7 @@ Page({
       this.setData({
         storedValueAccount: storedValueData.account,
         storedValueTransactions: storedValueData.transactions,
+        storedValueErrorMessage: storedValueData.errorMessage,
         showRechargeModal: false,
         rechargeSubmitting: false,
         rechargeAmount: '',

@@ -44,7 +44,12 @@
     <skeleton wx:if="{{loading}}" theme="{{theme}}" type="card" count="1" />
 
     <view wx:else class="stored-value-card" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}};">
-      <view wx:if="{{storedValueAccount}}">
+      <view wx:if="{{storedValueErrorMessage}}" class="stored-value-error">
+        <text class="error-title" style="color: {{theme.amountNegative || '#F87171'}};">储值账户加载失败</text>
+        <text class="error-desc" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{storedValueErrorMessage}}</text>
+      </view>
+
+      <view wx:elif="{{storedValueAccount}}">
         <view class="balance-block">
           <text class="balance-label" style="color: {{theme.textMuted || '#5C5C72'}};">当前余额</text>
           <text class="balance-amount" style="color: {{theme.amountPositive || '#4ADE80'}};">¥{{storedValueAccount.balanceText}}</text>

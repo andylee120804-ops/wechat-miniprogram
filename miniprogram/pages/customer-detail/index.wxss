@@ -216,20 +216,28 @@
 }
 
 .empty-transactions,
-.stored-value-empty {
+.stored-value-empty,
+.stored-value-error {
   padding: 28rpx 0 8rpx;
   text-align: center;
   font-size: 26rpx;
 }
 
-.empty-title {
+.empty-title,
+.error-title {
   display: block;
   font-size: 30rpx;
   font-weight: 600;
 }
 
-.empty-desc {
+.empty-desc,
+.error-desc {
   margin-top: 10rpx;
+}
+
+.error-desc {
+  display: block;
+  line-height: 1.6;
 }
 
 .recharge-form {

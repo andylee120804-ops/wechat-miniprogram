@@ -177,6 +177,55 @@ describe('customer detail stored-value recharge UI', () => {
     expect(result.transactions).toEqual([])
   })
 
+  test('keeps stored-value backend ambiguity message instead of silently showing empty account', async () => {
+    const page = loadCustomerDetailPage({ canAddIncome: true })
+    page.data.customerName = '张三'
+    mockCallFunction.mockResolvedValue({
+      result: {
+        success: false,
+        message: '同名客户存在多个储值账户，请补充手机号'
+      }
+    })
+
+    await page.loadData()
+
+    expect(page.data.storedValueErrorMessage).toBe('同名客户存在多个储值账户，请补充手机号')
+    expect(page.data.storedValueAccount).toBeNull()
+    expect(page.data.storedValueTransactions).toEqual([])
+  })
+
+  test('shows generic stored-value load failure when cloud function rejects', async () => {
+    const page = loadCustomerDetailPage({ canAddIncome: true })
+    page.data.customerName = '张三'
+    mockCallFunction.mockRejectedValue(new Error('network unavailable'))
+
+    await page.loadData()
+
+    expect(page.data.storedValueErrorMessage).toBe('储值账户加载失败，请重试')
+    expect(page.data.storedValueAccount).toBeNull()
+    expect(page.data.storedValueTransactions).toEqual([])
+  })
+
+  test('clears stored-value error message after successful account load', async () => {
+    const page = loadCustomerDetailPage({ canAddIncome: true })
+    page.data.customerName = '张三'
+    page.data.storedValueErrorMessage = '同名客户存在多个储值账户，请补充手机号'
+    mockCallFunction.mockResolvedValue({
+      result: {
+        success: true,
+        data: {
+          account: { _id: 'account-1', balance: 100, totalRecharge: 100, totalConsume: 0 },
+          transactions: []
+        }
+      }
+    })
+
+    await page.loadData()
+
+    expect(page.data.storedValueErrorMessage).toBe('')
+    expect(page.data.storedValueAccount).toEqual(expect.objectContaining({ _id: 'account-1' }))
+  })
+
   test('submits recharge with a non-empty requestId for server idempotency', async () => {
     const page = loadCustomerDetailPage({ canAddIncome: true })
     page.data.customerName = '张三'
