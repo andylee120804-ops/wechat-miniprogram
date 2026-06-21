@@ -1376,6 +1376,27 @@ describe('stored value query matching and minimized responses', () => {
     expect(result).toEqual({ success: false, message: '同名客户存在多个储值账户，请补充手机号' })
   })
 
+  test('queryAccountsByCustomers rejects ambiguous same-name accounts even when name customerKey matches one account', async () => {
+    const { main, accountReads } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '收银', role: 'waiter', status: 'active', boundOpenid: 'openid-user' }],
+      permissionsData: [{ staffId: 'staff-1', permissions: [{ module: 'income', actions: ['add'] }] }],
+      accountDataSequence: [[
+        { _id: 'name-key-account', customerName: '李四', customerKey: 'name:李四', status: 'active', balance: 100 }
+      ], [
+        { _id: 'name-key-account', customerName: '李四', customerKey: 'name:李四', status: 'active', balance: 100 },
+        { _id: 'phone-account', customerName: '李四', phone: '13800000000', customerKey: 'phone:13800000000', status: 'active', balance: 200 }
+      ]]
+    })
+
+    const result = await main({ action: 'queryAccountsByCustomers', customers: [{ customerName: '李四' }] })
+
+    expect(result).toEqual({ success: false, message: '同名客户存在多个储值账户，请补充手机号' })
+    expect(accountReads).toEqual([
+      { customerKey: 'name:李四', status: 'active' },
+      { customerName: '李四', status: 'active' }
+    ])
+  })
+
   test('queryAccountsByCustomers uses fallback matching and returns minimized accounts with all match keys', async () => {
     const { main, accountReads } = loadStoredValueFunction({
       staffData: [{ _id: 'staff-1', name: '收银', role: 'waiter', status: 'active', boundOpenid: 'openid-user' }],

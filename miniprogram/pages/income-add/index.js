@@ -191,12 +191,17 @@ Page({
         }
       })
       const result = response && response.result
-      if (!result || result.success === false) {
-        return { accountsByKey: {}, conflictsByKey: {} }
-      }
-
       const accountsByKey = {}
       const conflictsByKey = {}
+      if (!result || result.success === false) {
+        const message = (result && result.message) || '储值账户预览加载失败，请重试'
+        seenKeys.forEach((key) => {
+          conflictsByKey[key] = message
+        })
+        return { accountsByKey, conflictsByKey }
+      }
+
+
       ;(result.data || []).forEach((account) => {
         const keys = Array.isArray(account.matchKeys) && account.matchKeys.length
           ? account.matchKeys.map((key) => String(key || '').trim()).filter(Boolean)
@@ -214,7 +219,11 @@ Page({
       return { accountsByKey, conflictsByKey }
     } catch (err) {
       console.warn('[IncomeAdd] 加载储值账户失败:', err)
-      return { accountsByKey: {}, conflictsByKey: {} }
+      const conflictsByKey = {}
+      seenKeys.forEach((key) => {
+        conflictsByKey[key] = '储值账户预览加载失败，请重试'
+      })
+      return { accountsByKey: {}, conflictsByKey }
     }
   },
 
@@ -243,10 +252,14 @@ Page({
     const account = key && !hasConflict ? this.data.storedValueAccountsByKey[key] : null
 
     if (hasConflict) {
+      const conflictValue = this.data.storedValueConflictsByKey[key]
+      const conflictMessage = typeof conflictValue === 'string'
+        ? conflictValue
+        : '该客户存在多个储值账户，请先到客户详情处理后再结算。'
       this.setData({
         selectedStoredValueAccount: null,
         storedValuePreview: null,
-        storedValueConflictMessage: '该客户存在多个储值账户，请先到客户详情处理后再结算。'
+        storedValueConflictMessage: conflictMessage
       })
       return
     }
@@ -531,6 +544,19 @@ Page({
         this.setData({ submitting: false })
         wx.showToast({ title: '储值关联收入不可直接编辑', icon: 'none' })
         return
+      }
+
+      if (!noReservation && reservationId && this.data.selectedReservation) {
+        const key = this.getStoredValueCustomerKey(this.data.selectedReservation)
+        const conflictValue = key ? this.data.storedValueConflictsByKey[key] : ''
+        if (conflictValue) {
+          const conflictMessage = typeof conflictValue === 'string'
+            ? conflictValue
+            : '该客户存在多个储值账户，请先到客户详情处理后再结算。'
+          this.setData({ submitting: false, storedValueConflictMessage: conflictMessage })
+          wx.showToast({ title: conflictMessage, icon: 'none' })
+          return
+        }
       }
 
       const userInfo = app.globalData.userInfo

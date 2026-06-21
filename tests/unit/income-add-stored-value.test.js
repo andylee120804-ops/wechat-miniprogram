@@ -150,6 +150,38 @@ describe('income-add stored value settlement', () => {
     expect(page.data.storedValuePreview).toBeNull()
   })
 
+  test('surfaces batch preview failure as per-reservation stored-value conflict instead of empty account map', async () => {
+    const page = loadIncomeAddPage()
+    mockCallFunction.mockResolvedValue({
+      result: {
+        success: false,
+        message: '同名客户存在多个储值账户，请补充手机号'
+      }
+    })
+
+    const result = await page.loadStoredValueAccountsForReservations([
+      { customerName: '李四' },
+      { phone: '13800000000', customerName: '张三' }
+    ])
+
+    expect(result.accountsByKey).toEqual({})
+    expect(result.conflictsByKey).toEqual({
+      '李四': '同名客户存在多个储值账户，请补充手机号',
+      '13800000000': '同名客户存在多个储值账户，请补充手机号'
+    })
+
+    page.data.selectedReservation = { customerName: '李四' }
+    page.data.amount = '800'
+    page.data.storedValueAccountsByKey = result.accountsByKey
+    page.data.storedValueConflictsByKey = result.conflictsByKey
+
+    page.updateStoredValuePreview()
+
+    expect(page.data.selectedStoredValueAccount).toBeNull()
+    expect(page.data.storedValuePreview).toBeNull()
+    expect(page.data.storedValueConflictMessage).toBe('同名客户存在多个储值账户，请补充手机号')
+  })
+
   test('maps cloud returned matchKeys so phone reservations can use name-matched accounts and vice versa', async () => {
     const page = loadIncomeAddPage()
     mockCallFunction.mockResolvedValue({

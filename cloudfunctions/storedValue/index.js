@@ -319,12 +319,31 @@ async function findAccountsByNameInCollection(collectionProvider, customerName) 
 }
 
 async function findAccountByCustomerInCollection(collectionProvider, customer = {}) {
+  const phone = String(customer.phone || '').trim()
+  const customerName = String(customer.customerName || customer.name || '').trim()
   const customerKey = getCustomerKey(customer)
+  let keyedAccount = null
+
   if (customerKey) {
-    const keyedAccount = await findSingleAccountInCollection(collectionProvider, customerKey)
+    keyedAccount = await findSingleAccountInCollection(collectionProvider, customerKey)
+  }
+
+  if (!phone && customerName) {
+    const nameAccounts = await findAccountsByNameInCollection(collectionProvider, customerName)
+    if (nameAccounts.length > 1) {
+      return { error: '同名客户存在多个储值账户，请补充手机号' }
+    }
     if (keyedAccount) {
       return { account: keyedAccount }
     }
+    if (nameAccounts.length === 1) {
+      return { account: nameAccounts[0] }
+    }
+    return { account: null }
+  }
+
+  if (keyedAccount) {
+    return { account: keyedAccount }
   }
 
   const legacyMatch = await findLegacyAccountInCollection(collectionProvider, customer)
