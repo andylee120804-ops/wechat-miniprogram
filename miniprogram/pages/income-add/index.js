@@ -6,6 +6,10 @@ const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 
+function isStoredValueLinkedIncome(income) {
+  return income && (income.settlementMode === 'stored_partial' || income.settlementMode === 'stored_value_recharge')
+}
+
 Page({
   data: {
     theme: {},
@@ -32,6 +36,7 @@ Page({
     serviceChargeEnabledDate: '',
     serviceChargeNoon: 0,
     serviceChargeNight: 0,
+    isStoredValueIncome: false,
     showNoDishPriceModal: false,
     submitting: false,
     typeOptions: [
@@ -117,9 +122,22 @@ Page({
         noReservation,
         reservationId: d.reservationId || '',
         remark: d.remark || '',
+        settlementMode: d.settlementMode || '',
+        originalAmount: d.originalAmount,
+        deductedAmount: d.deductedAmount,
+        isStoredValueIncome: isStoredValueLinkedIncome(d),
         selectedReservation,
         pickerIndex,
-        _oldData: { type: d.type || 'dining', amount: d.amount !== undefined ? String(d.amount) : '', source: d.source || '', date: d.date || '', remark: d.remark || '' }
+        _oldData: {
+          type: d.type || 'dining',
+          amount: d.amount !== undefined ? String(d.amount) : '',
+          source: d.source || '',
+          date: d.date || '',
+          remark: d.remark || '',
+          settlementMode: d.settlementMode || '',
+          originalAmount: d.originalAmount,
+          deductedAmount: d.deductedAmount
+        }
       })
     } catch (err) {
       handleCloudError(err, '加载收入')
@@ -502,6 +520,12 @@ Page({
             wx.showToast({ title: '已按最低消费 ¥' + minAmount + ' 计算', icon: 'none' })
           }
         }
+      }
+
+      if (this.data.isEdit && isStoredValueLinkedIncome(this.data._oldData)) {
+        this.setData({ submitting: false })
+        wx.showToast({ title: '储值关联收入不可直接编辑', icon: 'none' })
+        return
       }
 
       const userInfo = app.globalData.userInfo

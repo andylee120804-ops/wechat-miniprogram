@@ -6,6 +6,7 @@ let mockCallFunction
 let mockQueryAll
 let mockAddDoc
 let mockUpdateDoc
+let mockGetDoc
 let mockLog
 let mockHandleCloudError
 
@@ -25,6 +26,7 @@ function loadIncomeAddPage() {
   mockQueryAll = jest.fn(() => Promise.resolve({ data: [] }))
   mockAddDoc = jest.fn(() => Promise.resolve({ _id: 'income-new-id' }))
   mockUpdateDoc = jest.fn(() => Promise.resolve({ updated: 1 }))
+  mockGetDoc = jest.fn()
   mockLog = jest.fn()
   mockHandleCloudError = jest.fn()
 
@@ -48,7 +50,7 @@ function loadIncomeAddPage() {
     queryAll: mockQueryAll,
     addDoc: mockAddDoc,
     updateDoc: mockUpdateDoc,
-    getDoc: jest.fn(),
+    getDoc: mockGetDoc,
     getDb: jest.fn(() => ({
       command: {
         gte: jest.fn(() => ({ and: jest.fn() })),
@@ -199,5 +201,32 @@ describe('income-add stored value settlement', () => {
 
     expect(mockCallFunction).not.toHaveBeenCalled()
     expect(mockUpdateDoc).toHaveBeenCalledWith('income', 'income-1', expect.objectContaining({ amount: 800 }))
+  })
+
+  test.each(['stored_partial', 'stored_value_recharge'])('loadExisting preserves %s trace fields and edit submit blocks update', async (settlementMode) => {
+    const page = loadIncomeAddPage()
+    page.data.id = 'income-1'
+    page.data.isEdit = true
+    mockGetDoc.mockResolvedValue({
+      _id: 'income-1',
+      type: 'dining',
+      amount: 300,
+      originalAmount: 800,
+      deductedAmount: 500,
+      settlementMode,
+      date: '2026-06-21',
+      reservationId: 'res-1',
+      remark: '储值结算'
+    })
+
+    await page.loadExisting()
+    await page.onSubmit()
+
+    expect(page.data.settlementMode).toBe(settlementMode)
+    expect(page.data.originalAmount).toBe(800)
+    expect(page.data.deductedAmount).toBe(500)
+    expect(page.data._oldData).toEqual(expect.objectContaining({ settlementMode, originalAmount: 800, deductedAmount: 500 }))
+    expect(mockUpdateDoc).not.toHaveBeenCalled()
+    expect(global.wx.showToast).toHaveBeenCalledWith({ title: '储值关联收入不可直接编辑', icon: 'none' })
   })
 })

@@ -6,6 +6,10 @@ const { COLLECTIONS } = require('../../utils/db')
 const { formatDate, formatAmount, getIncomeTypeText, getRoomName, getReservationStatusText, getExclusiveTypeName } = require('../../utils/helpers')
 const db = require('../../utils/db')
 
+function isStoredValueLinkedIncome(income) {
+  return income && (income.settlementMode === 'stored_partial' || income.settlementMode === 'stored_value_recharge')
+}
+
 Page({
   data: {
     theme: {},
@@ -101,6 +105,10 @@ Page({
       wx.showToast({ title: '无权限', icon: 'none' })
       return
     }
+    if (isStoredValueLinkedIncome(this.data.income)) {
+      wx.showToast({ title: '储值关联收入不可直接编辑', icon: 'none' })
+      return
+    }
     wx.navigateTo({ url: `/pages/income-add/index?id=${this.data.id}` })
   },
 
@@ -109,15 +117,23 @@ Page({
       wx.showToast({ title: '无权限', icon: 'none' })
       return
     }
+    if (isStoredValueLinkedIncome(this.data.income)) {
+      wx.showToast({ title: '储值关联收入不可直接删除', icon: 'none' })
+      return
+    }
     this.setData({ showDeleteModal: true })
   },
 
   async onConfirmDelete() {
     this.setData({ showDeleteModal: false })
+    const income = this.data.income
+    if (isStoredValueLinkedIncome(income)) {
+      wx.showToast({ title: '储值关联收入不可直接删除', icon: 'none' })
+      return
+    }
     try {
-      const income = this.data.income
       await db.deleteDoc(COLLECTIONS.INCOME, this.data.id)
-      if (income.reservationId) {
+      if (income.reservationId && !isStoredValueLinkedIncome(income)) {
         await db.updateDoc(COLLECTIONS.RESERVATION, income.reservationId, { hasIncome: false })
       }
       log('INCOME_DELETE', { type: income.type, amount: income.amount })

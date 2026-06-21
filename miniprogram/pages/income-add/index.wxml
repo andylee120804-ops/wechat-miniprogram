@@ -65,9 +65,10 @@
       <view style="display: flex; align-items: baseline;">
         <text style="color: {{theme.amountPositive || '#4ADE80'}}; font-size: 36rpx; font-weight: 600; margin-right: 6rpx; flex-shrink: 0;">¥</text>
         <input type="digit" placeholder="0.00" placeholder-style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 44rpx; font-weight: 600;"
-          value="{{amount}}" bindinput="onAmountInput"
+          value="{{amount}}" bindinput="onAmountInput" disabled="{{isStoredValueIncome}}"
           style="color: {{theme.amountPositive || '#4ADE80'}}; text-align: left; width: 100%; font-size: 44rpx; font-weight: 600; height: 57rpx; display: block; box-sizing: border-box" />
       </view>
+      <text wx:if="{{isStoredValueIncome}}" style="display: block; color: {{theme.warningColor || '#F59E0B'}}; font-size: 24rpx; margin-top: 10rpx;">储值关联收入不可直接编辑，请在储值流水中处理。</text>
     </view>
 
     <!-- Stored Value Preview -->
