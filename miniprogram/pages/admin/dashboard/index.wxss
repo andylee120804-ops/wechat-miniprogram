@@ -214,6 +214,42 @@
   font-family: 'DIN Alternate', 'SF Pro Display', sans-serif;
 }
 
+/* ==================== Stored Value Section ==================== */
+.stored-value-section {
+  overflow: hidden;
+}
+
+.stored-value-grid {
+  display: flex;
+  flex-direction: row;
+  padding: 24rpx 16rpx;
+}
+
+.stored-value-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.stored-value-label {
+  font-size: 22rpx;
+}
+
+.stored-value-value {
+  font-size: 28rpx;
+  font-weight: 600;
+  font-family: 'DIN Alternate', 'SF Pro Display', sans-serif;
+}
+
+.stored-value-note {
+  display: block;
+  padding: 16rpx 24rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
 /* ==================== Chart Section ==================== */
 .chart-section {
   border-radius: 20rpx;

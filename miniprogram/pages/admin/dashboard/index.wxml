@@ -118,7 +118,7 @@
       <view class="summary-row px-lg mt-lg">
         <view class="summary-card {{chartMode === 'income' ? 'summary-card-active' : ''}}" bindtap="switchToIncome"
           style="background: {{chartMode === 'income' ? (theme.amountPositiveBg || 'rgba(74,222,128,0.10)') : (theme.cardBg || 'rgba(26,26,46,0.85)')}}; border: 2rpx solid {{chartMode === 'income' ? (theme.amountPositive || '#4ADE80') : (theme.borderColor || 'rgba(255,255,255,0.10)')}}; border-radius: 16rpx;">
-          <text class="summary-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">收入</text>
+          <text class="summary-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">收入（含储值预收款）</text>
           <text class="summary-value" style="color: {{theme.amountPositive || '#4ADE80'}};">¥{{totalIncome}}</text>
         </view>
         <view class="summary-card {{chartMode === 'expense' ? 'summary-card-active' : ''}}" bindtap="switchToExpense"
@@ -126,6 +126,25 @@
           <text class="summary-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">支出</text>
           <text class="summary-value" style="color: {{theme.amountNegative || '#F87171'}};">¥{{totalExpense}}</text>
         </view>
+      </view>
+
+      <!-- Stored Value Stats -->
+      <view class="stored-value-section mx-lg mt-md" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}}; border-radius: 16rpx;">
+        <view class="stored-value-grid">
+          <view class="stored-value-item">
+            <text class="stored-value-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">储值充值</text>
+            <text class="stored-value-value" style="color: {{theme.amountPositive || '#4ADE80'}};">¥{{storedValueRecharge}}</text>
+          </view>
+          <view class="stored-value-item">
+            <text class="stored-value-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">储值消费</text>
+            <text class="stored-value-value" style="color: {{theme.accentColor || '#C9A96E'}};">¥{{storedValueConsume}}</text>
+          </view>
+          <view class="stored-value-item">
+            <text class="stored-value-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">当前余额</text>
+            <text class="stored-value-value" style="color: {{theme.textPrimary || '#F5F0E8'}};">¥{{storedValueBalance}}</text>
+          </view>
+        </view>
+        <text class="stored-value-note" style="color: {{theme.textMuted || '#5C5C72'}}; border-top: 1rpx solid {{theme.dividerColor || 'rgba(255,255,255,0.06)'}};">储值消费为余额抵扣参考，不重复计入收入。</text>
       </view>
 
       <!-- Ring Chart Section -->

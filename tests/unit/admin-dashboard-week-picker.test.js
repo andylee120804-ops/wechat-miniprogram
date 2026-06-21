@@ -1,6 +1,7 @@
 const mockApp = {
   globalData: { statusBarHeight: 44, userInfo: { _id: 'u1', role: 'admin' } },
-  getThemePageData: jest.fn(() => ({}))
+  getThemePageData: jest.fn(() => ({})),
+  getTheme: jest.fn(() => 'dark')
 }
 
 let pageInstance
@@ -80,7 +81,6 @@ describe('admin dashboard week picker', () => {
     }))
 
     require('../../miniprogram/pages/admin/dashboard/index.js')
-    pageInstance.loadData = jest.fn()
     pageInstance.setPeriodRange = jest.fn()
   })
 
@@ -89,6 +89,7 @@ describe('admin dashboard week picker', () => {
   })
 
   test('week picker confirm does not throw and reloads data', () => {
+    pageInstance.loadData = jest.fn()
     pageInstance.data.periodType = 'week'
     pageInstance.data.pickerYear = 2026
     pageInstance.data.pickerWeek = 20
@@ -135,6 +136,42 @@ describe('admin dashboard week picker', () => {
         periodType: 'month',
         periodLabel: '2026-06'
       }
+    }))
+  })
+
+  test('loadData maps stored value stats from finance function result', () => {
+    wx.cloud.callFunction.mockImplementation(({ success }) => {
+      success({
+        result: {
+          success: true,
+          data: {
+            totalIncome: 1500,
+            totalExpenseAll: 300,
+            netProfit: 1200,
+            incomeByType: { other: 1500 },
+            expenseByCategory: {},
+            totalPurchase: 0,
+            totalSalary: 0,
+            fixedByName: {},
+            storedValueRecharge: 1000,
+            storedValueConsume: 450,
+            storedValueBalance: 2300.5
+          }
+        }
+      })
+    })
+    pageInstance.data.startDate = '2026-06-01'
+    pageInstance.data.endDate = '2026-06-30'
+    pageInstance.data.periodType = 'month'
+    pageInstance.data.chartSize = 240
+
+    pageInstance.loadData()
+
+    expect(pageInstance.setData).toHaveBeenCalledWith(expect.objectContaining({
+      totalIncome: '1500.00',
+      storedValueRecharge: '1000.00',
+      storedValueConsume: '450.00',
+      storedValueBalance: '2300.50'
     }))
   })
 })

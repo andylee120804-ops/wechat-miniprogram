@@ -24,7 +24,9 @@ const COLLECTIONS = {
   PURCHASE: 'purchase',
   INCOME: 'income',
   EXPENSE: 'expense',
-  FIXED_EXPENSE: 'fixed_expense'
+  FIXED_EXPENSE: 'fixed_expense',
+  STORED_VALUE_ACCOUNT: 'stored_value_account',
+  STORED_VALUE_TRANSACTION: 'stored_value_transaction'
 }
 
 const ADMIN_ONLY_MODULES = ['staff', 'venueSettings', 'minAmount']
@@ -75,12 +77,14 @@ async function authorizeDashboardView() {
 async function computeFinanceStats(startDate, endDate, periodType) {
   const dateFilter = { date: _.gte(startDate).and(_.lte(endDate)) }
 
-  const [incomeData, purchaseData, expenseData, fixedData, staffData] = await Promise.all([
+  const [incomeData, purchaseData, expenseData, fixedData, staffData, storedValueTransactions, storedValueAccounts] = await Promise.all([
     fetchAll(COLLECTIONS.INCOME, dateFilter),
     fetchAll(COLLECTIONS.PURCHASE, dateFilter),
     fetchAll(COLLECTIONS.EXPENSE, dateFilter),
     fetchAll(COLLECTIONS.FIXED_EXPENSE, { active: true }),
-    fetchAll(COLLECTIONS.STAFF, { status: 'active' })
+    fetchAll(COLLECTIONS.STAFF, { status: 'active' }),
+    fetchAll(COLLECTIONS.STORED_VALUE_TRANSACTION, { status: 'active' }),
+    fetchAll(COLLECTIONS.STORED_VALUE_ACCOUNT, { status: 'active' })
   ])
 
   // ===== 收入 =====
@@ -154,6 +158,9 @@ async function computeFinanceStats(startDate, endDate, periodType) {
     totalSalary += Math.ceil((Number(item.salary) || 0) * proratedMonths)
   })
 
+  // ===== 储值：额外核对指标，不重复计入收入 =====
+  const storedValueStats = computeStoredValueStats(storedValueTransactions, storedValueAccounts, startDate, endDate)
+
   const totalFixed = Object.keys(fixedByName).reduce(function (s, k) { return s + fixedByName[k] }, 0)
   const totalExpenseAll = totalPurchase + totalExpense + totalSalary
   const netProfit = totalIncome - totalExpenseAll
@@ -169,8 +176,45 @@ async function computeFinanceStats(startDate, endDate, periodType) {
     incomeByType: incomeByType,
     expenseByCategory: expenseByCategory,
     purchaseByCategory: purchaseByCategory,
-    fixedByName: fixedByName
+    fixedByName: fixedByName,
+    storedValueRecharge: storedValueStats.recharge,
+    storedValueConsume: storedValueStats.consume,
+    storedValueBalance: storedValueStats.balance
   }
+}
+
+/**
+ * 计算储值统计。流水按查询期间过滤，账户余额为当前 active 余额合计。
+ */
+function computeStoredValueStats(transactions, accounts, startDate, endDate) {
+  const stats = { recharge: 0, consume: 0, balance: 0 }
+
+  transactions.forEach(function (item) {
+    if (item.status !== 'active') return
+    const itemDate = getStoredValueTransactionDate(item)
+    if (!itemDate || itemDate < startDate || itemDate > endDate) return
+
+    const amount = Number(item.amount) || 0
+    if (item.type === 'recharge') {
+      stats.recharge += amount
+    } else if (item.type === 'consume') {
+      stats.consume += amount
+    }
+  })
+
+  accounts.forEach(function (item) {
+    if (item.status !== 'active') return
+    stats.balance += Number(item.balance) || 0
+  })
+
+  return stats
+}
+
+function getStoredValueTransactionDate(item) {
+  if (item.date) return String(item.date).slice(0, 10)
+  if (item.createTime instanceof Date) return item.createTime.toISOString().slice(0, 10)
+  if (item.createTime) return String(item.createTime).slice(0, 10)
+  return ''
 }
 
 /**
