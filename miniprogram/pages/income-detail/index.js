@@ -3,7 +3,7 @@ const { hasPermission, checkPermission, ACTIONS } = require('../../utils/permiss
 const { log } = require('../../utils/logger')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
-const { formatDate, formatAmount, getIncomeTypeText, getRoomName, getReservationStatusText, getExclusiveTypeName } = require('../../utils/helpers')
+const { formatDate, formatAmount, getIncomeDisplayType, getRoomName, getReservationStatusText, getExclusiveTypeName } = require('../../utils/helpers')
 const db = require('../../utils/db')
 
 function isStoredValueLinkedIncome(income) {
@@ -48,11 +48,15 @@ Page({
         setTimeout(() => wx.navigateBack(), 1500)
         return
       }
+      const hasOriginalAmountTrace = res.originalAmount !== undefined && res.originalAmount !== null && res.originalAmount !== res.amount
       const income = {
         ...res,
-        typeName: getIncomeTypeText(res.type),
+        typeName: getIncomeDisplayType(res),
         formattedAmount: formatAmount(res.amount),
-        formattedDate: formatDate(res.date)
+        formattedDate: formatDate(res.date),
+        hasStoredPartialTrace: res.settlementMode === 'stored_partial' && res.deductedAmount !== undefined && res.deductedAmount !== null,
+        hasOriginalAmountTrace,
+        hasStoredRechargeTrace: res.settlementMode === 'stored_value_recharge'
       }
 
       // 加载关联预约数据

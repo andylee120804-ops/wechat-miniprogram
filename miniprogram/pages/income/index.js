@@ -1,5 +1,5 @@
 const app = getApp()
-const { formatDate, formatAmount, getIncomeTypeText, getMonthRange } = require('../../utils/helpers')
+const { formatDate, formatAmount, getIncomeDisplayType, getMonthRange } = require('../../utils/helpers')
 const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
@@ -91,7 +91,7 @@ Page({
 
       const items = (res.data || []).map(i => ({
         ...i,
-        typeText: getIncomeTypeText(i.type) || '其他',
+        typeText: getIncomeDisplayType(i) || '其他',
         amountText: formatAmount(i.amount),
         dateText: formatDate(i.date)
       }))
@@ -147,7 +147,7 @@ Page({
     db.queryPage(COLLECTIONS.INCOME, query, that.data.page + 1, that.data.pageSize, that.data.sortField, 'desc').then(function(res) {
       const newItems = (res.data || []).map(function(i) {
         return { ...i,
-          typeText: getIncomeTypeText(i.type) || '其他',
+          typeText: getIncomeDisplayType(i) || '其他',
           amountText: formatAmount(i.amount),
           dateText: formatDate(i.date)
         }

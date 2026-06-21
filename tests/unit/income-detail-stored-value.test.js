@@ -4,7 +4,9 @@ const originalGetApp = global.getApp
 let pageInstance
 let mockDeleteDoc
 let mockUpdateDoc
+let mockGetDoc
 let mockCheckPermission
+let mockGetIncomeDisplayType
 
 function capturePage(pageDef) {
   pageInstance = Object.assign({}, pageDef)
@@ -19,7 +21,9 @@ function loadIncomeDetailPage() {
   pageInstance = null
   mockDeleteDoc = jest.fn(() => Promise.resolve({ deleted: 1 }))
   mockUpdateDoc = jest.fn(() => Promise.resolve({ updated: 1 }))
+  mockGetDoc = jest.fn()
   mockCheckPermission = jest.fn(() => true)
+  mockGetIncomeDisplayType = jest.fn((income) => income.categoryLabel || income.type)
 
   global.getApp = jest.fn(() => ({
     globalData: { statusBarHeight: 44 },
@@ -38,7 +42,7 @@ function loadIncomeDetailPage() {
     ACTIONS: { VIEW: 'view', ADD: 'add', EDIT: 'edit', DELETE: 'delete' }
   }))
   jest.doMock('../../miniprogram/utils/db', () => ({
-    getDoc: jest.fn(),
+    getDoc: mockGetDoc,
     deleteDoc: mockDeleteDoc,
     updateDoc: mockUpdateDoc,
     COLLECTIONS: { INCOME: 'income', RESERVATION: 'reservation' }
@@ -46,6 +50,7 @@ function loadIncomeDetailPage() {
   jest.doMock('../../miniprogram/utils/helpers', () => ({
     formatDate: jest.fn((value) => value || '2026-06-21'),
     formatAmount: jest.fn((value) => `¥${value}`),
+    getIncomeDisplayType: mockGetIncomeDisplayType,
     getIncomeTypeText: jest.fn((value) => value),
     getRoomName: jest.fn((value) => value),
     getReservationStatusText: jest.fn((value) => value),
@@ -108,5 +113,49 @@ describe('income-detail stored value edit/delete protection', () => {
 
     expect(mockDeleteDoc).toHaveBeenCalledWith('income', 'income-1')
     expect(mockUpdateDoc).toHaveBeenCalledWith('reservation', 'res-1', { hasIncome: false })
+  })
+
+  test('loadData uses display type helper for stored-value recharge category label', async () => {
+    const page = loadIncomeDetailPage()
+    page.data.id = 'income-1'
+    const storedRechargeIncome = {
+      _id: 'income-1',
+      type: 'other',
+      categoryLabel: '储值充值',
+      settlementMode: 'stored_value_recharge',
+      amount: 1000,
+      date: '2026-06-21'
+    }
+    mockGetDoc.mockResolvedValue(storedRechargeIncome)
+
+    await page.loadData()
+
+    expect(mockGetIncomeDisplayType).toHaveBeenCalledWith(storedRechargeIncome)
+    expect(page.data.income.typeName).toBe('储值充值')
+  })
+
+  test('loadData exposes stored-value trace rows for detail rendering', async () => {
+    const page = loadIncomeDetailPage()
+    page.data.id = 'income-1'
+    mockGetDoc.mockResolvedValue({
+      _id: 'income-1',
+      type: 'dining',
+      settlementMode: 'stored_partial',
+      amount: 300,
+      originalAmount: 800,
+      deductedAmount: 500,
+      date: '2026-06-21'
+    })
+
+    await page.loadData()
+
+    expect(page.data.income).toEqual(expect.objectContaining({
+      settlementMode: 'stored_partial',
+      originalAmount: 800,
+      deductedAmount: 500,
+      hasStoredPartialTrace: true,
+      hasOriginalAmountTrace: true,
+      hasStoredRechargeTrace: false
+    }))
   })
 })

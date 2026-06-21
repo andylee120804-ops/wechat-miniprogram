@@ -52,6 +52,18 @@
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">收款人</text>
           <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">{{income.collectedByName}}</text>
         </view>
+        <view class="detail-row" wx:if="{{income.hasStoredPartialTrace}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">储值抵扣</text>
+          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx;">¥{{income.deductedAmount}}</text>
+        </view>
+        <view class="detail-row" wx:if="{{income.hasOriginalAmountTrace}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">原消费金额</text>
+          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx;">¥{{income.originalAmount}}</text>
+        </view>
+        <view class="detail-row" wx:if="{{income.hasStoredRechargeTrace}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">储值说明</text>
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">充值已计入收入</text>
+        </view>
         <view class="detail-row" wx:if="{{income.remark && !reservation}}">
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">备注</text>
           <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 28rpx; flex: 1; text-align: right;">{{income.remark}}</text>
