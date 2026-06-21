@@ -22,6 +22,13 @@ function createDocChain(id, hooks) {
     update: jest.fn((payload) => {
       if (hooks && hooks.onUpdate) hooks.onUpdate(id, payload)
       return Promise.resolve({ stats: { updated: 1 } })
+    }),
+    set: jest.fn((payload) => {
+      if (hooks && hooks.onSet) hooks.onSet(id, payload)
+      if (hooks && hooks.shouldRejectSet && hooks.shouldRejectSet(id, payload)) {
+        return Promise.reject(new Error('document write conflict'))
+      }
+      return Promise.resolve({ stats: { updated: 1 } })
     })
   }
   return chain
@@ -44,10 +51,13 @@ function loadStoredValueFunction(options) {
   const whereCalls = []
   const adds = []
   const updates = []
+  const sets = []
   const outsideAdds = []
   const outsideUpdates = []
+  const outsideSets = []
   const transactionAdds = []
   const transactionUpdates = []
+  const transactionSets = []
   const accountDataQueue = Array.isArray(options.accountDataSequence) ? options.accountDataSequence.slice() : null
 
   function getAccountResult() {
@@ -78,7 +88,19 @@ function loadStoredValueFunction(options) {
           return
         }
         outsideUpdates.push(entry)
-      }
+      },
+      onSet: (id, payload) => {
+        const entry = { id, payload }
+        sets.push(entry)
+        if (isTransaction) {
+          transactionSets.push(entry)
+          return
+        }
+        outsideSets.push(entry)
+      },
+      shouldRejectSet: options.rejectSetIds
+        ? (id) => options.rejectSetIds.includes(id)
+        : null
     }
   }
 
@@ -86,8 +108,8 @@ function loadStoredValueFunction(options) {
     const hooks = createHooks(isTransaction)
     return {
       collection: jest.fn((name) => {
-        if (name === 'staff') return createCollection(name, { data: options.staffData || [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate })
-        if (name === 'permissions') return createCollection(name, { data: options.permissionsData || [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate })
+        if (name === 'staff') return createCollection(name, { data: options.staffData || [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate, onSet: hooks.onSet, shouldRejectSet: hooks.shouldRejectSet })
+        if (name === 'permissions') return createCollection(name, { data: options.permissionsData || [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate, onSet: hooks.onSet, shouldRejectSet: hooks.shouldRejectSet })
         if (name === 'stored_value_account') {
           return createCollection(name, getAccountResult(), {
             onWhere: (where) => {
@@ -95,10 +117,12 @@ function loadStoredValueFunction(options) {
               hooks.onWhere(name, where)
             },
             onAdd: hooks.onAdd,
-            onUpdate: hooks.onUpdate
+            onUpdate: hooks.onUpdate,
+            onSet: hooks.onSet,
+            shouldRejectSet: hooks.shouldRejectSet
           })
         }
-        return createCollection(name, { data: [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate })
+        return createCollection(name, { data: [] }, { onWhere: (where) => hooks.onWhere(name, where), onAdd: hooks.onAdd, onUpdate: hooks.onUpdate, onSet: hooks.onSet, shouldRejectSet: hooks.shouldRejectSet })
       })
     }
   }
@@ -128,7 +152,7 @@ function loadStoredValueFunction(options) {
   jest.doMock('wx-server-sdk', () => cloud, { virtual: true })
 
   const mod = require('../../cloudfunctions/storedValue/index')
-  return { main: mod.main, testApi: mod.__test__, db, cloud, accountReads, whereCalls, adds, updates, outsideAdds, outsideUpdates, transactionAdds, transactionUpdates }
+  return { main: mod.main, testApi: mod.__test__, db, cloud, accountReads, whereCalls, adds, updates, sets, outsideAdds, outsideUpdates, outsideSets, transactionAdds, transactionUpdates, transactionSets }
 }
 
 describe('stored value settlement helpers', () => {
@@ -157,6 +181,17 @@ describe('stored value settlement helpers', () => {
     expect(storedValue.__test__.getCustomerKey({ phone: '', customerName: ' 张三 ' })).toBe('name:张三')
     expect(storedValue.__test__.getCustomerKey({ name: ' 李四 ' })).toBe('name:李四')
     expect(storedValue.__test__.getCustomerKey({ phone: '', customerName: '' })).toBe('')
+  })
+
+  test('builds stable safe deterministic account ids from customer keys', () => {
+    const firstId = storedValue.__test__.buildStoredValueAccountId('phone:13800000000')
+    const secondId = storedValue.__test__.buildStoredValueAccountId('phone:13800000000')
+    const unicodeId = storedValue.__test__.buildStoredValueAccountId('name:张三😀; DROP TABLE')
+
+    expect(firstId).toBe(secondId)
+    expect(firstId).toMatch(/^stored_value_account_[a-f0-9]{64}$/)
+    expect(unicodeId).toMatch(/^stored_value_account_[a-f0-9]{64}$/)
+    expect(unicodeId).not.toBe(firstId)
   })
 
   test('builds stored-value recharge income payload', () => {
@@ -215,7 +250,8 @@ describe('stored value recharge action', () => {
   })
 
   test('creates account, income and recharge transaction for new customer', async () => {
-    const { main, accountReads, adds, updates } = loadStoredValueFunction({
+    const expectedAccountId = storedValue.__test__.buildStoredValueAccountId('phone:13800000000')
+    const { main, accountReads, adds, sets, updates } = loadStoredValueFunction({
       staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }]
     })
 
@@ -237,9 +273,9 @@ describe('stored value recharge action', () => {
       { phone: '13800000000', status: 'active' },
       { customerName: '张三', status: 'active' }
     ])
-    expect(adds).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        name: 'stored_value_account',
+    expect(sets).toEqual([
+      {
+        id: expectedAccountId,
         payload: expect.objectContaining({
           data: expect.objectContaining({
             customerName: '张三',
@@ -256,13 +292,15 @@ describe('stored value recharge action', () => {
             updatedByName: '管理员'
           })
         })
-      }),
+      }
+    ])
+    expect(adds).toEqual(expect.arrayContaining([
       expect.objectContaining({
         name: 'income',
         payload: expect.objectContaining({
           data: expect.objectContaining({
             settlementMode: 'stored_value_recharge',
-            storedValueAccountId: 'stored_value_account-new-id',
+            storedValueAccountId: expectedAccountId,
             amount: 1000,
             source: '张三',
             collectedBy: 'staff-1'
@@ -275,7 +313,7 @@ describe('stored value recharge action', () => {
           data: expect.objectContaining({
             type: 'recharge',
             status: 'active',
-            accountId: 'stored_value_account-new-id',
+            accountId: expectedAccountId,
             amount: 1000,
             balanceBefore: 0,
             balanceAfter: 1000,
@@ -291,7 +329,7 @@ describe('stored value recharge action', () => {
       payload: { data: { storedValueTransactionId: 'stored_value_transaction-new-id' } }
     }])
     expect(result.data).toEqual(expect.objectContaining({
-      account: expect.objectContaining({ _id: 'stored_value_account-new-id', balance: 1000, totalRecharge: 1000 }),
+      account: expect.objectContaining({ _id: expectedAccountId, balance: 1000, totalRecharge: 1000 }),
       transaction: expect.objectContaining({ _id: 'stored_value_transaction-new-id', balanceBefore: 0, balanceAfter: 1000 }),
       incomeId: 'income-new-id'
     }))
@@ -350,7 +388,8 @@ describe('stored value recharge action', () => {
   })
 
   test('returns failure and performs no outside writes when transaction rollback is reported after attempted writes', async () => {
-    const { main, db, outsideAdds, outsideUpdates, transactionAdds, transactionUpdates } = loadStoredValueFunction({
+    const expectedAccountId = storedValue.__test__.buildStoredValueAccountId('phone:13800000000')
+    const { main, db, outsideAdds, outsideUpdates, outsideSets, transactionAdds, transactionUpdates, transactionSets } = loadStoredValueFunction({
       staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
       rejectRunTransactionAfterCallback: 'transaction rollback'
     })
@@ -359,10 +398,12 @@ describe('stored value recharge action', () => {
 
     expect(result).toEqual({ success: false, message: 'transaction rollback' })
     expect(db.runTransaction).toHaveBeenCalledTimes(1)
-    expect(transactionAdds.map((entry) => entry.name)).toEqual(['stored_value_account', 'income', 'stored_value_transaction'])
+    expect(transactionSets.map((entry) => entry.id)).toEqual([expectedAccountId])
+    expect(transactionAdds.map((entry) => entry.name)).toEqual(['income', 'stored_value_transaction'])
     expect(transactionUpdates).toEqual([{ id: 'income-new-id', payload: { data: { storedValueTransactionId: 'stored_value_transaction-new-id' } } }])
     expect(outsideAdds).toEqual([])
     expect(outsideUpdates).toEqual([])
+    expect(outsideSets).toEqual([])
   })
 
   test('updates legacy account found by phone and backfills customerKey', async () => {
@@ -425,6 +466,27 @@ describe('stored value recharge action', () => {
       }
     ]))
     expect(result.data.account).toEqual(expect.objectContaining({ _id: 'account-concurrent', balance: 1000, totalRecharge: 1000 }))
+  })
+
+  test('fails deterministic first account create conflict without creating a random duplicate account', async () => {
+    const conflictAccountId = storedValue.__test__.buildStoredValueAccountId('phone:13800000000')
+    const { main, adds, sets, outsideAdds, outsideSets } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      rejectSetIds: [conflictAccountId]
+    })
+
+    const result = await main({ action: 'recharge', customerName: '张三', phone: '13800000000', amount: 700 })
+
+    expect(result).toEqual({ success: false, message: '储值账户正在创建，请重试' })
+    expect(adds.filter((entry) => entry.name === 'stored_value_account')).toEqual([])
+    expect(sets).toEqual([
+      {
+        id: conflictAccountId,
+        payload: { data: expect.objectContaining({ customerKey: 'phone:13800000000', balance: 700, totalRecharge: 700 }) }
+      }
+    ])
+    expect(outsideAdds).toEqual([])
+    expect(outsideSets).toEqual([])
   })
 })
 

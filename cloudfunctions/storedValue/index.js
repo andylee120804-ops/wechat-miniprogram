@@ -1,3 +1,5 @@
+const crypto = require('crypto')
+
 const cloud = loadCloud()
 
 initCloud(cloud)
@@ -106,6 +108,18 @@ function getCustomerKey(customer = {}) {
 
   const name = String(customer.customerName || customer.name || '').trim()
   return name ? `name:${name}` : ''
+}
+
+function buildStoredValueAccountId(customerKey) {
+  const hash = crypto.createHash('sha256')
+    .update(String(customerKey || ''), 'utf8')
+    .digest('hex')
+  return `stored_value_account_${hash}`
+}
+
+function isAccountCreateConflictError(error) {
+  const message = String((error && error.message) || error || '').toLowerCase()
+  return message.includes('conflict') || message.includes('duplicate') || message.includes('already') || message.includes('exist')
 }
 
 function getLegacyCustomerKeys(customer = {}) {
@@ -411,8 +425,18 @@ async function recharge(event = {}) {
         createTime: now,
         updateTime: now
       }
-      const accountResult = await transaction.collection(COLLECTIONS.STORED_VALUE_ACCOUNT).add({ data: accountData })
-      account = Object.assign({}, accountData, { _id: accountResult._id })
+      const accountId = buildStoredValueAccountId(customerKey)
+      try {
+        await transaction.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
+          .doc(accountId)
+          .set({ data: accountData })
+      } catch (error) {
+        if (isAccountCreateConflictError(error)) {
+          throw new Error('储值账户正在创建，请重试')
+        }
+        throw error
+      }
+      account = Object.assign({}, accountData, { _id: accountId })
     }
 
     const incomeData = buildRechargeIncomeData(event, account, staff)
@@ -478,6 +502,7 @@ exports.__test__ = {
   buildReservationSnapshot,
   toAmount,
   getCustomerKey,
+  buildStoredValueAccountId,
   normalizeCustomerInputs,
   authorize,
   buildRechargeIncomeData,
