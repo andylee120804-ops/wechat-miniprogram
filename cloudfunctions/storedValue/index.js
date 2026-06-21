@@ -676,34 +676,27 @@ async function settleIncomeWithStoredValue(event = {}) {
   }
 
   const db = cloud.database()
-  const reservation = await getReservationById(db, reservationId)
-  if (!reservation) {
-    return fail('关联预约不存在')
-  }
+  const result = await db.runTransaction(async (transaction) => {
+    const transactionReservation = await getReservationById(transaction, reservationId)
+    if (!transactionReservation) {
+      throw new Error('关联预约不存在')
+    }
 
-  if (reservation.hasIncome) {
-    return fail('该预约已结算')
-  }
+    if (transactionReservation.hasIncome) {
+      throw new Error('该预约已结算')
+    }
 
-  const account = await findAccountBySettlementEventInCollection(db, event, reservation)
-  const incomeData = Object.assign({}, event, {
-    reservationId,
-    source: (reservation && reservation.customerName) || event.source || event.customerName || '',
-    phone: (reservation && reservation.phone) || event.phone || ''
-  })
-
-  if (!account) {
     const now = new Date()
-    const incomePayload = buildNormalIncomeData(incomeData, 'normal', staff, null)
-    const incomeResult = await db.runTransaction(async (transaction) => {
-      const transactionReservation = await getReservationById(transaction, reservationId)
-      if (!transactionReservation) {
-        throw new Error('关联预约不存在')
-      }
+    const incomeData = Object.assign({}, event, {
+      reservationId,
+      customerName: transactionReservation.customerName || '',
+      source: transactionReservation.customerName || '',
+      phone: transactionReservation.phone || ''
+    })
+    const currentAccount = await findAccountBySettlementEventInCollection(transaction, {}, transactionReservation)
 
-      if (transactionReservation.hasIncome) {
-        throw new Error('该预约已结算')
-      }
+    if (!currentAccount) {
+      const incomePayload = buildNormalIncomeData(incomeData, 'normal', staff, null)
       const createdIncome = await transaction.collection(COLLECTIONS.INCOME).add({ data: incomePayload })
       await markReservationSettled(transaction, reservationId, {
         settlementMode: 'normal',
@@ -715,56 +708,14 @@ async function settleIncomeWithStoredValue(event = {}) {
         settledByName: staff.name || '',
         settledAt: now
       })
-      return createdIncome
-    })
-    return ok({ settlementMode: 'normal', incomeId: incomeResult._id })
-  }
 
-  const balanceBefore = toAmount(account.balance)
-  if (balanceBefore <= 0) {
-    const now = new Date()
-    const incomePayload = buildNormalIncomeData(incomeData, 'stored_empty', staff, account)
-    const incomeResult = await db.runTransaction(async (transaction) => {
-      const transactionReservation = await getReservationById(transaction, reservationId)
-      if (!transactionReservation) {
-        throw new Error('关联预约不存在')
-      }
-
-      if (transactionReservation.hasIncome) {
-        throw new Error('该预约已结算')
-      }
-      const createdIncome = await transaction.collection(COLLECTIONS.INCOME).add({ data: incomePayload })
-      await markReservationSettled(transaction, reservationId, {
-        settlementMode: 'stored_empty',
-        storedValueAccountId: account._id,
+      return {
+        settlementMode: 'normal',
         incomeId: createdIncome._id,
         originalAmount: amount,
         deductedAmount: 0,
-        incomeAmount: amount,
-        settledBy: staff._id,
-        settledByName: staff.name || '',
-        settledAt: now
-      })
-      return createdIncome
-    })
-    return ok({ settlementMode: 'stored_empty', incomeId: incomeResult._id, accountId: account._id })
-  }
-
-  const now = new Date()
-  const settlement = calculateSettlement(balanceBefore, amount)
-  const result = await db.runTransaction(async (transaction) => {
-    const transactionReservation = await getReservationById(transaction, reservationId)
-    if (!transactionReservation) {
-      throw new Error('关联预约不存在')
-    }
-
-    if (transactionReservation.hasIncome) {
-      throw new Error('该预约已结算')
-    }
-
-    const currentAccount = await findAccountBySettlementEventInCollection(transaction, event, transactionReservation)
-    if (!currentAccount) {
-      throw new Error('储值账户不存在')
+        incomeAmount: amount
+      }
     }
 
     const freshBalanceBefore = toAmount(currentAccount.balance)
@@ -820,7 +771,7 @@ async function settleIncomeWithStoredValue(event = {}) {
       balanceAfter: freshSettlement.balanceAfter,
       incomeId: null,
       reservationId,
-      reservationSnapshot: buildReservationSnapshot(transactionReservation || reservation || incomeData),
+      reservationSnapshot: buildReservationSnapshot(transactionReservation),
       operatorId: staff._id,
       operatorName: staff.name || '',
       remark: String(event.remark || '').trim(),
@@ -865,7 +816,7 @@ async function settleIncomeWithStoredValue(event = {}) {
     }
   })
 
-  return ok(Object.assign({}, result, { settlementMode: result.settlementMode || settlement.mode }))
+  return ok(result)
 }
 
 async function getStats(event = {}) {

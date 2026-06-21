@@ -303,10 +303,10 @@ describe('stored value settlement action', () => {
     expect(sets).toEqual([])
   })
 
-  test('rejects settlement when reservation already has income', async () => {
+  test('rejects settlement when in-transaction reservation already has income', async () => {
     const { main, db, adds, updates } = loadStoredValueFunction({
       staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
-      docData: {
+      transactionDocData: {
         reservation: {
           'res-1': { _id: 'res-1', hasIncome: true, customerName: '张三', phone: '13800000000' }
         }
@@ -316,12 +316,12 @@ describe('stored value settlement action', () => {
     const result = await main({ action: 'settleIncomeWithStoredValue', amount: 800, reservationId: 'res-1', source: '张三' })
 
     expect(result).toEqual({ success: false, message: '该预约已结算' })
-    expect(db.runTransaction).not.toHaveBeenCalled()
+    expect(db.runTransaction).toHaveBeenCalledTimes(1)
     expect(adds).toEqual([])
     expect(updates).toEqual([])
   })
 
-  test('rejects settlement when reservationId does not exist before account lookup or writes', async () => {
+  test('rejects settlement when transaction reservationId does not exist before account lookup or writes', async () => {
     const { main, db, accountReads, adds, updates, sets } = loadStoredValueFunction({
       staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
       accountData: [{
@@ -340,7 +340,7 @@ describe('stored value settlement action', () => {
     const result = await main({ action: 'settleIncomeWithStoredValue', amount: 800, reservationId: 'fake-reservation', source: '事件客户', phone: '13999999999' })
 
     expect(result).toEqual({ success: false, message: '关联预约不存在' })
-    expect(db.runTransaction).not.toHaveBeenCalled()
+    expect(db.runTransaction).toHaveBeenCalledTimes(1)
     expect(accountReads).toEqual([])
     expect(adds).toEqual([])
     expect(updates).toEqual([])
@@ -351,13 +351,7 @@ describe('stored value settlement action', () => {
     {
       name: 'normal income branch',
       accountData: [],
-      expectedAccountReads: [
-        { customerKey: 'phone:13800000000', status: 'active' },
-        { customerKey: '13800000000', status: 'active' },
-        { customerKey: '张三', status: 'active' },
-        { phone: '13800000000', status: 'active' },
-        { customerName: '张三', status: 'active' }
-      ]
+      expectedAccountReads: []
     },
     {
       name: 'stored_empty branch',
@@ -372,7 +366,7 @@ describe('stored value settlement action', () => {
         status: 'active',
         _version: 2
       }],
-      expectedAccountReads: [{ customerKey: 'phone:13800000000', status: 'active' }]
+      expectedAccountReads: []
     },
     {
       name: 'stored consume branch',
@@ -387,7 +381,7 @@ describe('stored value settlement action', () => {
         status: 'active',
         _version: 1
       }],
-      expectedAccountReads: [{ customerKey: 'phone:13800000000', status: 'active' }]
+      expectedAccountReads: []
     }
   ])('rejects settlement when reservation disappears inside transaction before writes: $name', async ({ accountData, expectedAccountReads }) => {
     const { main, db, accountReads, transactionAdds, transactionUpdates, transactionSets } = loadStoredValueFunction({
@@ -411,6 +405,79 @@ describe('stored value settlement action', () => {
     expect(transactionAdds).toEqual([])
     expect(transactionUpdates).toEqual([])
     expect(transactionSets).toEqual([])
+  })
+
+  test('uses transaction reservation account when outer pre-read finds no account', async () => {
+    const { main, accountReads, transactionAdds, transactionUpdates, outsideAdds, outsideUpdates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountDataSequence: [[{
+        _id: 'fresh-account',
+        customerName: '新客户',
+        phone: '13811111111',
+        customerKey: 'phone:13811111111',
+        balance: 1000,
+        totalRecharge: 1000,
+        totalConsume: 0,
+        status: 'active',
+        _version: 1
+      }]],
+      docData: {
+        reservation: {
+          'res-1': { _id: 'res-1', hasIncome: false, customerName: '旧客户', phone: '13800000000', date: '2026-06-19' }
+        }
+      },
+      transactionDocData: {
+        reservation: {
+          'res-1': { _id: 'res-1', hasIncome: false, customerName: '新客户', phone: '13811111111', date: '2026-06-20', time: '晚上', roomName: '新包厢' }
+        }
+      }
+    })
+
+    const result = await main({ action: 'settleIncomeWithStoredValue', amount: 800, reservationId: 'res-1', source: '事件客户', phone: '13999999999' })
+
+    expect(result.success).toBe(true)
+    expect(result.data).toEqual(expect.objectContaining({ settlementMode: 'stored_full', accountId: 'fresh-account', incomeId: null }))
+    expect(accountReads).toEqual([
+      { customerKey: 'phone:13811111111', status: 'active' }
+    ])
+    expect(transactionAdds.filter((entry) => entry.name === 'income')).toEqual([])
+    expect(transactionAdds).toEqual([expect.objectContaining({
+      name: 'stored_value_transaction',
+      payload: { data: expect.objectContaining({ accountId: 'fresh-account', amount: 800, balanceBefore: 1000, balanceAfter: 200 }) }
+    })])
+    expect(transactionUpdates).toEqual(expect.arrayContaining([
+      { id: 'fresh-account', payload: { data: expect.objectContaining({ balance: 200, totalConsume: 800, _version: 2 }) } },
+      { id: 'res-1', payload: { data: expect.objectContaining({ settlementMode: 'stored_full', storedValueAccountId: 'fresh-account', deductedAmount: 800, incomeAmount: 0 }) } }
+    ]))
+    expect(outsideAdds).toEqual([])
+    expect(outsideUpdates).toEqual([])
+  })
+
+  test('uses transaction reservation to avoid stale outer empty account branch', async () => {
+    const { main, transactionAdds, transactionUpdates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountDataSequence: [[]],
+      docData: {
+        reservation: {
+          'res-1': { _id: 'res-1', hasIncome: false, customerName: '旧客户', phone: '13800000000', date: '2026-06-19' }
+        }
+      },
+      transactionDocData: {
+        reservation: {
+          'res-1': { _id: 'res-1', hasIncome: false, customerName: '新客户', phone: '13811111111', date: '2026-06-20', time: '晚上', roomName: '新包厢' }
+        }
+      }
+    })
+
+    const result = await main({ action: 'settleIncomeWithStoredValue', amount: 800, reservationId: 'res-1', source: '事件客户', phone: '13999999999' })
+
+    expect(result.success).toBe(true)
+    expect(result.data).toEqual(expect.objectContaining({ settlementMode: 'normal', incomeId: 'income-new-id' }))
+    expect(transactionAdds).toEqual([expect.objectContaining({
+      name: 'income',
+      payload: { data: expect.objectContaining({ settlementMode: 'normal', storedValueAccountId: '', amount: 800, source: '新客户' }) }
+    })])
+    expect(transactionUpdates).toEqual([{ id: 'res-1', payload: { data: expect.objectContaining({ settlementMode: 'normal', deductedAmount: 0, incomeAmount: 800 }) } }])
   })
 
   test('settles stored_full with no income and marks reservation settled in one transaction', async () => {
@@ -507,7 +574,6 @@ describe('stored value settlement action', () => {
 
     expect(result.success).toBe(true)
     expect(accountReads).toEqual([
-      { customerKey: 'phone:13800000000', status: 'active' },
       { customerKey: 'phone:13800000000', status: 'active' }
     ])
     expect(transactionUpdates).toEqual(expect.arrayContaining([
@@ -602,16 +668,6 @@ describe('stored value settlement action', () => {
     const { main, transactionAdds, transactionUpdates } = loadStoredValueFunction({
       staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
       accountDataSequence: [[{
-        _id: 'account-1',
-        customerName: '张三',
-        phone: '13800000000',
-        customerKey: 'phone:13800000000',
-        balance: 500,
-        totalRecharge: 1000,
-        totalConsume: 500,
-        status: 'active',
-        _version: 3
-      }], [{
         _id: 'account-1',
         customerName: '张三',
         phone: '13800000000',
