@@ -221,7 +221,12 @@ function getStoredValueTransactionDate(item) {
 
 function normalizeBusinessDate(value) {
   if (!value) return ''
-  if (typeof value === 'string') return value.slice(0, 10)
+  if (typeof value === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value.slice(0, 10)
+    const parsedDate = new Date(value)
+    if (!Number.isNaN(parsedDate.getTime())) return formatChinaDate(parsedDate)
+    return value.slice(0, 10)
+  }
   if (value instanceof Date) return formatChinaDate(value)
   if (typeof value.toDate === 'function') return formatChinaDate(value.toDate())
   return String(value).slice(0, 10)

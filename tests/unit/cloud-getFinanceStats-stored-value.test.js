@@ -210,4 +210,38 @@ describe('getFinanceStats stored value stats', () => {
     expect(result.success).toBe(true)
     expect(result.data.storedValueRecharge).toBe(321)
   })
+
+  test('uses China business date for ISO string createTime at Beijing day boundary', async () => {
+    const { main } = loadFunction({
+      staff: [{ _id: 'staff-admin', role: 'admin', status: 'active', boundOpenid: 'openid-admin' }],
+      permissions: [],
+      income: [],
+      purchase: [],
+      expense: [],
+      fixed_expense: [],
+      stored_value_transaction: [
+        {
+          _id: 'iso-string-beijing-midnight-recharge',
+          type: 'recharge',
+          status: 'active',
+          amount: 456,
+          createTime: '2026-06-20T16:30:00.000Z'
+        },
+        {
+          _id: 'date-only-previous-business-day-recharge',
+          type: 'recharge',
+          status: 'active',
+          amount: 999,
+          createTime: '2026-06-20'
+        }
+      ],
+      stored_value_account: []
+    })
+
+    const result = await main({ startDate: '2026-06-21', endDate: '2026-06-21', periodType: 'week' }, {})
+
+    expect(result.success).toBe(true)
+    expect(result.data.storedValueRecharge).toBe(456)
+    expect(result.data.storedValueConsume).toBe(0)
+  })
 })
