@@ -154,6 +154,25 @@ function normalizeCustomerInputs(customers) {
   return { customers: normalizedCustomers, isTooMany }
 }
 
+function getBoundAtTime(staff) {
+  if (!staff || !staff.boundAt) {
+    return 0
+  }
+
+  const time = new Date(staff.boundAt).getTime()
+  return Number.isFinite(time) ? time : 0
+}
+
+function selectLatestBoundStaff(staffList) {
+  if (!Array.isArray(staffList) || staffList.length === 0) {
+    return null
+  }
+
+  return staffList
+    .slice()
+    .sort((current, next) => getBoundAtTime(next) - getBoundAtTime(current))[0]
+}
+
 async function authorize(requiredModule, requiredAction) {
   const wxContext = cloud.getWXContext()
   const openid = wxContext && wxContext.OPENID
@@ -162,11 +181,15 @@ async function authorize(requiredModule, requiredAction) {
   }
 
   const db = cloud.database()
-  const staffResult = await db.collection(COLLECTIONS.STAFF)
+  let staffQuery = db.collection(COLLECTIONS.STAFF)
     .where({ boundOpenid: openid, status: 'active' })
-    .limit(1)
-    .get()
-  const staff = staffResult.data && staffResult.data[0]
+
+  if (typeof staffQuery.orderBy === 'function') {
+    staffQuery = staffQuery.orderBy('boundAt', 'desc')
+  }
+
+  const staffResult = await staffQuery.get()
+  const staff = selectLatestBoundStaff(staffResult.data)
 
   if (!staff) {
     throw new Error('无权限')

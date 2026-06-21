@@ -6,6 +6,7 @@ function createChain(getResult, hooks) {
       if (hooks && hooks.onWhere) hooks.onWhere(where)
       return chain
     }),
+    orderBy: jest.fn(() => chain),
     limit: jest.fn(() => chain),
     get: jest.fn(() => Promise.resolve(getResult || { data: [] }))
   }
@@ -87,6 +88,49 @@ describe('stored value query authorization', () => {
       name: 'staff',
       where: { boundOpenid: 'openid-user', status: 'active' }
     })
+  })
+
+  test('rejects queryAccountsByCustomers when newest bound staff lacks permission despite older privileged staff', async () => {
+    const { main, accountReads, whereCalls } = loadStoredValueFunction({
+      staffData: [
+        { _id: 'older-admin', role: 'admin', status: 'active', boundOpenid: 'openid-user', boundAt: '2026-06-01T00:00:00.000Z' },
+        { _id: 'newer-waiter', role: 'waiter', status: 'active', boundOpenid: 'openid-user', boundAt: '2026-06-20T00:00:00.000Z' }
+      ],
+      permissionsData: [{ staffId: 'newer-waiter', permissions: [{ module: 'income', actions: ['view'] }] }]
+    })
+
+    const result = await main({
+      action: 'queryAccountsByCustomers',
+      staffId: 'older-admin',
+      customers: [{ phone: '13800000000' }]
+    })
+
+    expect(result).toEqual({ success: false, message: '无权限' })
+    expect(accountReads).toEqual([])
+    expect(whereCalls).toContainEqual({ name: 'permissions', where: { staffId: 'newer-waiter' } })
+  })
+
+  test('allows queryAccountsByCustomers when newest bound staff has income add permission', async () => {
+    const { main, accountReads, whereCalls } = loadStoredValueFunction({
+      staffData: [
+        { _id: 'older-waiter', role: 'waiter', status: 'active', boundOpenid: 'openid-user', boundAt: '2026-06-01T00:00:00.000Z' },
+        { _id: 'newer-cashier', role: 'waiter', status: 'active', boundOpenid: 'openid-user', boundAt: '2026-06-20T00:00:00.000Z' }
+      ],
+      permissionsData: [{ staffId: 'newer-cashier', permissions: [{ module: 'income', actions: ['add'] }] }]
+    })
+
+    const result = await main({
+      action: 'queryAccountsByCustomers',
+      customers: [
+        { phone: '13800000000', customerName: '张三' },
+        { phone: ' 13800000000 ', customerName: '重复' },
+        { customerName: '李四' }
+      ]
+    })
+
+    expect(result.success).toBe(true)
+    expect(accountReads).toEqual([{ customerKey: '13800000000' }, { customerKey: '李四' }])
+    expect(whereCalls).toContainEqual({ name: 'permissions', where: { staffId: 'newer-cashier' } })
   })
 
   test('allows queryAccountsByCustomers with income add permission and deduplicates lookups', async () => {
