@@ -30,6 +30,7 @@ const COLLECTIONS = {
 }
 
 const ADMIN_ONLY_MODULES = ['staff', 'venueSettings', 'minAmount']
+const CHINA_TIME_OFFSET_MS = 8 * 60 * 60 * 1000
 
 exports.main = async (event, context) => {
   const { startDate, endDate, periodType } = event
@@ -76,6 +77,10 @@ async function authorizeDashboardView() {
  */
 async function computeFinanceStats(startDate, endDate, periodType) {
   const dateFilter = { date: _.gte(startDate).and(_.lte(endDate)) }
+  const storedValueTransactionFilter = {
+    status: 'active',
+    createTime: _.gte(getChinaBusinessDayStart(startDate)).and(_.lte(getChinaBusinessDayEnd(endDate)))
+  }
 
   const [incomeData, purchaseData, expenseData, fixedData, staffData, storedValueTransactions, storedValueAccounts] = await Promise.all([
     fetchAll(COLLECTIONS.INCOME, dateFilter),
@@ -83,7 +88,7 @@ async function computeFinanceStats(startDate, endDate, periodType) {
     fetchAll(COLLECTIONS.EXPENSE, dateFilter),
     fetchAll(COLLECTIONS.FIXED_EXPENSE, { active: true }),
     fetchAll(COLLECTIONS.STAFF, { status: 'active' }),
-    fetchAll(COLLECTIONS.STORED_VALUE_TRANSACTION, { status: 'active' }),
+    fetchAll(COLLECTIONS.STORED_VALUE_TRANSACTION, storedValueTransactionFilter),
     fetchAll(COLLECTIONS.STORED_VALUE_ACCOUNT, { status: 'active' })
   ])
 
@@ -211,10 +216,31 @@ function computeStoredValueStats(transactions, accounts, startDate, endDate) {
 }
 
 function getStoredValueTransactionDate(item) {
-  if (item.date) return String(item.date).slice(0, 10)
-  if (item.createTime instanceof Date) return item.createTime.toISOString().slice(0, 10)
-  if (item.createTime) return String(item.createTime).slice(0, 10)
-  return ''
+  return normalizeBusinessDate(item.date || item.createTime)
+}
+
+function normalizeBusinessDate(value) {
+  if (!value) return ''
+  if (typeof value === 'string') return value.slice(0, 10)
+  if (value instanceof Date) return formatChinaDate(value)
+  if (typeof value.toDate === 'function') return formatChinaDate(value.toDate())
+  return String(value).slice(0, 10)
+}
+
+function formatChinaDate(date) {
+  const shifted = new Date(date.getTime() + CHINA_TIME_OFFSET_MS)
+  const year = shifted.getUTCFullYear()
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(shifted.getUTCDate()).padStart(2, '0')
+  return year + '-' + month + '-' + day
+}
+
+function getChinaBusinessDayStart(dateText) {
+  return new Date(dateText + 'T00:00:00+08:00')
+}
+
+function getChinaBusinessDayEnd(dateText) {
+  return new Date(dateText + 'T23:59:59.999+08:00')
 }
 
 /**

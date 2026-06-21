@@ -11,11 +11,33 @@ function buildRangeCommand() {
   }
 }
 
+const CHINA_TIME_OFFSET_MS = 8 * 60 * 60 * 1000
+
+function formatChinaDate(value) {
+  if (!value) return ''
+  const shifted = new Date(value.getTime() + CHINA_TIME_OFFSET_MS)
+  const year = shifted.getUTCFullYear()
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(shifted.getUTCDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function normalizeDate(value) {
   if (!value) return ''
   if (typeof value === 'string') return value.slice(0, 10)
-  if (value instanceof Date) return value.toISOString().slice(0, 10)
+  if (value instanceof Date) return formatChinaDate(value)
+  if (typeof value.toDate === 'function') return formatChinaDate(value.toDate())
   return ''
+}
+
+function normalizeComparableValue(value, expected) {
+  if (!value) return value
+  if (expected instanceof Date) {
+    if (value instanceof Date) return value.getTime()
+    if (typeof value.toDate === 'function') return value.toDate().getTime()
+    return new Date(value).getTime()
+  }
+  return normalizeDate(value)
 }
 
 function matchesWhere(item, where) {
@@ -23,8 +45,10 @@ function matchesWhere(item, where) {
   return Object.keys(where).every((key) => {
     const expected = where[key]
     if (expected && expected.__op === 'range') {
-      const actual = normalizeDate(item[key])
-      return actual >= expected.start && actual <= expected.end
+      const actual = normalizeComparableValue(item[key], expected.start)
+      const start = expected.start instanceof Date ? expected.start.getTime() : expected.start
+      const end = expected.end instanceof Date ? expected.end.getTime() : expected.end
+      return actual >= start && actual <= end
     }
     return item[key] === expected
   })
@@ -117,9 +141,73 @@ describe('getFinanceStats stored value stats', () => {
       storedValueConsume: 300,
       storedValueBalance: 1000.25
     }))
+    const transactionWhere = collectionCalls.find((call) => call.name === 'stored_value_transaction').where
+    expect(transactionWhere).toEqual({
+      status: 'active',
+      createTime: { __op: 'range', start: new Date('2026-06-01T00:00:00+08:00'), end: new Date('2026-06-30T23:59:59.999+08:00') }
+    })
     expect(collectionCalls).toEqual(expect.arrayContaining([
-      { name: 'stored_value_transaction', where: { status: 'active' } },
       { name: 'stored_value_account', where: { status: 'active' } }
     ]))
+  })
+
+  test('counts Timestamp-like createTime objects in the requested period', async () => {
+    const { main } = loadFunction({
+      staff: [{ _id: 'staff-admin', role: 'admin', status: 'active', boundOpenid: 'openid-admin' }],
+      permissions: [],
+      income: [],
+      purchase: [],
+      expense: [],
+      fixed_expense: [],
+      stored_value_transaction: [
+        {
+          _id: 'timestamp-recharge',
+          type: 'recharge',
+          status: 'active',
+          amount: 200,
+          createTime: { toDate: () => new Date('2026-06-21T03:00:00Z') }
+        }
+      ],
+      stored_value_account: []
+    })
+
+    const result = await main({ startDate: '2026-06-21', endDate: '2026-06-21', periodType: 'week' }, {})
+
+    expect(result.success).toBe(true)
+    expect(result.data.storedValueRecharge).toBe(200)
+    expect(result.data.storedValueConsume).toBe(0)
+  })
+
+  test('uses China business date instead of UTC date for Date createTime boundaries', async () => {
+    const { main } = loadFunction({
+      staff: [{ _id: 'staff-admin', role: 'admin', status: 'active', boundOpenid: 'openid-admin' }],
+      permissions: [],
+      income: [],
+      purchase: [],
+      expense: [],
+      fixed_expense: [],
+      stored_value_transaction: [
+        {
+          _id: 'beijing-midnight-recharge',
+          type: 'recharge',
+          status: 'active',
+          amount: 321,
+          createTime: new Date('2026-06-20T16:30:00Z')
+        },
+        {
+          _id: 'previous-business-day-recharge',
+          type: 'recharge',
+          status: 'active',
+          amount: 999,
+          createTime: new Date('2026-06-20T15:59:59Z')
+        }
+      ],
+      stored_value_account: []
+    })
+
+    const result = await main({ startDate: '2026-06-21', endDate: '2026-06-21', periodType: 'week' }, {})
+
+    expect(result.success).toBe(true)
+    expect(result.data.storedValueRecharge).toBe(321)
   })
 })
