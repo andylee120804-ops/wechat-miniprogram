@@ -410,11 +410,19 @@ async function getReservationById(collectionProvider, reservationId) {
   return result.data || null
 }
 
-function getSettlementCustomer(reservation, event) {
+function getSettlementCustomer(reservation, event = {}) {
   const snapshot = event.reservationSnapshot || {}
+  if (reservation) {
+    return {
+      phone: reservation.phone || '',
+      customerName: reservation.customerName || '',
+      name: reservation.customerName || ''
+    }
+  }
+
   return {
-    phone: event.phone || snapshot.phone || (reservation && reservation.phone) || '',
-    customerName: event.customerName || snapshot.customerName || event.source || (reservation && reservation.customerName) || '',
+    phone: event.phone || snapshot.phone || '',
+    customerName: event.customerName || snapshot.customerName || event.source || '',
     name: event.name || event.source || ''
   }
 }
@@ -490,6 +498,31 @@ function normalizeDateString(value) {
   }
 
   return String(value).slice(0, 10)
+}
+
+function isValidDateString(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`)
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
+}
+
+function validateDateRange(start, end) {
+  if (!start || !end) {
+    return '缺少统计日期范围'
+  }
+
+  if (!isValidDateString(start) || !isValidDateString(end)) {
+    return '统计日期格式不正确'
+  }
+
+  if (start > end) {
+    return '统计开始日期不能晚于结束日期'
+  }
+
+  return ''
 }
 
 async function fetchAll(collectionProvider, collectionName, where) {
@@ -632,33 +665,39 @@ async function recharge(event = {}) {
 async function settleIncomeWithStoredValue(event = {}) {
   const staff = await authorize('income', 'add')
   const amount = toAmount(event.amount)
+  const reservationId = String(event.reservationId || '').trim()
 
   if (amount <= 0) {
     return fail('结算金额必须大于0')
   }
 
+  if (!reservationId) {
+    return fail('储值结算必须关联预约')
+  }
+
   const db = cloud.database()
-  const reservation = await getReservationById(db, event.reservationId)
+  const reservation = await getReservationById(db, reservationId)
   if (reservation && reservation.hasIncome) {
     return fail('该预约已结算')
   }
 
   const account = await findAccountBySettlementEventInCollection(db, event, reservation)
   const incomeData = Object.assign({}, event, {
-    source: event.source || event.customerName || (reservation && reservation.customerName) || '',
-    phone: event.phone || (reservation && reservation.phone) || ''
+    reservationId,
+    source: (reservation && reservation.customerName) || event.source || event.customerName || '',
+    phone: (reservation && reservation.phone) || event.phone || ''
   })
 
   if (!account) {
     const now = new Date()
     const incomePayload = buildNormalIncomeData(incomeData, 'normal', staff, null)
     const incomeResult = await db.runTransaction(async (transaction) => {
-      const transactionReservation = await getReservationById(transaction, event.reservationId)
+      const transactionReservation = await getReservationById(transaction, reservationId)
       if (transactionReservation && transactionReservation.hasIncome) {
         throw new Error('该预约已结算')
       }
       const createdIncome = await transaction.collection(COLLECTIONS.INCOME).add({ data: incomePayload })
-      await markReservationSettled(transaction, event.reservationId, {
+      await markReservationSettled(transaction, reservationId, {
         settlementMode: 'normal',
         incomeId: createdIncome._id,
         originalAmount: amount,
@@ -678,12 +717,12 @@ async function settleIncomeWithStoredValue(event = {}) {
     const now = new Date()
     const incomePayload = buildNormalIncomeData(incomeData, 'stored_empty', staff, account)
     const incomeResult = await db.runTransaction(async (transaction) => {
-      const transactionReservation = await getReservationById(transaction, event.reservationId)
+      const transactionReservation = await getReservationById(transaction, reservationId)
       if (transactionReservation && transactionReservation.hasIncome) {
         throw new Error('该预约已结算')
       }
       const createdIncome = await transaction.collection(COLLECTIONS.INCOME).add({ data: incomePayload })
-      await markReservationSettled(transaction, event.reservationId, {
+      await markReservationSettled(transaction, reservationId, {
         settlementMode: 'stored_empty',
         storedValueAccountId: account._id,
         incomeId: createdIncome._id,
@@ -702,7 +741,7 @@ async function settleIncomeWithStoredValue(event = {}) {
   const now = new Date()
   const settlement = calculateSettlement(balanceBefore, amount)
   const result = await db.runTransaction(async (transaction) => {
-    const transactionReservation = await getReservationById(transaction, event.reservationId)
+    const transactionReservation = await getReservationById(transaction, reservationId)
     if (transactionReservation && transactionReservation.hasIncome) {
       throw new Error('该预约已结算')
     }
@@ -718,7 +757,7 @@ async function settleIncomeWithStoredValue(event = {}) {
     if (freshSettlement.deductedAmount <= 0) {
       const incomePayload = buildNormalIncomeData(incomeData, 'stored_empty', staff, currentAccount)
       const createdIncome = await transaction.collection(COLLECTIONS.INCOME).add({ data: incomePayload })
-      await markReservationSettled(transaction, event.reservationId, {
+      await markReservationSettled(transaction, reservationId, {
         settlementMode: 'stored_empty',
         storedValueAccountId: currentAccount._id,
         incomeId: createdIncome._id,
@@ -764,8 +803,8 @@ async function settleIncomeWithStoredValue(event = {}) {
       balanceBefore: freshBalanceBefore,
       balanceAfter: freshSettlement.balanceAfter,
       incomeId: null,
-      reservationId: event.reservationId || '',
-      reservationSnapshot: buildReservationSnapshot(reservation || incomeData),
+      reservationId,
+      reservationSnapshot: buildReservationSnapshot(transactionReservation || reservation || incomeData),
       operatorId: staff._id,
       operatorName: staff.name || '',
       remark: String(event.remark || '').trim(),
@@ -785,7 +824,7 @@ async function settleIncomeWithStoredValue(event = {}) {
         .update({ data: { incomeId } })
     }
 
-    await markReservationSettled(transaction, event.reservationId, {
+    await markReservationSettled(transaction, reservationId, {
       settlementMode: freshSettlement.mode,
       storedValueAccountId: currentAccount._id,
       storedValueTransactionId: transactionResult._id,
@@ -818,8 +857,9 @@ async function getStats(event = {}) {
 
   const start = normalizeDateString(event.start)
   const end = normalizeDateString(event.end)
-  if (!start || !end) {
-    return fail('缺少统计日期范围')
+  const dateRangeError = validateDateRange(start, end)
+  if (dateRangeError) {
+    return fail(dateRangeError)
   }
 
   const db = cloud.database()
@@ -869,6 +909,9 @@ exports.__test__ = {
   buildSettlementRemark,
   markReservationSettled,
   normalizeDateString,
+  isValidDateString,
+  validateDateRange,
+  getSettlementCustomer,
   fetchAll,
   sumAmount,
   formatDateString

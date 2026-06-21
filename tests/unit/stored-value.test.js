@@ -114,8 +114,8 @@ function loadStoredValueFunction(options) {
     return { data: [] }
   }
 
-  function getDoc(name, id) {
-    const docsByCollection = options.docData || {}
+  function getDoc(name, id, isTransaction) {
+    const docsByCollection = isTransaction && options.transactionDocData ? options.transactionDocData : (options.docData || {})
     const docs = docsByCollection[name] || {}
     return docs[id] || null
   }
@@ -130,7 +130,7 @@ function loadStoredValueFunction(options) {
           onUpdate: hooks.onUpdate,
           onSet: hooks.onSet,
           shouldRejectSet: hooks.shouldRejectSet,
-          getDoc: (id) => getDoc(name, id)
+          getDoc: (id) => getDoc(name, id, isTransaction)
         }
         if (name === 'staff') return createCollection(name, { data: options.staffData || [] }, collectionHooks)
         if (name === 'permissions') return createCollection(name, { data: options.permissionsData || [] }, collectionHooks)
@@ -277,6 +277,32 @@ describe('stored value settlement helpers', () => {
 })
 
 describe('stored value settlement action', () => {
+  test('rejects settlement without reservationId before writing income, transaction, or account', async () => {
+    const { main, db, adds, updates, sets, accountReads } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountData: [{
+        _id: 'account-1',
+        customerName: '张三',
+        phone: '13800000000',
+        customerKey: 'phone:13800000000',
+        balance: 1000,
+        totalRecharge: 1000,
+        totalConsume: 0,
+        status: 'active',
+        _version: 1
+      }]
+    })
+
+    const result = await main({ action: 'settleIncomeWithStoredValue', amount: 800, source: '张三', phone: '13800000000' })
+
+    expect(result).toEqual({ success: false, message: '储值结算必须关联预约' })
+    expect(db.runTransaction).not.toHaveBeenCalled()
+    expect(accountReads).toEqual([])
+    expect(adds).toEqual([])
+    expect(updates).toEqual([])
+    expect(sets).toEqual([])
+  })
+
   test('rejects settlement when reservation already has income', async () => {
     const { main, db, adds, updates } = loadStoredValueFunction({
       staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
@@ -343,6 +369,103 @@ describe('stored value settlement action', () => {
     expect(outsideAdds).toEqual([])
     expect(outsideUpdates).toEqual([])
     expect(updates).toEqual(transactionUpdates)
+  })
+
+  test('uses reservation customer instead of spoofed event customer when selecting settlement account', async () => {
+    const { main, accountReads, transactionUpdates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountDataSequence: [[{
+        _id: 'reservation-account',
+        customerName: '预约客户',
+        phone: '13800000000',
+        customerKey: 'phone:13800000000',
+        balance: 1000,
+        totalRecharge: 1000,
+        totalConsume: 0,
+        status: 'active',
+        _version: 1
+      }], [{
+        _id: 'reservation-account',
+        customerName: '预约客户',
+        phone: '13800000000',
+        customerKey: 'phone:13800000000',
+        balance: 1000,
+        totalRecharge: 1000,
+        totalConsume: 0,
+        status: 'active',
+        _version: 1
+      }]],
+      docData: {
+        reservation: {
+          'res-1': { _id: 'res-1', hasIncome: false, customerName: '预约客户', phone: '13800000000', date: '2026-06-20', time: '晚上', roomName: '大包' }
+        }
+      }
+    })
+
+    const result = await main({
+      action: 'settleIncomeWithStoredValue',
+      type: 'dining',
+      amount: 800,
+      reservationId: 'res-1',
+      source: '伪造客户',
+      customerName: '伪造客户',
+      phone: '13999999999',
+      remark: '晚餐'
+    })
+
+    expect(result.success).toBe(true)
+    expect(accountReads).toEqual([
+      { customerKey: 'phone:13800000000', status: 'active' },
+      { customerKey: 'phone:13800000000', status: 'active' }
+    ])
+    expect(transactionUpdates).toEqual(expect.arrayContaining([
+      { id: 'reservation-account', payload: { data: expect.objectContaining({ balance: 200, totalConsume: 800, _version: 2 }) } }
+    ]))
+  })
+
+  test('uses in-transaction reservation for consume transaction snapshot when outer reservation is stale', async () => {
+    const { main, transactionAdds } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountData: [{
+        _id: 'account-1',
+        customerName: '更新客户',
+        phone: '13811111111',
+        customerKey: 'phone:13811111111',
+        balance: 1000,
+        totalRecharge: 1000,
+        totalConsume: 0,
+        status: 'active',
+        _version: 1
+      }],
+      docData: {
+        reservation: {
+          'res-1': { _id: 'res-1', hasIncome: false, customerName: '旧客户', phone: '13800000000', date: '2026-06-19', time: '中午', roomName: '旧包厢' }
+        }
+      },
+      transactionDocData: {
+        reservation: {
+          'res-1': { _id: 'res-1', hasIncome: false, customerName: '更新客户', phone: '13811111111', date: '2026-06-20', time: '晚上', roomName: '新包厢' }
+        }
+      }
+    })
+
+    const result = await main({ action: 'settleIncomeWithStoredValue', amount: 800, reservationId: 'res-1', source: '事件客户', phone: '13999999999' })
+
+    expect(result.success).toBe(true)
+    expect(transactionAdds).toEqual([expect.objectContaining({
+      name: 'stored_value_transaction',
+      payload: expect.objectContaining({
+        data: expect.objectContaining({
+          reservationSnapshot: {
+            customerName: '更新客户',
+            phone: '13811111111',
+            date: '2026-06-20',
+            time: '晚上',
+            roomName: '新包厢'
+          }
+        })
+      })
+    })])
   })
 
   test('settles stored_partial with consume transaction, partial income, and reservation trace fields', async () => {
@@ -463,6 +586,30 @@ describe('stored value stats action', () => {
     const result = await main({ action: 'getStats', start: '2026-06-01' })
 
     expect(result).toEqual({ success: false, message: '缺少统计日期范围' })
+    expect(whereCalls.filter((entry) => entry.name === 'stored_value_transaction')).toEqual([])
+    expect(whereCalls.filter((entry) => entry.name === 'stored_value_account')).toEqual([])
+  })
+
+  test('rejects invalid stats date strings before reading data', async () => {
+    const { main, whereCalls } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '老板', role: 'boss', status: 'active', boundOpenid: 'openid-user' }]
+    })
+
+    const result = await main({ action: 'getStats', start: 'not-a-date', end: '2026-06-30' })
+
+    expect(result).toEqual({ success: false, message: '统计日期格式不正确' })
+    expect(whereCalls.filter((entry) => entry.name === 'stored_value_transaction')).toEqual([])
+    expect(whereCalls.filter((entry) => entry.name === 'stored_value_account')).toEqual([])
+  })
+
+  test('rejects inverted stats date ranges before reading data', async () => {
+    const { main, whereCalls } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '老板', role: 'boss', status: 'active', boundOpenid: 'openid-user' }]
+    })
+
+    const result = await main({ action: 'getStats', start: '2026-06-30', end: '2026-06-01' })
+
+    expect(result).toEqual({ success: false, message: '统计开始日期不能晚于结束日期' })
     expect(whereCalls.filter((entry) => entry.name === 'stored_value_transaction')).toEqual([])
     expect(whereCalls.filter((entry) => entry.name === 'stored_value_account')).toEqual([])
   })
