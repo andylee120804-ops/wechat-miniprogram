@@ -49,7 +49,15 @@ function loadIncomeDetailPage() {
   }))
   jest.doMock('../../miniprogram/utils/helpers', () => ({
     formatDate: jest.fn((value) => value || '2026-06-21'),
-    formatAmount: jest.fn((value) => `¥${value}`),
+    formatAmount: jest.fn((value) => {
+      if (value === null || value === undefined || value === '') return '0.00'
+      const amount = Number(value)
+      if (Number.isNaN(amount)) return '0.00'
+      return amount.toLocaleString('zh-CN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })
+    }),
     getIncomeDisplayType: mockGetIncomeDisplayType,
     getIncomeTypeText: jest.fn((value) => value),
     getRoomName: jest.fn((value) => value),
@@ -142,7 +150,7 @@ describe('income-detail stored value edit/delete protection', () => {
       type: 'dining',
       settlementMode: 'stored_partial',
       amount: 300,
-      originalAmount: 800,
+      originalAmount: 1800,
       deductedAmount: 500,
       date: '2026-06-21'
     })
@@ -151,10 +159,10 @@ describe('income-detail stored value edit/delete protection', () => {
 
     expect(page.data.income).toEqual(expect.objectContaining({
       settlementMode: 'stored_partial',
-      originalAmount: 800,
+      originalAmount: 1800,
       deductedAmount: 500,
-      formattedOriginalAmount: '¥800',
-      formattedDeductedAmount: '¥500',
+      formattedOriginalAmount: '1,800.00',
+      formattedDeductedAmount: '500.00',
       hasStoredPartialTrace: true,
       hasOriginalAmountTrace: true,
       hasStoredRechargeTrace: false
