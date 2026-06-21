@@ -118,7 +118,11 @@
   <!-- Fixed Bottom Bar -->
   <view class="bottom-bar">
     <view class="bottom-bar-inner single-btn">
-      <view class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onSubmit">{{isEdit ? '保存修改' : '记录收入'}}</view>
+      <view class="bar-btn bar-btn-primary bar-btn-primary-wide {{submitting ? 'bar-btn-disabled' : ''}}" bindtap="onSubmit">
+        <text wx:if="{{submitting}}">保存中...</text>
+        <text wx:elif="{{isEdit}}">保存修改</text>
+        <text wx:else>记录收入</text>
+      </view>
     </view>
   </view>
 

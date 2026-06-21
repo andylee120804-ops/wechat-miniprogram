@@ -371,13 +371,26 @@ function buildSettlementRemark(baseRemark, originalAmount, deductedAmount, incom
   return `${remark}；原金额${toAmount(originalAmount)}，储值抵扣${toAmount(deductedAmount)}，实收${toAmount(incomeAmount)}`
 }
 
+function pickIncomeMetadata(incomeData) {
+  const metadata = {}
+  const allowedFields = ['guestCount', 'standard', 'roomName', 'calcMode', 'dishPrice', 'serviceCharge']
+
+  allowedFields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(incomeData, field)) {
+      metadata[field] = incomeData[field]
+    }
+  })
+
+  return metadata
+}
+
 function buildSettlementIncomeData(incomeData, account, transaction, settlement, staff) {
   const now = new Date()
   const originalAmount = toAmount(incomeData.amount)
   const deductedAmount = toAmount(settlement.deductedAmount)
   const incomeAmount = toAmount(settlement.incomeAmount)
 
-  return {
+  return Object.assign({}, pickIncomeMetadata(incomeData), {
     type: incomeData.type || 'dining',
     categoryLabel: incomeData.categoryLabel || '',
     settlementMode: settlement.mode,
@@ -396,7 +409,7 @@ function buildSettlementIncomeData(incomeData, account, transaction, settlement,
     createTime: now,
     updateTime: now,
     status: 'active'
-  }
+  })
 }
 
 async function getReservationById(collectionProvider, reservationId) {
@@ -459,7 +472,7 @@ function buildNormalIncomeData(incomeData, settlementMode, staff, account) {
   const now = new Date()
   const amount = toAmount(incomeData.amount)
 
-  return {
+  return Object.assign({}, pickIncomeMetadata(incomeData), {
     type: incomeData.type || 'dining',
     categoryLabel: incomeData.categoryLabel || '',
     settlementMode,
@@ -477,7 +490,7 @@ function buildNormalIncomeData(incomeData, settlementMode, staff, account) {
     createTime: now,
     updateTime: now,
     status: 'active'
-  }
+  })
 }
 
 function normalizeDateString(value) {
@@ -872,6 +885,7 @@ exports.__test__ = {
   normalizeCustomerInputs,
   authorize,
   buildRechargeIncomeData,
+  pickIncomeMetadata,
   buildSettlementIncomeData,
   buildSettlementRemark,
   markReservationSettled,

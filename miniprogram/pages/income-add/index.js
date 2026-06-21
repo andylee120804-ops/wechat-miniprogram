@@ -472,33 +472,38 @@ Page({
   },
 
   async onSubmit() {
+    if (this.data.submitting) {
+      return
+    }
+
     const { type, amount, date, noReservation, reservationId, remark } = this.data
     if (!amount || parseFloat(amount) <= 0) {
       wx.showToast({ title: '请输入有效金额', icon: 'none' })
       return
     }
 
-    // 关联预约时检查金额是否满足最低消费，不足则自动调整
-    // 新模式（菜价+服务费）跳过最低消费检查
-    if (!noReservation && reservationId && this.data.selectedReservation) {
-      const selRes = this.data.selectedReservation
-      const resDateStr = formatDate(selRes.date)
-      const useNewMode = this.data.serviceChargeEnabled
-        && this.data.serviceChargeEnabledDate
-        && resDateStr >= this.data.serviceChargeEnabledDate
+    this.setData({ submitting: true })
 
-      if (!useNewMode) {
-        const minAmount = await this.getMinAmountForReservation(selRes)
-        if (minAmount && parseFloat(amount) < minAmount) {
-          this.setData({ amount: String(minAmount) })
-          this.updateStoredValuePreview()
-          wx.showToast({ title: '已按最低消费 ¥' + minAmount + ' 计算', icon: 'none' })
+    try {
+      // 关联预约时检查金额是否满足最低消费，不足则自动调整
+      // 新模式（菜价+服务费）跳过最低消费检查
+      if (!noReservation && reservationId && this.data.selectedReservation) {
+        const selRes = this.data.selectedReservation
+        const resDateStr = formatDate(selRes.date)
+        const useNewMode = this.data.serviceChargeEnabled
+          && this.data.serviceChargeEnabledDate
+          && resDateStr >= this.data.serviceChargeEnabledDate
+
+        if (!useNewMode) {
+          const minAmount = await this.getMinAmountForReservation(selRes)
+          if (minAmount && parseFloat(amount) < minAmount) {
+            this.setData({ amount: String(minAmount) })
+            this.updateStoredValuePreview()
+            wx.showToast({ title: '已按最低消费 ¥' + minAmount + ' 计算', icon: 'none' })
+          }
         }
       }
-    }
 
-    this.setData({ submitting: true })
-    try {
       const userInfo = app.globalData.userInfo
 
       const data = {

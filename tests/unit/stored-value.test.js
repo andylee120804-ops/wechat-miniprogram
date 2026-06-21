@@ -246,14 +246,21 @@ describe('stored value settlement helpers', () => {
     }))
   })
 
-  test('builds partial settlement income payload with trace fields', () => {
+  test('builds partial settlement income payload with trace fields and whitelisted reservation metadata', () => {
     const payload = storedValue.__test__.buildSettlementIncomeData({
       type: 'dining',
       amount: 800,
       date: '2026-06-20',
       reservationId: 'res-1',
       source: '张三',
-      remark: '晚餐'
+      remark: '晚餐',
+      guestCount: 4,
+      standard: 200,
+      roomName: '大包厢',
+      calcMode: 'dishPrice',
+      dishPrice: 680,
+      serviceCharge: 120,
+      unsafeField: 'must-not-persist'
     }, { _id: 'account-1' }, { _id: 'tx-1' }, { mode: 'stored_partial', deductedAmount: 500, incomeAmount: 300 }, { _id: 'staff-1', name: '管理员' })
 
     expect(payload).toEqual(expect.objectContaining({
@@ -266,8 +273,15 @@ describe('stored value settlement helpers', () => {
       deductedAmount: 500,
       amount: 300,
       source: '张三',
+      guestCount: 4,
+      standard: 200,
+      roomName: '大包厢',
+      calcMode: 'dishPrice',
+      dishPrice: 680,
+      serviceCharge: 120,
       collectedBy: 'staff-1'
     }))
+    expect(payload).not.toHaveProperty('unsafeField')
   })
 
   test('builds readable settlement remark with original and deducted amounts', () => {
@@ -453,7 +467,7 @@ describe('stored value settlement action', () => {
     expect(outsideUpdates).toEqual([])
   })
 
-  test('uses transaction reservation to avoid stale outer empty account branch', async () => {
+  test('uses transaction reservation to avoid stale outer empty account branch and preserves whitelisted income metadata', async () => {
     const { main, transactionAdds, transactionUpdates } = loadStoredValueFunction({
       staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
       accountDataSequence: [[]],
@@ -469,14 +483,39 @@ describe('stored value settlement action', () => {
       }
     })
 
-    const result = await main({ action: 'settleIncomeWithStoredValue', amount: 800, reservationId: 'res-1', source: '事件客户', phone: '13999999999' })
+    const result = await main({
+      action: 'settleIncomeWithStoredValue',
+      amount: 800,
+      reservationId: 'res-1',
+      source: '事件客户',
+      phone: '13999999999',
+      guestCount: 4,
+      standard: 200,
+      roomName: '大包厢',
+      calcMode: 'dishPrice',
+      dishPrice: 680,
+      serviceCharge: 120,
+      unsafeField: 'must-not-persist'
+    })
 
     expect(result.success).toBe(true)
     expect(result.data).toEqual(expect.objectContaining({ settlementMode: 'normal', incomeId: 'income-new-id' }))
     expect(transactionAdds).toEqual([expect.objectContaining({
       name: 'income',
-      payload: { data: expect.objectContaining({ settlementMode: 'normal', storedValueAccountId: '', amount: 800, source: '新客户' }) }
+      payload: { data: expect.objectContaining({
+        settlementMode: 'normal',
+        storedValueAccountId: '',
+        amount: 800,
+        source: '新客户',
+        guestCount: 4,
+        standard: 200,
+        roomName: '大包厢',
+        calcMode: 'dishPrice',
+        dishPrice: 680,
+        serviceCharge: 120
+      }) }
     })])
+    expect(transactionAdds[0].payload.data).not.toHaveProperty('unsafeField')
     expect(transactionUpdates).toEqual([{ id: 'res-1', payload: { data: expect.objectContaining({ settlementMode: 'normal', deductedAmount: 0, incomeAmount: 800 }) } }])
   })
 
@@ -647,14 +686,44 @@ describe('stored value settlement action', () => {
       }
     })
 
-    const result = await main({ action: 'settleIncomeWithStoredValue', type: 'dining', amount: 800, date: '2026-06-20', reservationId: 'res-1', source: '张三', phone: '13800000000', remark: '晚餐' })
+    const result = await main({
+      action: 'settleIncomeWithStoredValue',
+      type: 'dining',
+      amount: 800,
+      date: '2026-06-20',
+      reservationId: 'res-1',
+      source: '张三',
+      phone: '13800000000',
+      remark: '晚餐',
+      guestCount: 4,
+      standard: 200,
+      roomName: '大包厢',
+      calcMode: 'dishPrice',
+      dishPrice: 680,
+      serviceCharge: 120,
+      unsafeField: 'must-not-persist'
+    })
 
     expect(result.success).toBe(true)
     expect(result.data).toEqual(expect.objectContaining({ settlementMode: 'stored_partial', incomeId: 'income-new-id' }))
     expect(transactionAdds).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'stored_value_transaction', payload: { data: expect.objectContaining({ amount: 500, balanceBefore: 500, balanceAfter: 0, incomeId: null }) } }),
-      expect.objectContaining({ name: 'income', payload: { data: expect.objectContaining({ settlementMode: 'stored_partial', amount: 300, originalAmount: 800, deductedAmount: 500, storedValueTransactionId: 'stored_value_transaction-new-id' }) } })
+      expect.objectContaining({ name: 'income', payload: { data: expect.objectContaining({
+        settlementMode: 'stored_partial',
+        amount: 300,
+        originalAmount: 800,
+        deductedAmount: 500,
+        storedValueTransactionId: 'stored_value_transaction-new-id',
+        guestCount: 4,
+        standard: 200,
+        roomName: '大包厢',
+        calcMode: 'dishPrice',
+        dishPrice: 680,
+        serviceCharge: 120
+      }) } })
     ]))
+    const partialIncomeAdd = transactionAdds.find((entry) => entry.name === 'income')
+    expect(partialIncomeAdd.payload.data).not.toHaveProperty('unsafeField')
     expect(updates).toEqual(expect.arrayContaining([
       { id: 'account-1', payload: { data: expect.objectContaining({ balance: 0, totalConsume: 600, _version: 5 }) } },
       { id: 'stored_value_transaction-new-id', payload: { data: { incomeId: 'income-new-id' } } },
@@ -685,12 +754,36 @@ describe('stored value settlement action', () => {
       }
     })
 
-    const result = await main({ action: 'settleIncomeWithStoredValue', amount: 800, reservationId: 'res-1', source: '张三', phone: '13800000000' })
+    const result = await main({
+      action: 'settleIncomeWithStoredValue',
+      amount: 800,
+      reservationId: 'res-1',
+      source: '张三',
+      phone: '13800000000',
+      guestCount: 4,
+      standard: 200,
+      roomName: '大包厢',
+      calcMode: 'dishPrice',
+      dishPrice: 680,
+      serviceCharge: 120,
+      unsafeField: 'must-not-persist'
+    })
 
     expect(result.success).toBe(true)
     expect(result.data).toEqual(expect.objectContaining({ settlementMode: 'stored_empty', incomeId: 'income-new-id' }))
     expect(transactionAdds.filter((entry) => entry.name === 'stored_value_transaction')).toEqual([])
-    expect(transactionAdds).toEqual([expect.objectContaining({ name: 'income', payload: { data: expect.objectContaining({ settlementMode: 'stored_empty', amount: 800, deductedAmount: 0 }) } })])
+    expect(transactionAdds).toEqual([expect.objectContaining({ name: 'income', payload: { data: expect.objectContaining({
+      settlementMode: 'stored_empty',
+      amount: 800,
+      deductedAmount: 0,
+      guestCount: 4,
+      standard: 200,
+      roomName: '大包厢',
+      calcMode: 'dishPrice',
+      dishPrice: 680,
+      serviceCharge: 120
+    }) } })])
+    expect(transactionAdds[0].payload.data).not.toHaveProperty('unsafeField')
     expect(transactionUpdates).toEqual([{ id: 'res-1', payload: { data: expect.objectContaining({ settlementMode: 'stored_empty', deductedAmount: 0, incomeAmount: 800, storedValueAccountId: 'account-1' }) } }])
   })
 })

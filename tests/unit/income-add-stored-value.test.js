@@ -146,6 +146,25 @@ describe('income-add stored value settlement', () => {
     expect(mockAddDoc).toHaveBeenCalledWith('income', expect.objectContaining({ amount: 100, reservationId: '' }))
   })
 
+  test('ignores immediate duplicate submit while first persistence is pending', async () => {
+    const page = loadIncomeAddPage()
+    page.data.amount = '100'
+    page.data.noReservation = true
+    page.data.reservationId = ''
+    let resolveAdd
+    mockAddDoc.mockImplementation(() => new Promise((resolve) => {
+      resolveAdd = resolve
+    }))
+
+    const firstSubmit = page.onSubmit()
+    const secondSubmit = page.onSubmit()
+
+    expect(mockAddDoc).toHaveBeenCalledTimes(1)
+    resolveAdd({ _id: 'income-new-id' })
+    await Promise.all([firstSubmit, secondSubmit])
+    expect(mockAddDoc).toHaveBeenCalledTimes(1)
+  })
+
   test('uses stored-value settlement for create mode with reservation and avoids normal addDoc', async () => {
     const page = loadIncomeAddPage()
     page.data.amount = '800'

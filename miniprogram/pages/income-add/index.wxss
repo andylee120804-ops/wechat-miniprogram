@@ -162,3 +162,8 @@
   font-size: 34rpx;
   font-weight: 700;
 }
+
+.bar-btn-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
