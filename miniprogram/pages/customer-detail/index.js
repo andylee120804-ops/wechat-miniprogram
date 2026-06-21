@@ -73,6 +73,7 @@ Page({
     visitHistory: [],
     storedValueAccount: null,
     storedValueTransactions: [],
+    canRecharge: false,
     showRechargeModal: false,
     rechargeAmount: '',
     rechargePhone: '',
@@ -91,7 +92,8 @@ Page({
     }
     const theme = app.getThemePageData()
     const name = decodeURIComponent(options.name || '')
-    this.setData({ theme, customerName: name, customerNameInitial: (name || '?').charAt(0), statusBarHeight: app.globalData.statusBarHeight || 44 })
+    const canRecharge = hasPermission('income', ACTIONS.ADD)
+    this.setData({ theme, customerName: name, customerNameInitial: (name || '?').charAt(0), statusBarHeight: app.globalData.statusBarHeight || 44, canRecharge })
   },
 
   onShow() {
@@ -128,6 +130,7 @@ Page({
 
       this.setData({
         loading: false,
+        canRecharge: hasPermission('income', ACTIONS.ADD),
         totalVisits: history.length,
         totalSpending: formatAmount(totalSpending),
         preferredRoom,
@@ -144,14 +147,15 @@ Page({
     }
   },
 
-  async loadStoredValueData() {
+  async loadStoredValueData(optionalPhone) {
     try {
+      const queryPhone = String(optionalPhone || (this.data.storedValueAccount && this.data.storedValueAccount.phone) || this.data.rechargePhone || '').trim()
       const result = await wx.cloud.callFunction({
         name: 'storedValue',
         data: {
           action: 'queryAccountByCustomer',
           customerName: this.data.customerName,
-          phone: ''
+          phone: queryPhone
         }
       })
 
@@ -191,7 +195,14 @@ Page({
   },
 
   openRechargeModal() {
+    if (!hasPermission('income', ACTIONS.ADD)) {
+      wx.showToast({ title: '无权限', icon: 'none' })
+      this.setData({ canRecharge: false })
+      return
+    }
+
     this.setData({
+      canRecharge: true,
       showRechargeModal: true,
       rechargeAmount: '',
       rechargePhone: this.data.storedValueAccount ? (this.data.storedValueAccount.phone || '') : '',
@@ -231,6 +242,12 @@ Page({
   async submitRecharge() {
     if (this.data.rechargeSubmitting) return
 
+    if (!hasPermission('income', ACTIONS.ADD)) {
+      wx.showToast({ title: '无权限', icon: 'none' })
+      this.setData({ canRecharge: false })
+      return
+    }
+
     const amount = toNumber(this.data.rechargeAmount)
     if (amount <= 0) {
       wx.showToast({ title: '请输入有效充值金额', icon: 'none' })
@@ -259,7 +276,8 @@ Page({
         return
       }
 
-      const storedValueData = await this.loadStoredValueData()
+      const rechargeAccount = response.data && response.data.account ? response.data.account : null
+      const storedValueData = await this.loadStoredValueData((rechargeAccount && rechargeAccount.phone) || this.data.rechargePhone)
       this.setData({
         storedValueAccount: storedValueData.account,
         storedValueTransactions: storedValueData.transactions,

@@ -1,0 +1,159 @@
+const originalPage = global.Page
+const originalGetApp = global.getApp
+
+let pageInstance
+let mockHasPermission
+let mockCallFunction
+let mockQueryAll
+
+function capturePage(pageDef) {
+  pageInstance = Object.assign({}, pageDef)
+  pageInstance.data = Object.assign({}, pageDef.data)
+  pageInstance.setData = jest.fn((data) => {
+    pageInstance.data = Object.assign({}, pageInstance.data, data)
+  })
+}
+
+function loadCustomerDetailPage(options) {
+  jest.resetModules()
+  pageInstance = null
+
+  const canViewCustomer = options && Object.prototype.hasOwnProperty.call(options, 'canViewCustomer') ? options.canViewCustomer : true
+  const canAddIncome = options && Object.prototype.hasOwnProperty.call(options, 'canAddIncome') ? options.canAddIncome : true
+
+  mockHasPermission = jest.fn((module, action) => {
+    if (module === 'customer' && action === 'view') return canViewCustomer
+    if (module === 'income' && action === 'add') return canAddIncome
+    return false
+  })
+  mockCallFunction = jest.fn()
+  mockQueryAll = jest.fn(() => Promise.resolve({ data: [] }))
+
+  global.getApp = jest.fn(() => ({
+    globalData: { statusBarHeight: 44 },
+    getThemePageData: jest.fn(() => ({}))
+  }))
+  global.Page = jest.fn(capturePage)
+  global.wx = {
+    cloud: { callFunction: mockCallFunction },
+    showToast: jest.fn(),
+    navigateBack: jest.fn()
+  }
+
+  jest.doMock('../../miniprogram/utils/permission', () => ({
+    hasPermission: mockHasPermission,
+    ACTIONS: { VIEW: 'view', ADD: 'add' }
+  }))
+  jest.doMock('../../miniprogram/utils/db', () => ({
+    queryAll: mockQueryAll,
+    COLLECTIONS: {
+      RESERVATION: 'reservation',
+      INCOME: 'income',
+      STORED_VALUE_TRANSACTION: 'stored_value_transaction'
+    }
+  }))
+  jest.doMock('../../miniprogram/utils/helpers', () => ({
+    formatDate: jest.fn((value) => value || ''),
+    formatDateTime: jest.fn((value) => value || ''),
+    formatAmount: jest.fn((value) => Number(value || 0).toFixed(2))
+  }))
+
+  require('../../miniprogram/pages/customer-detail/index')
+  return pageInstance
+}
+
+describe('customer detail stored-value recharge UI', () => {
+  afterAll(() => {
+    global.Page = originalPage
+    global.getApp = originalGetApp
+  })
+
+  test('initializes canRecharge from income add permission during onLoad', () => {
+    const page = loadCustomerDetailPage({ canAddIncome: false })
+
+    page.onLoad({ name: encodeURIComponent('张三') })
+
+    expect(page.data.canRecharge).toBe(false)
+    expect(mockHasPermission).toHaveBeenCalledWith('income', 'add')
+  })
+
+  test('updates canRecharge from income add permission while loading data', async () => {
+    const page = loadCustomerDetailPage({ canAddIncome: false })
+    page.data.customerName = '张三'
+    page.loadStoredValueData = jest.fn(() => Promise.resolve({ account: null, transactions: [] }))
+
+    await page.loadData()
+
+    expect(page.data.canRecharge).toBe(false)
+    expect(mockHasPermission).toHaveBeenCalledWith('income', 'add')
+  })
+
+  test('blocks opening recharge modal when user lacks income add permission', () => {
+    const page = loadCustomerDetailPage({ canAddIncome: false })
+    page.data.customerName = '张三'
+
+    page.openRechargeModal()
+
+    expect(page.data.showRechargeModal).toBe(false)
+    expect(global.wx.showToast).toHaveBeenCalledWith({ title: '无权限', icon: 'none' })
+  })
+
+  test('blocks submitting recharge when user lacks income add permission', async () => {
+    const page = loadCustomerDetailPage({ canAddIncome: false })
+    page.data.customerName = '张三'
+    page.data.rechargeAmount = '100'
+
+    await page.submitRecharge()
+
+    expect(mockCallFunction).not.toHaveBeenCalled()
+    expect(global.wx.showToast).toHaveBeenCalledWith({ title: '无权限', icon: 'none' })
+  })
+
+  test('queries stored-value account by explicit, account, then recharge phone', async () => {
+    const page = loadCustomerDetailPage({ canAddIncome: true })
+    page.data.customerName = '张三'
+    page.data.storedValueAccount = { phone: '13811111111' }
+    page.data.rechargePhone = '13922222222'
+    mockCallFunction.mockResolvedValue({ result: { success: true, data: null } })
+
+    await page.loadStoredValueData('13700000000')
+    await page.loadStoredValueData()
+    page.data.storedValueAccount = null
+    await page.loadStoredValueData()
+
+    expect(mockCallFunction.mock.calls.map((call) => call[0].data.phone)).toEqual([
+      '13700000000',
+      '13811111111',
+      '13922222222'
+    ])
+  })
+
+  test('keeps payment method label in sync with selected option', () => {
+    const page = loadCustomerDetailPage({ canAddIncome: true })
+
+    page.onRechargePaymentMethodChange({ detail: { value: '2' } })
+
+    expect(page.data.rechargePaymentMethod).toBe('cash')
+    expect(page.data.rechargePaymentMethodLabel).toBe('现金')
+  })
+
+  test('reloads stored-value account by returned account phone after successful recharge', async () => {
+    const page = loadCustomerDetailPage({ canAddIncome: true })
+    page.data.customerName = '张三'
+    page.data.rechargeAmount = '100'
+    page.data.rechargePhone = '13800000000'
+    page.loadStoredValueData = jest.fn(() => Promise.resolve({ account: null, transactions: [] }))
+    mockCallFunction.mockResolvedValue({
+      result: {
+        success: true,
+        data: {
+          account: { phone: '13812345678' }
+        }
+      }
+    })
+
+    await page.submitRecharge()
+
+    expect(page.loadStoredValueData).toHaveBeenCalledWith('13812345678')
+  })
+})
