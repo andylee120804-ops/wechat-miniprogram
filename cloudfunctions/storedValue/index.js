@@ -677,7 +677,11 @@ async function settleIncomeWithStoredValue(event = {}) {
 
   const db = cloud.database()
   const reservation = await getReservationById(db, reservationId)
-  if (reservation && reservation.hasIncome) {
+  if (!reservation) {
+    return fail('关联预约不存在')
+  }
+
+  if (reservation.hasIncome) {
     return fail('该预约已结算')
   }
 
@@ -693,7 +697,11 @@ async function settleIncomeWithStoredValue(event = {}) {
     const incomePayload = buildNormalIncomeData(incomeData, 'normal', staff, null)
     const incomeResult = await db.runTransaction(async (transaction) => {
       const transactionReservation = await getReservationById(transaction, reservationId)
-      if (transactionReservation && transactionReservation.hasIncome) {
+      if (!transactionReservation) {
+        throw new Error('关联预约不存在')
+      }
+
+      if (transactionReservation.hasIncome) {
         throw new Error('该预约已结算')
       }
       const createdIncome = await transaction.collection(COLLECTIONS.INCOME).add({ data: incomePayload })
@@ -718,7 +726,11 @@ async function settleIncomeWithStoredValue(event = {}) {
     const incomePayload = buildNormalIncomeData(incomeData, 'stored_empty', staff, account)
     const incomeResult = await db.runTransaction(async (transaction) => {
       const transactionReservation = await getReservationById(transaction, reservationId)
-      if (transactionReservation && transactionReservation.hasIncome) {
+      if (!transactionReservation) {
+        throw new Error('关联预约不存在')
+      }
+
+      if (transactionReservation.hasIncome) {
         throw new Error('该预约已结算')
       }
       const createdIncome = await transaction.collection(COLLECTIONS.INCOME).add({ data: incomePayload })
@@ -742,11 +754,15 @@ async function settleIncomeWithStoredValue(event = {}) {
   const settlement = calculateSettlement(balanceBefore, amount)
   const result = await db.runTransaction(async (transaction) => {
     const transactionReservation = await getReservationById(transaction, reservationId)
-    if (transactionReservation && transactionReservation.hasIncome) {
+    if (!transactionReservation) {
+      throw new Error('关联预约不存在')
+    }
+
+    if (transactionReservation.hasIncome) {
       throw new Error('该预约已结算')
     }
 
-    const currentAccount = await findAccountBySettlementEventInCollection(transaction, event, transactionReservation || reservation)
+    const currentAccount = await findAccountBySettlementEventInCollection(transaction, event, transactionReservation)
     if (!currentAccount) {
       throw new Error('储值账户不存在')
     }

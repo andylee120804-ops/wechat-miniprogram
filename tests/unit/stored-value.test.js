@@ -321,6 +321,98 @@ describe('stored value settlement action', () => {
     expect(updates).toEqual([])
   })
 
+  test('rejects settlement when reservationId does not exist before account lookup or writes', async () => {
+    const { main, db, accountReads, adds, updates, sets } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountData: [{
+        _id: 'account-1',
+        customerName: '事件客户',
+        phone: '13999999999',
+        customerKey: 'phone:13999999999',
+        balance: 1000,
+        totalRecharge: 1000,
+        totalConsume: 0,
+        status: 'active',
+        _version: 1
+      }]
+    })
+
+    const result = await main({ action: 'settleIncomeWithStoredValue', amount: 800, reservationId: 'fake-reservation', source: '事件客户', phone: '13999999999' })
+
+    expect(result).toEqual({ success: false, message: '关联预约不存在' })
+    expect(db.runTransaction).not.toHaveBeenCalled()
+    expect(accountReads).toEqual([])
+    expect(adds).toEqual([])
+    expect(updates).toEqual([])
+    expect(sets).toEqual([])
+  })
+
+  test.each([
+    {
+      name: 'normal income branch',
+      accountData: [],
+      expectedAccountReads: [
+        { customerKey: 'phone:13800000000', status: 'active' },
+        { customerKey: '13800000000', status: 'active' },
+        { customerKey: '张三', status: 'active' },
+        { phone: '13800000000', status: 'active' },
+        { customerName: '张三', status: 'active' }
+      ]
+    },
+    {
+      name: 'stored_empty branch',
+      accountData: [{
+        _id: 'account-1',
+        customerName: '张三',
+        phone: '13800000000',
+        customerKey: 'phone:13800000000',
+        balance: 0,
+        totalRecharge: 1000,
+        totalConsume: 1000,
+        status: 'active',
+        _version: 2
+      }],
+      expectedAccountReads: [{ customerKey: 'phone:13800000000', status: 'active' }]
+    },
+    {
+      name: 'stored consume branch',
+      accountData: [{
+        _id: 'account-1',
+        customerName: '张三',
+        phone: '13800000000',
+        customerKey: 'phone:13800000000',
+        balance: 1000,
+        totalRecharge: 1000,
+        totalConsume: 0,
+        status: 'active',
+        _version: 1
+      }],
+      expectedAccountReads: [{ customerKey: 'phone:13800000000', status: 'active' }]
+    }
+  ])('rejects settlement when reservation disappears inside transaction before writes: $name', async ({ accountData, expectedAccountReads }) => {
+    const { main, db, accountReads, transactionAdds, transactionUpdates, transactionSets } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      accountData,
+      docData: {
+        reservation: {
+          'res-1': { _id: 'res-1', hasIncome: false, customerName: '张三', phone: '13800000000' }
+        }
+      },
+      transactionDocData: {
+        reservation: {}
+      }
+    })
+
+    const result = await main({ action: 'settleIncomeWithStoredValue', amount: 800, reservationId: 'res-1', source: '事件客户', phone: '13999999999' })
+
+    expect(result).toEqual({ success: false, message: '关联预约不存在' })
+    expect(db.runTransaction).toHaveBeenCalledTimes(1)
+    expect(accountReads).toEqual(expectedAccountReads)
+    expect(transactionAdds).toEqual([])
+    expect(transactionUpdates).toEqual([])
+    expect(transactionSets).toEqual([])
+  })
+
   test('settles stored_full with no income and marks reservation settled in one transaction', async () => {
     const { main, adds, updates, outsideAdds, outsideUpdates, transactionAdds, transactionUpdates } = loadStoredValueFunction({
       staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
