@@ -70,6 +70,36 @@
       </view>
     </view>
 
+    <!-- Stored Value Preview -->
+    <view wx:if="{{storedValueConflictMessage}}" class="stored-value-warning" style="background: {{theme.elevated || '#252540'}}; border-color: {{theme.warningColor || '#F59E0B'}};">
+      <text class="stored-value-warning-title" style="color: {{theme.warningColor || '#F59E0B'}};">储值账户冲突</text>
+      <text class="stored-value-warning-text" style="color: {{theme.textSecondary || '#9A9AB0'}};">{{storedValueConflictMessage}}</text>
+    </view>
+
+    <view wx:elif="{{storedValuePreview}}" class="stored-value-preview" style="background: {{theme.elevated || '#252540'}}; border-color: {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
+      <view class="stored-value-header">
+        <text class="stored-value-title" style="color: {{theme.textPrimary || '#F5F0E8'}};">储值结算预览</text>
+        <text class="stored-value-badge" style="background: {{theme.accentColor || '#C9A96E'}}; color: {{theme.textInverse || '#0F0F1A'}};">自动抵扣</text>
+      </view>
+      <view class="stored-value-row">
+        <text class="stored-value-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">账户余额</text>
+        <text class="stored-value-value" style="color: {{theme.textPrimary || '#F5F0E8'}};">¥{{storedValuePreview.balanceText}}</text>
+      </view>
+      <view class="stored-value-row">
+        <text class="stored-value-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">原始金额</text>
+        <text class="stored-value-value" style="color: {{theme.textPrimary || '#F5F0E8'}};">¥{{storedValuePreview.originalAmountText}}</text>
+      </view>
+      <view class="stored-value-row">
+        <text class="stored-value-label" style="color: {{theme.textSecondary || '#9A9AB0'}};">储值抵扣</text>
+        <text class="stored-value-value stored-value-deduct" style="color: {{theme.amountNegative || '#F87171'}};">-¥{{storedValuePreview.deductedText}}</text>
+      </view>
+      <view class="stored-value-divider" style="background: {{theme.borderColor || 'rgba(255,255,255,0.10)'}};"></view>
+      <view class="stored-value-row stored-value-total">
+        <text class="stored-value-label" style="color: {{theme.textPrimary || '#F5F0E8'}};">本次实收</text>
+        <text class="stored-value-income" style="color: {{theme.amountPositive || '#4ADE80'}};">¥{{storedValuePreview.incomeAmountText}}</text>
+      </view>
+    </view>
+
     <!-- Remark -->
     <view style="background: {{theme.elevated || '#252540'}}; border-radius: 10rpx; padding: 14rpx 20rpx; margin-top: 12rpx; border: 1rpx solid {{theme.borderColor || 'rgba(255,255,255,0.10)'}};">
       <view class="flex-row" style="align-items: center; margin-bottom: 10rpx;">

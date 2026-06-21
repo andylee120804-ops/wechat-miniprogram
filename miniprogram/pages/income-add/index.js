@@ -23,6 +23,11 @@ Page({
     pickerIndex: -1,
     pickerItems: [],
     remark: '',
+    storedValueAccountsByKey: {},
+    storedValueConflictsByKey: {},
+    selectedStoredValueAccount: null,
+    storedValuePreview: null,
+    storedValueConflictMessage: '',
     serviceChargeEnabled: false,
     serviceChargeEnabledDate: '',
     serviceChargeNoon: 0,
@@ -121,6 +126,136 @@ Page({
     }
   },
 
+  getStoredValueCustomerKey(customer) {
+    if (!customer) return ''
+    const phone = String(customer.phone || '').trim()
+    if (phone) return phone
+    return String(customer.customerName || customer.name || '').trim()
+  },
+
+  getStoredValueAccountKey(account) {
+    if (!account) return ''
+    const phone = String(account.phone || '').trim()
+    if (phone) return phone
+    const customerKey = String(account.customerKey || '').trim()
+    if (customerKey.indexOf('phone:') === 0) return customerKey.slice(6)
+    if (customerKey.indexOf('name:') === 0) return customerKey.slice(5)
+    return String(account.customerName || account.name || '').trim()
+  },
+
+  formatMoneyText(value) {
+    return (Number(value) || 0).toFixed(2)
+  },
+
+  async loadStoredValueAccountsForReservations(reservations) {
+    const uniqueCustomers = []
+    const seenKeys = new Set()
+    ;(reservations || []).forEach((reservation) => {
+      const key = this.getStoredValueCustomerKey(reservation)
+      if (!key || seenKeys.has(key)) return
+      seenKeys.add(key)
+      uniqueCustomers.push({
+        phone: String(reservation.phone || '').trim(),
+        customerName: String(reservation.customerName || reservation.name || '').trim()
+      })
+    })
+
+    if (uniqueCustomers.length === 0) {
+      return { accountsByKey: {}, conflictsByKey: {} }
+    }
+
+    try {
+      const response = await wx.cloud.callFunction({
+        name: 'storedValue',
+        data: {
+          action: 'queryAccountsByCustomers',
+          customers: uniqueCustomers
+        }
+      })
+      const result = response && response.result
+      if (!result || result.success === false) {
+        return { accountsByKey: {}, conflictsByKey: {} }
+      }
+
+      const accountsByKey = {}
+      const conflictsByKey = {}
+      ;(result.data || []).forEach((account) => {
+        const key = this.getStoredValueAccountKey(account)
+        if (!key) return
+        if (accountsByKey[key]) {
+          conflictsByKey[key] = true
+          return
+        }
+        accountsByKey[key] = account
+      })
+      return { accountsByKey, conflictsByKey }
+    } catch (err) {
+      console.warn('[IncomeAdd] 加载储值账户失败:', err)
+      return { accountsByKey: {}, conflictsByKey: {} }
+    }
+  },
+
+  buildReservationPickerItem(reservation, accountsByKey, conflictsByKey) {
+    const dateStr = formatDate(reservation.date)
+    const parts = dateStr.split('-')
+    const month = parseInt(parts[1]) || 0
+    const day = parseInt(parts[2]) || 0
+    const room = reservation.roomName || (reservation.room === 'big' ? '大包厢' : '小包厢')
+    const key = this.getStoredValueCustomerKey(reservation)
+    let storedValueLabel = ''
+    if (key && conflictsByKey[key]) {
+      storedValueLabel = ' 【储值冲突】'
+    } else if (key && accountsByKey[key]) {
+      const balance = Number(accountsByKey[key].balance) || 0
+      storedValueLabel = balance > 0 ? ' 【储值】余额 ¥' + this.formatMoneyText(balance) : ' 【储值·余额0】'
+    }
+    return month + '月' + day + '日：' + (reservation.time || '') + ' ' + (reservation.customerName || '') + ' ' + room + storedValueLabel
+  },
+
+  updateStoredValuePreview() {
+    const selectedReservation = this.data.selectedReservation
+    const amount = Number(parseFloat(this.data.amount)) || 0
+    const key = this.getStoredValueCustomerKey(selectedReservation)
+    const hasConflict = !!(key && this.data.storedValueConflictsByKey[key])
+    const account = key && !hasConflict ? this.data.storedValueAccountsByKey[key] : null
+
+    if (hasConflict) {
+      this.setData({
+        selectedStoredValueAccount: null,
+        storedValuePreview: null,
+        storedValueConflictMessage: '该客户存在多个储值账户，请先到客户详情处理后再结算。'
+      })
+      return
+    }
+
+    if (!account || amount <= 0) {
+      this.setData({
+        selectedStoredValueAccount: account || null,
+        storedValuePreview: null,
+        storedValueConflictMessage: ''
+      })
+      return
+    }
+
+    const balance = Number(account.balance) || 0
+    const deducted = Math.min(balance, amount)
+    const incomeAmount = Math.max(amount - deducted, 0)
+    this.setData({
+      selectedStoredValueAccount: account,
+      storedValuePreview: {
+        balance,
+        balanceText: this.formatMoneyText(balance),
+        originalAmount: amount,
+        originalAmountText: this.formatMoneyText(amount),
+        deducted,
+        deductedText: this.formatMoneyText(deducted),
+        incomeAmount,
+        incomeAmountText: this.formatMoneyText(incomeAmount)
+      },
+      storedValueConflictMessage: ''
+    })
+  },
+
   async loadRecentReservations() {
     try {
       const that = this
@@ -179,14 +314,11 @@ Page({
         return (b.date || 0) - (a.date || 0)
       })
 
+      const storedValueMaps = await that.loadStoredValueAccountsForReservations(available)
+
       // Build picker items
       const items = available.map(function(r) {
-        const dateStr = formatDate(r.date)
-        const parts = dateStr.split('-')
-        const month = parseInt(parts[1]) || 0
-        const day = parseInt(parts[2]) || 0
-        const room = r.roomName || (r.room === 'big' ? '大包厢' : '小包厢')
-        return month + '月' + day + '日：' + (r.time || '') + ' ' + (r.customerName || '') + ' ' + room
+        return that.buildReservationPickerItem(r, storedValueMaps.accountsByKey, storedValueMaps.conflictsByKey)
       })
 
       // In edit mode, find the index of the currently linked reservation
@@ -198,7 +330,14 @@ Page({
         that.setData({ selectedReservation: available[pickerIndex] })
       }
 
-      that.setData({ recentReservations: available, pickerItems: items, pickerIndex })
+      that.setData({
+        recentReservations: available,
+        pickerItems: items,
+        pickerIndex,
+        storedValueAccountsByKey: storedValueMaps.accountsByKey,
+        storedValueConflictsByKey: storedValueMaps.conflictsByKey
+      })
+      that.updateStoredValuePreview()
     } catch (err) {
       console.warn('[IncomeAdd] 加载最近预约失败:', err)
     }
@@ -223,6 +362,7 @@ Page({
 
   toggleNoReservation() {
     this.setData({ noReservation: !this.data.noReservation, reservationId: '', selectedReservation: null, pickerIndex: -1 })
+    this.updateStoredValuePreview()
   },
 
   onReservationPickerChange(e) {
@@ -247,6 +387,7 @@ Page({
           pickerIndex: index,
           amount: String(amount)
         })
+        this.updateStoredValuePreview()
       } else {
         // No dish price, prompt manual input
         this.setData({
@@ -256,6 +397,7 @@ Page({
           amount: '',
           showNoDishPriceModal: true
         })
+        this.updateStoredValuePreview()
       }
     } else {
       // Old mode: standard × guestCount × discount
@@ -277,6 +419,7 @@ Page({
         pickerIndex: index,
         amount: String(estimatedAmount)
       })
+      this.updateStoredValuePreview()
       return
     }
 
@@ -297,10 +440,12 @@ Page({
       pickerIndex: index,
       amount: String(finalAmount)
     })
+    this.updateStoredValuePreview()
   },
 
   onAmountInput(e) {
     this.setData({ amount: e.detail.value })
+    this.updateStoredValuePreview()
   },
 
   onRemarkInput(e) {
@@ -346,6 +491,7 @@ Page({
         const minAmount = await this.getMinAmountForReservation(selRes)
         if (minAmount && parseFloat(amount) < minAmount) {
           this.setData({ amount: String(minAmount) })
+          this.updateStoredValuePreview()
           wx.showToast({ title: '已按最低消费 ¥' + minAmount + ' 计算', icon: 'none' })
         }
       }
@@ -387,19 +533,44 @@ Page({
         }
       }
 
+      let successToastTitle = '保存成功'
       if (!this.data.isEdit) {
-        await db.addDoc(COLLECTIONS.INCOME, data)
-        if (reservationId) {
-          await db.updateDoc(COLLECTIONS.RESERVATION, reservationId, { hasIncome: true })
+        if (!noReservation && reservationId) {
+          const settlementResponse = await wx.cloud.callFunction({
+            name: 'storedValue',
+            data: Object.assign({}, data, {
+              action: 'settleIncomeWithStoredValue',
+              reservationId,
+              incomeData: data,
+              reservationSnapshot: this.data.selectedReservation || null
+            })
+          })
+          const settlementResult = settlementResponse && settlementResponse.result
+          if (!settlementResult || settlementResult.success === false) {
+            throw new Error((settlementResult && settlementResult.message) || '储值结算失败')
+          }
+          const settlementData = settlementResult.data || {}
+          if (settlementData.settlementMode === 'stored_full') {
+            successToastTitle = '储值已全额抵扣'
+          } else if (settlementData.settlementMode === 'stored_partial') {
+            successToastTitle = '储值抵扣成功'
+          } else if (settlementData.settlementMode === 'stored_empty') {
+            successToastTitle = '储值余额为0，已记收入'
+          } else {
+            successToastTitle = '收入已保存'
+          }
+          log('INCOME_CREATE', { type, amount: data.amount, source: data.source })
+        } else {
+          await db.addDoc(COLLECTIONS.INCOME, data)
+          log('INCOME_CREATE', { type, amount: data.amount, source: data.source })
         }
-        log('INCOME_CREATE', { type, amount: data.amount, source: data.source })
       } else {
         await db.updateDoc(COLLECTIONS.INCOME, this.data.id, data)
         var extra = buildChanges(this.data._oldData || {}, data, { type: '类型', amount: '金额', source: '来源', date: '日期', remark: '备注' }, { amount: true }) || {}
         log('INCOME_UPDATE', { type, amount: data.amount }, extra)
       }
 
-      wx.showToast({ title: '保存成功', icon: 'success' })
+      wx.showToast({ title: successToastTitle, icon: 'success' })
       // 成功后不重置 submitting，保持按钮禁用直到页面返回
       setTimeout(() => wx.navigateBack(), 1500)
     } catch (err) {
