@@ -366,6 +366,167 @@ function buildRechargeIncomeData(event, account, staff) {
   }
 }
 
+function buildSettlementRemark(baseRemark, originalAmount, deductedAmount, incomeAmount) {
+  const remark = String(baseRemark || '').trim() || '储值抵扣'
+  return `${remark}；原金额${toAmount(originalAmount)}，储值抵扣${toAmount(deductedAmount)}，实收${toAmount(incomeAmount)}`
+}
+
+function buildSettlementIncomeData(incomeData, account, transaction, settlement, staff) {
+  const now = new Date()
+  const originalAmount = toAmount(incomeData.amount)
+  const deductedAmount = toAmount(settlement.deductedAmount)
+  const incomeAmount = toAmount(settlement.incomeAmount)
+
+  return {
+    type: incomeData.type || 'dining',
+    categoryLabel: incomeData.categoryLabel || '',
+    settlementMode: settlement.mode,
+    storedValueAccountId: account && account._id ? account._id : '',
+    storedValueTransactionId: transaction && transaction._id ? transaction._id : '',
+    reservationId: incomeData.reservationId || '',
+    originalAmount,
+    deductedAmount,
+    amount: incomeAmount,
+    source: String(incomeData.source || incomeData.customerName || '').trim(),
+    paymentMethod: incomeData.paymentMethod || '',
+    remark: buildSettlementRemark(incomeData.remark, originalAmount, deductedAmount, incomeAmount),
+    collectedBy: staff._id,
+    collectedByName: staff.name || '',
+    date: incomeData.date || formatDateString(now),
+    createTime: now,
+    updateTime: now,
+    status: 'active'
+  }
+}
+
+async function getReservationById(collectionProvider, reservationId) {
+  if (!reservationId) {
+    return null
+  }
+
+  const result = await collectionProvider.collection(COLLECTIONS.RESERVATION)
+    .doc(reservationId)
+    .get()
+  return result.data || null
+}
+
+function getSettlementCustomer(reservation, event) {
+  const snapshot = event.reservationSnapshot || {}
+  return {
+    phone: event.phone || snapshot.phone || (reservation && reservation.phone) || '',
+    customerName: event.customerName || snapshot.customerName || event.source || (reservation && reservation.customerName) || '',
+    name: event.name || event.source || ''
+  }
+}
+
+async function findAccountBySettlementEventInCollection(collectionProvider, event = {}, reservation = null) {
+  const customer = getSettlementCustomer(reservation, event)
+  const customerKey = getCustomerKey(customer)
+  if (customerKey) {
+    const keyedAccount = await findSingleAccountInCollection(collectionProvider, customerKey)
+    if (keyedAccount) {
+      return keyedAccount
+    }
+  }
+
+  return findLegacyAccountInCollection(collectionProvider, customer)
+}
+
+function markReservationSettled(collectionProvider, reservationId, settlementData) {
+  if (!reservationId) {
+    return Promise.resolve(null)
+  }
+
+  return collectionProvider.collection(COLLECTIONS.RESERVATION)
+    .doc(reservationId)
+    .update({
+      data: Object.assign({}, settlementData, {
+        hasIncome: true,
+        updateTime: new Date()
+      })
+    })
+}
+
+function buildNormalIncomeData(incomeData, settlementMode, staff, account) {
+  const now = new Date()
+  const amount = toAmount(incomeData.amount)
+
+  return {
+    type: incomeData.type || 'dining',
+    categoryLabel: incomeData.categoryLabel || '',
+    settlementMode,
+    storedValueAccountId: account && account._id ? account._id : '',
+    reservationId: incomeData.reservationId || '',
+    originalAmount: amount,
+    deductedAmount: 0,
+    amount,
+    source: String(incomeData.source || incomeData.customerName || '').trim(),
+    paymentMethod: incomeData.paymentMethod || '',
+    remark: String(incomeData.remark || '').trim(),
+    collectedBy: staff._id,
+    collectedByName: staff.name || '',
+    date: incomeData.date || formatDateString(now),
+    createTime: now,
+    updateTime: now,
+    status: 'active'
+  }
+}
+
+function normalizeDateString(value) {
+  if (!value) {
+    return ''
+  }
+
+  if (typeof value === 'string') {
+    return value.slice(0, 10)
+  }
+
+  if (value instanceof Date) {
+    return formatDateString(value)
+  }
+
+  if (value && typeof value.toDate === 'function') {
+    return formatDateString(value.toDate())
+  }
+
+  return String(value).slice(0, 10)
+}
+
+async function fetchAll(collectionProvider, collectionName, where) {
+  const pageSize = 100
+  const collection = collectionProvider.collection(collectionName)
+  const allItems = []
+  let offset = 0
+  let shouldContinue = true
+
+  while (shouldContinue) {
+    let query = collection.where(where)
+    if (typeof query.skip === 'function') {
+      query = query.skip(offset)
+    }
+    if (typeof query.limit === 'function') {
+      query = query.limit(pageSize)
+    }
+
+    const result = await query.get()
+    const items = Array.isArray(result.data) ? result.data : []
+    allItems.push(...items)
+    shouldContinue = items.length === pageSize
+    offset += pageSize
+  }
+
+  return allItems
+}
+
+function isDateInRange(value, start, end) {
+  const date = normalizeDateString(value)
+  return date >= start && date <= end
+}
+
+function sumAmount(items, fieldName) {
+  return items.reduce((total, item) => toAmount(total + toAmount(item[fieldName])), 0)
+}
+
 async function recharge(event = {}) {
   const staff = await authorize('income', 'add')
   const customerName = String(event.customerName || '').trim()
@@ -468,12 +629,210 @@ async function recharge(event = {}) {
   return ok(result)
 }
 
-async function settleIncomeWithStoredValue() {
-  return fail('储值抵扣功能未启用')
+async function settleIncomeWithStoredValue(event = {}) {
+  const staff = await authorize('income', 'add')
+  const amount = toAmount(event.amount)
+
+  if (amount <= 0) {
+    return fail('结算金额必须大于0')
+  }
+
+  const db = cloud.database()
+  const reservation = await getReservationById(db, event.reservationId)
+  if (reservation && reservation.hasIncome) {
+    return fail('该预约已结算')
+  }
+
+  const account = await findAccountBySettlementEventInCollection(db, event, reservation)
+  const incomeData = Object.assign({}, event, {
+    source: event.source || event.customerName || (reservation && reservation.customerName) || '',
+    phone: event.phone || (reservation && reservation.phone) || ''
+  })
+
+  if (!account) {
+    const now = new Date()
+    const incomePayload = buildNormalIncomeData(incomeData, 'normal', staff, null)
+    const incomeResult = await db.runTransaction(async (transaction) => {
+      const transactionReservation = await getReservationById(transaction, event.reservationId)
+      if (transactionReservation && transactionReservation.hasIncome) {
+        throw new Error('该预约已结算')
+      }
+      const createdIncome = await transaction.collection(COLLECTIONS.INCOME).add({ data: incomePayload })
+      await markReservationSettled(transaction, event.reservationId, {
+        settlementMode: 'normal',
+        incomeId: createdIncome._id,
+        originalAmount: amount,
+        deductedAmount: 0,
+        incomeAmount: amount,
+        settledBy: staff._id,
+        settledByName: staff.name || '',
+        settledAt: now
+      })
+      return createdIncome
+    })
+    return ok({ settlementMode: 'normal', incomeId: incomeResult._id })
+  }
+
+  const balanceBefore = toAmount(account.balance)
+  if (balanceBefore <= 0) {
+    const now = new Date()
+    const incomePayload = buildNormalIncomeData(incomeData, 'stored_empty', staff, account)
+    const incomeResult = await db.runTransaction(async (transaction) => {
+      const transactionReservation = await getReservationById(transaction, event.reservationId)
+      if (transactionReservation && transactionReservation.hasIncome) {
+        throw new Error('该预约已结算')
+      }
+      const createdIncome = await transaction.collection(COLLECTIONS.INCOME).add({ data: incomePayload })
+      await markReservationSettled(transaction, event.reservationId, {
+        settlementMode: 'stored_empty',
+        storedValueAccountId: account._id,
+        incomeId: createdIncome._id,
+        originalAmount: amount,
+        deductedAmount: 0,
+        incomeAmount: amount,
+        settledBy: staff._id,
+        settledByName: staff.name || '',
+        settledAt: now
+      })
+      return createdIncome
+    })
+    return ok({ settlementMode: 'stored_empty', incomeId: incomeResult._id, accountId: account._id })
+  }
+
+  const now = new Date()
+  const settlement = calculateSettlement(balanceBefore, amount)
+  const result = await db.runTransaction(async (transaction) => {
+    const transactionReservation = await getReservationById(transaction, event.reservationId)
+    if (transactionReservation && transactionReservation.hasIncome) {
+      throw new Error('该预约已结算')
+    }
+
+    const currentAccount = await findAccountBySettlementEventInCollection(transaction, event, transactionReservation || reservation)
+    if (!currentAccount) {
+      throw new Error('储值账户不存在')
+    }
+
+    const freshBalanceBefore = toAmount(currentAccount.balance)
+    const freshSettlement = calculateSettlement(freshBalanceBefore, amount)
+
+    if (freshSettlement.deductedAmount <= 0) {
+      const incomePayload = buildNormalIncomeData(incomeData, 'stored_empty', staff, currentAccount)
+      const createdIncome = await transaction.collection(COLLECTIONS.INCOME).add({ data: incomePayload })
+      await markReservationSettled(transaction, event.reservationId, {
+        settlementMode: 'stored_empty',
+        storedValueAccountId: currentAccount._id,
+        incomeId: createdIncome._id,
+        originalAmount: amount,
+        deductedAmount: 0,
+        incomeAmount: amount,
+        settledBy: staff._id,
+        settledByName: staff.name || '',
+        settledAt: now
+      })
+
+      return {
+        settlementMode: 'stored_empty',
+        accountId: currentAccount._id,
+        transactionId: null,
+        incomeId: createdIncome._id,
+        originalAmount: amount,
+        deductedAmount: 0,
+        incomeAmount: amount,
+        balanceAfter: freshBalanceBefore
+      }
+    }
+
+    const currentVersion = Number(currentAccount._version || 0)
+    const accountUpdate = {
+      balance: freshSettlement.balanceAfter,
+      totalConsume: toAmount(toAmount(currentAccount.totalConsume) + freshSettlement.deductedAmount),
+      updatedBy: staff._id,
+      updatedByName: staff.name || '',
+      updateTime: now,
+      _version: currentVersion + 1
+    }
+
+    await transaction.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
+      .doc(currentAccount._id)
+      .update({ data: accountUpdate })
+
+    const transactionData = {
+      type: 'consume',
+      status: 'active',
+      accountId: currentAccount._id,
+      amount: freshSettlement.deductedAmount,
+      balanceBefore: freshBalanceBefore,
+      balanceAfter: freshSettlement.balanceAfter,
+      incomeId: null,
+      reservationId: event.reservationId || '',
+      reservationSnapshot: buildReservationSnapshot(reservation || incomeData),
+      operatorId: staff._id,
+      operatorName: staff.name || '',
+      remark: String(event.remark || '').trim(),
+      createTime: now,
+      updateTime: now
+    }
+    const transactionResult = await transaction.collection(COLLECTIONS.STORED_VALUE_TRANSACTION).add({ data: transactionData })
+    const consumeTransaction = Object.assign({}, transactionData, { _id: transactionResult._id })
+
+    let incomeId = null
+    if (freshSettlement.incomeAmount > 0) {
+      const settlementIncomeData = buildSettlementIncomeData(incomeData, currentAccount, consumeTransaction, freshSettlement, staff)
+      const incomeResult = await transaction.collection(COLLECTIONS.INCOME).add({ data: settlementIncomeData })
+      incomeId = incomeResult._id
+      await transaction.collection(COLLECTIONS.STORED_VALUE_TRANSACTION)
+        .doc(transactionResult._id)
+        .update({ data: { incomeId } })
+    }
+
+    await markReservationSettled(transaction, event.reservationId, {
+      settlementMode: freshSettlement.mode,
+      storedValueAccountId: currentAccount._id,
+      storedValueTransactionId: transactionResult._id,
+      incomeId,
+      originalAmount: amount,
+      deductedAmount: freshSettlement.deductedAmount,
+      incomeAmount: freshSettlement.incomeAmount,
+      settledBy: staff._id,
+      settledByName: staff.name || '',
+      settledAt: now
+    })
+
+    return {
+      settlementMode: freshSettlement.mode,
+      accountId: currentAccount._id,
+      transactionId: transactionResult._id,
+      incomeId,
+      originalAmount: amount,
+      deductedAmount: freshSettlement.deductedAmount,
+      incomeAmount: freshSettlement.incomeAmount,
+      balanceAfter: freshSettlement.balanceAfter
+    }
+  })
+
+  return ok(Object.assign({}, result, { settlementMode: result.settlementMode || settlement.mode }))
 }
 
-async function getStats() {
-  return fail('储值统计功能未启用')
+async function getStats(event = {}) {
+  await authorize('dashboard', 'view')
+
+  const start = normalizeDateString(event.start)
+  const end = normalizeDateString(event.end)
+  if (!start || !end) {
+    return fail('缺少统计日期范围')
+  }
+
+  const db = cloud.database()
+  const transactions = await fetchAll(db, COLLECTIONS.STORED_VALUE_TRANSACTION, { status: 'active' })
+  const accounts = await fetchAll(db, COLLECTIONS.STORED_VALUE_ACCOUNT, { status: 'active' })
+  const activeTransactions = transactions.filter((transaction) => transaction.status === 'active')
+  const activeAccounts = accounts.filter((account) => account.status === 'active')
+  const periodTransactions = activeTransactions.filter((transaction) => isDateInRange(transaction.createTime || transaction.date, start, end))
+  const rechargeAmount = sumAmount(periodTransactions.filter((transaction) => transaction.type === 'recharge'), 'amount')
+  const consumeAmount = sumAmount(periodTransactions.filter((transaction) => transaction.type === 'consume'), 'amount')
+  const balanceAmount = sumAmount(activeAccounts, 'balance')
+
+  return ok({ rechargeAmount, consumeAmount, balanceAmount })
 }
 
 exports.main = async (event = {}) => {
@@ -506,5 +865,11 @@ exports.__test__ = {
   normalizeCustomerInputs,
   authorize,
   buildRechargeIncomeData,
+  buildSettlementIncomeData,
+  buildSettlementRemark,
+  markReservationSettled,
+  normalizeDateString,
+  fetchAll,
+  sumAmount,
   formatDateString
 }
