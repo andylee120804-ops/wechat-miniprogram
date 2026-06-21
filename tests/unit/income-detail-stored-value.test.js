@@ -153,6 +153,8 @@ describe('income-detail stored value edit/delete protection', () => {
       settlementMode: 'stored_partial',
       originalAmount: 800,
       deductedAmount: 500,
+      formattedOriginalAmount: '¥800',
+      formattedDeductedAmount: '¥500',
       hasStoredPartialTrace: true,
       hasOriginalAmountTrace: true,
       hasStoredRechargeTrace: false

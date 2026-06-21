@@ -54,6 +54,8 @@ Page({
         typeName: getIncomeDisplayType(res),
         formattedAmount: formatAmount(res.amount),
         formattedDate: formatDate(res.date),
+        formattedDeductedAmount: formatAmount(res.deductedAmount),
+        formattedOriginalAmount: formatAmount(res.originalAmount),
         hasStoredPartialTrace: res.settlementMode === 'stored_partial' && res.deductedAmount !== undefined && res.deductedAmount !== null,
         hasOriginalAmountTrace,
         hasStoredRechargeTrace: res.settlementMode === 'stored_value_recharge'
