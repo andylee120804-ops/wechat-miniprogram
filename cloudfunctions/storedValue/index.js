@@ -11,6 +11,8 @@ const COLLECTIONS = {
   STORED_VALUE_TRANSACTION: 'stored_value_transaction'
 }
 
+const MAX_CUSTOMER_BATCH_SIZE = 50
+
 function loadCloud() {
   try {
     return require('wx-server-sdk')
@@ -105,34 +107,93 @@ function getCustomerKey(customer = {}) {
   return String(customer.customerName || customer.name || '').trim()
 }
 
-async function authorize(requiredModule, requiredAction, event = {}) {
-  const staffId = event.staffId || event.operatorId
-  if (!staffId) {
-    return fail('缺少操作人信息')
+function normalizeCustomer(customer = {}) {
+  return {
+    phone: String(customer.phone || '').trim(),
+    customerName: String(customer.customerName || '').trim(),
+    name: String(customer.name || '').trim()
+  }
+}
+
+function removeEmptyCustomerFields(customer) {
+  return Object.keys(customer).reduce((result, key) => {
+    if (!customer[key]) {
+      return result
+    }
+
+    return Object.assign({}, result, { [key]: customer[key] })
+  }, {})
+}
+
+function normalizeCustomerInputs(customers) {
+  const inputCustomers = Array.isArray(customers) ? customers : []
+  const seenKeys = {}
+  const normalizedCustomers = []
+  let isTooMany = false
+
+  inputCustomers.forEach((customer) => {
+    if (!customer || typeof customer !== 'object' || isTooMany) {
+      return
+    }
+
+    const normalizedCustomer = removeEmptyCustomerFields(normalizeCustomer(customer))
+    const key = getCustomerKey(normalizedCustomer)
+    if (!key || seenKeys[key]) {
+      return
+    }
+
+    seenKeys[key] = true
+    if (normalizedCustomers.length >= MAX_CUSTOMER_BATCH_SIZE) {
+      isTooMany = true
+      return
+    }
+
+    normalizedCustomers.push({ key, customer: normalizedCustomer })
+  })
+
+  return { customers: normalizedCustomers, isTooMany }
+}
+
+async function authorize(requiredModule, requiredAction) {
+  const wxContext = cloud.getWXContext()
+  const openid = wxContext && wxContext.OPENID
+  if (!openid) {
+    throw new Error('无权限')
   }
 
   const db = cloud.database()
-  const staffResult = await db.collection(COLLECTIONS.STAFF).doc(staffId).get()
-  const staff = staffResult.data
+  const staffResult = await db.collection(COLLECTIONS.STAFF)
+    .where({ boundOpenid: openid, status: 'active' })
+    .limit(1)
+    .get()
+  const staff = staffResult.data && staffResult.data[0]
 
-  if (!staff || staff.status === 'deleted') {
-    return fail('操作人不存在')
+  if (!staff) {
+    throw new Error('无权限')
   }
 
-  if (staff.role === 'boss') {
-    return ok(staff)
+  if (staff.role === 'admin' || staff.role === 'boss') {
+    return staff
   }
 
-  const permissions = staff.permissions || {}
-  const modulePermissions = permissions[requiredModule] || {}
-  if (modulePermissions[requiredAction]) {
-    return ok(staff)
+  const permissionResult = await db.collection(COLLECTIONS.PERMISSIONS)
+    .where({ staffId: staff._id })
+    .get()
+  const permissionDoc = permissionResult.data && permissionResult.data[0]
+  const permissions = permissionDoc && Array.isArray(permissionDoc.permissions) ? permissionDoc.permissions : []
+  const modulePermission = permissions.find((permission) => permission.module === requiredModule)
+  const actions = modulePermission && Array.isArray(modulePermission.actions) ? modulePermission.actions : []
+
+  if (actions.includes(requiredAction) || actions.includes('*')) {
+    return staff
   }
 
-  return fail('无权限操作')
+  throw new Error('无权限')
 }
 
 async function queryAccountByCustomer(event = {}) {
+  await authorize('customer', 'view')
+
   const customerKey = getCustomerKey(event)
   if (!customerKey) {
     return fail('缺少客户信息')
@@ -143,15 +204,15 @@ async function queryAccountByCustomer(event = {}) {
 }
 
 async function queryAccountsByCustomers(event = {}) {
-  const customers = Array.isArray(event.customers) ? event.customers : []
+  await authorize('income', 'add')
+
+  const normalized = normalizeCustomerInputs(event.customers)
+  if (normalized.isTooMany) {
+    return fail(`一次最多查询${MAX_CUSTOMER_BATCH_SIZE}个客户`)
+  }
+
   const accounts = await Promise.all(
-    customers.map(async (customer) => {
-      const customerKey = getCustomerKey(customer)
-      if (!customerKey) {
-        return null
-      }
-      return findSingleAccount(customerKey)
-    })
+    normalized.customers.map(async (customer) => findSingleAccount(customer.key))
   )
 
   return ok(accounts.filter(Boolean))
@@ -204,5 +265,7 @@ exports.__test__ = {
   calculateSettlement,
   buildReservationSnapshot,
   toAmount,
-  getCustomerKey
+  getCustomerKey,
+  normalizeCustomerInputs,
+  authorize
 }
