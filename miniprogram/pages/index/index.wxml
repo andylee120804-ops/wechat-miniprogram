@@ -3,7 +3,14 @@
   <!-- Loading skeleton -->
   <skeleton wx:if="{{loading}}" theme="{{theme}}" type="home" />
 
-  <block wx:else>
+  <!-- Load error with retry -->
+  <view wx:elif="{{loadError}}" class="load-error-wrap" style="background: {{theme.surface || '#1A1A2E'}}; padding-top: {{statusBarHeight + 120}}px; text-align: center;">
+    <text class="load-error-icon" style="font-size: 80rpx;">⚠️</text>
+    <text class="load-error-msg" style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 28rpx; margin-top: 24rpx; display: block;">数据加载失败</text>
+    <view class="load-error-retry" bindtap="onRetryLoad" style="margin-top: 32rpx; padding: 16rpx 48rpx; background: {{theme.accentColor || '#C9A96E'}}; color: #fff; border-radius: 40rpx; font-size: 28rpx; display: inline-block;">点击重试</view>
+  </view>
+
+  <block wx:elif="{{!loadError}}">
 
     <!-- Custom Navigation Bar -->
     <view class="nav-bar" style="background: {{theme.gradientHeader || theme.surfaceColor}}; padding-top: {{statusBarHeight}}px; height: {{statusBarHeight + 44}}px; box-sizing: border-box;">

@@ -54,7 +54,13 @@ Page({
       { value: 'waiter', label: '服务员' }
     ],
     moduleOptions: MODULE_OPTIONS,
-    showDeleteModal: false
+    showDeleteModal: false,
+    showResignModal: false,
+    resignDate: '',
+    submittingResign: false,
+    staffStatus: 'active',
+    isLoginRevoked: false,
+    isBoundOpenid: false
   },
 
   onLoad(options) {
@@ -74,8 +80,7 @@ Page({
   },
 
   onBack() {
-    // Close any open modals first
-    this.setData({ showDeleteModal: false }, () => {
+    this.setData({ showDeleteModal: false, showResignModal: false }, () => {
       try {
         const pages = getCurrentPages()
         if (pages.length > 1) {
@@ -136,6 +141,10 @@ Page({
         wechatId: s.wechatId || '',
         salary: s.salary ? String(s.salary) : '',
         hireDate: s.hireDate || '',
+        resignDate: s.resignDate || '',
+        staffStatus: s.status || 'active',
+        isLoginRevoked: s.status === 'active' && !!s.loginRevoked,
+        isBoundOpenid: !!s.boundOpenid,
         permissions: defaultPerms,
         _oldData: { name: s.name || '', role: s.role || 'admin', wechatId: s.wechatId || '', salary: s.salary ? String(s.salary) : '0', hireDate: s.hireDate || '' }
       })
@@ -228,7 +237,7 @@ Page({
             }
           })
         await db.addDoc(COLLECTIONS.PERMISSIONS, {
-          staffId: res._id, permissions: permArray, updatedBy: userInfo._id, updatedAt: new Date()
+          staffId: res._id, venueId: app.globalData.userInfo.venueId || 'legacy-default', permissions: permArray, updatedBy: userInfo._id, updatedAt: new Date()
         })
       }
 
@@ -275,5 +284,124 @@ Page({
 
   onCloseDelete() {
     this.setData({ showDeleteModal: false })
+  },
+
+  onResign() {
+    const userInfo = app.globalData.userInfo || {}
+    if (userInfo.role !== 'admin') {
+      wx.showToast({ title: '无权限操作', icon: 'none' })
+      return
+    }
+    if (this.data.id === userInfo._id) {
+      wx.showToast({ title: '不能将自己离职', icon: 'none' })
+      return
+    }
+    const today = new Date()
+    const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
+    this.setData({ showResignModal: true, resignDate: this.data.resignDate || todayStr })
+  },
+
+  onResignDateChange(e) {
+    this.setData({ resignDate: e.detail.value })
+  },
+
+  onCloseResign() {
+    this.setData({ showResignModal: false })
+  },
+
+  async onConfirmResign() {
+    const { resignDate, name, hireDate, id } = this.data
+    if (!resignDate) {
+      wx.showToast({ title: '请选择离职日期', icon: 'none' })
+      return
+    }
+    if (hireDate && resignDate < hireDate) {
+      wx.showToast({ title: '离职日期不能早于入职日期', icon: 'none' })
+      return
+    }
+    this.setData({ submittingResign: true })
+    try {
+      await db.updateDoc(COLLECTIONS.STAFF, id, {
+        status: 'resigned',
+        resignDate: resignDate,
+        loginRevoked: true,
+        resignedAt: new Date()
+      })
+      log('STAFF_RESIGN', { name: name, resignDate: resignDate })
+      wx.showToast({ title: '已离职', icon: 'success' })
+      this.setData({ showResignModal: false })
+      setTimeout(() => wx.navigateBack(), 1500)
+    } catch (err) {
+      handleCloudError(err, '员工离职')
+    } finally {
+      this.setData({ submittingResign: false })
+    }
+  },
+
+  async onRevokeLogin() {
+    const userInfo = app.globalData.userInfo || {}
+    if (userInfo.role !== 'admin') {
+      wx.showToast({ title: '无权限操作', icon: 'none' })
+      return
+    }
+    try {
+      await db.updateDoc(COLLECTIONS.STAFF, this.data.id, { loginRevoked: true, logoutAt: new Date() })
+      log('STAFF_REVOKE_LOGIN', { name: this.data.name })
+      this.setData({ isLoginRevoked: true })
+      wx.showToast({ title: '已禁止登录', icon: 'success' })
+    } catch (err) {
+      handleCloudError(err, '禁止登录')
+    }
+  },
+
+  async onReEnableLogin() {
+    const userInfo = app.globalData.userInfo || {}
+    if (userInfo.role !== 'admin') {
+      wx.showToast({ title: '无权限操作', icon: 'none' })
+      return
+    }
+    try {
+      await db.updateDoc(COLLECTIONS.STAFF, this.data.id, { loginRevoked: false })
+      log('STAFF_RE_ENABLE', { name: this.data.name })
+      this.setData({ isLoginRevoked: false })
+      wx.showToast({ title: '已重新启用登录', icon: 'success' })
+    } catch (err) {
+      handleCloudError(err, '重新启用')
+    }
+  },
+
+  async onUnbindWechat() {
+    const userInfo = app.globalData.userInfo || {}
+    if (userInfo.role !== 'admin') {
+      wx.showToast({ title: '无权限操作', icon: 'none' })
+      return
+    }
+    if (this.data.submitting) return
+    wx.showModal({
+      title: '解绑微信',
+      content: '解绑后该员工可使用新微信号登录，确定解绑？',
+      confirmColor: '#FBBF24',
+      success: async (res) => {
+        if (!res.confirm) return
+        this.setData({ submitting: true })
+        try {
+          const result = await wx.cloud.callFunction({
+            name: 'login',
+            data: { action: 'unbindWechat', staffId: this.data.id }
+          })
+          if (result.result && result.result.success) {
+            this.setData({ isBoundOpenid: false, isLoginRevoked: false })
+            log('STAFF_UNBIND_WECHAT', { name: this.data.name })
+            wx.showToast({ title: '解绑成功', icon: 'success' })
+          } else {
+            wx.showToast({ title: (result.result && result.result.message) || '解绑失败', icon: 'none' })
+          }
+        } catch (err) {
+          handleCloudError(err, '解绑微信')
+        } finally {
+          this.setData({ submitting: false })
+        }
+      }
+    })
   }
 })

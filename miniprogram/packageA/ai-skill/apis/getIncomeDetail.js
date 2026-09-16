@@ -6,6 +6,7 @@
 const { queryAll, COLLECTIONS } = require('../../../utils/db')
 const { formatDate, formatAmount, getMonthRange } = require('../../../utils/helpers')
 const { hasPermission, ACTIONS } = require('../../../utils/permission')
+const { computeNetAmount, sumNetIncome } = require('../../../utils/incomeCalc')
 
 async function getIncomeDetail({ date, month, type }) {
   try {
@@ -79,12 +80,12 @@ async function getIncomeDetail({ date, month, type }) {
       }
     }
 
-    // 云函数失败降级：本地 reduce（收入口径本身一致：无 status 过滤）
-    const totalAmount = incomes.reduce((s, i) => s + (i.amount || 0), 0)
+    // 云函数失败降级：本地 reduce（使用统一口径扣除储值抵扣）
+    const totalAmount = sumNetIncome(incomes)
     const byType = {}
     incomes.forEach(i => {
       const t = i.type || 'other'
-      byType[t] = (byType[t] || 0) + (i.amount || 0)
+      byType[t] = (byType[t] || 0) + computeNetAmount(i)
     })
     const typeBreakdown = Object.entries(byType)
       .sort((a, b) => b[1] - a[1])

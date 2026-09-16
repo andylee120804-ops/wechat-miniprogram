@@ -103,14 +103,16 @@ async function fetchAll(collection, where) {
   return all
 }
 
-function calcProratedMonths(itemStart, periodStart, periodEnd, periodMonths) {
+function calcProratedMonths(itemStart, itemEnd, periodStart, periodEnd, periodMonths) {
   const pStart = new Date(periodStart + 'T00:00:00')
   const pEnd = new Date(periodEnd + 'T23:59:59')
   const start = itemStart ? new Date(itemStart + 'T00:00:00') : pStart
+  const end = itemEnd ? new Date(itemEnd + 'T23:59:59') : pEnd
   const activeStart = start > pStart ? start : pStart
-  if (activeStart >= pEnd) return 0
+  const activeEnd = end < pEnd ? end : pEnd
+  if (activeStart >= activeEnd) return 0
   const totalDays = (pEnd - pStart) / 86400000
-  const activeDays = (pEnd - activeStart) / 86400000
+  const activeDays = (activeEnd - activeStart) / 86400000
   return periodMonths * (activeDays / totalDays)
 }
 
@@ -137,7 +139,7 @@ async function buildReportData(input) {
     fetchAll(COLLECTIONS.PURCHASE, dateFilter),
     fetchAll(COLLECTIONS.EXPENSE, dateFilter),
     fetchAll(COLLECTIONS.FIXED_EXPENSE, { active: true }),
-    fetchAll(COLLECTIONS.STAFF, { status: 'active' })
+    fetchAll(COLLECTIONS.STAFF, { status: _.in(['active', 'resigned']) })
   ])
 
   const incomeData = results[0]
@@ -156,14 +158,27 @@ async function buildReportData(input) {
 
   let totalIncome = 0
   const incomeItems = incomeData.map(function(item) {
-    totalIncome += Number(item.amount) || 0
+    let amount = Number(item.amount) || 0
+    const settlementMode = item.settlementMode || ''
+    const deductedAmount = Number(item.deductedAmount) || 0
+    // 储值结算记录需减去抵扣部分，避免重复计算收入
+    if (settlementMode.indexOf('stored_') === 0 && deductedAmount > 0) {
+      amount -= deductedAmount
+    }
+    totalIncome += amount
+    let remark = item.remark || ''
+    // 在备注中标注储值抵扣信息
+    if (settlementMode.indexOf('stored_') === 0 && deductedAmount > 0) {
+      const modeText = settlementMode === 'stored_full' ? '储值全额' : settlementMode === 'stored_partial' ? '储值部分' : settlementMode
+      remark = remark ? remark + ('；[' + modeText + '抵扣¥' + deductedAmount.toFixed(2) + ']') : '[' + modeText + '抵扣¥' + deductedAmount.toFixed(2) + ']'
+    }
     return {
       date: formatDate(item.date),
       type: INCOME_TYPE_TEXT[item.type] || item.type || '其他',
       source: item.source || '',
-      amount: (Number(item.amount) || 0).toFixed(2),
+      amount: amount.toFixed(2),
       collectedByName: item.collectedByName || '',
-      remark: item.remark || ''
+      remark: remark
     }
   })
 
@@ -225,7 +240,9 @@ async function buildReportData(input) {
   let totalSalary = 0
   const salaryItems = staffData.map(function(item) {
     if (item.hireDate && item.hireDate > endDate) return null
-    const proratedMonths = calcProratedMonths(item.hireDate, startDate, endDate, periodMonths)
+    if (item.status === 'resigned' && !item.resignDate) return null
+    const effectiveEnd = item.status === 'resigned' ? item.resignDate : null
+    const proratedMonths = calcProratedMonths(item.hireDate, effectiveEnd, startDate, endDate, periodMonths)
     const salary = Math.ceil((Number(item.salary) || 0) * proratedMonths)
     totalSalary += salary
     return {
@@ -233,7 +250,8 @@ async function buildReportData(input) {
       role: ROLE_TEXT[item.role] || item.role || '',
       monthlySalary: (Number(item.salary) || 0).toFixed(2),
       periodSalary: salary.toFixed(2),
-      hireDate: item.hireDate || ''
+      hireDate: item.hireDate || '',
+      resignDate: item.resignDate || ''
     }
   }).filter(Boolean)
 
@@ -340,9 +358,9 @@ exports.main = async (event, context) => {
     if (salaryItems.length > 0) {
       rows.push([])
       rows.push(['--- 工资明细 ---'])
-      rows.push(['员工姓名', '职位', '月薪', '期间工资', '入职日期'])
+      rows.push(['员工姓名', '职位', '月薪', '期间工资', '入职日期', '离职日期'])
       salaryItems.forEach(function(si) {
-        rows.push([si.name, si.role, si.monthlySalary, si.periodSalary, si.hireDate])
+        rows.push([si.name, si.role, si.monthlySalary, si.periodSalary, si.hireDate, si.resignDate || ''])
       })
       rows.push(['小计', '', '', reportData.totalSalary])
     }

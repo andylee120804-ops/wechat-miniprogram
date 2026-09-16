@@ -3,6 +3,18 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// 统一收入净额计算：储值结算记录需扣除 deductedAmount 避免重复计算
+function computeNetAmount(item) {
+  if (!item) return 0
+  var amount = Number(item.amount) || 0
+  var settlementMode = item.settlementMode || ''
+  var deductedAmount = Number(item.deductedAmount) || 0
+  if (settlementMode.indexOf('stored_') === 0 && deductedAmount > 0) {
+    amount -= deductedAmount
+  }
+  return amount
+}
+
 exports.main = async (event, context) => {
   const { action } = event
 
@@ -55,12 +67,12 @@ async function monthlySummary(event) {
     fetchAll('expense', { month })
   ])
 
-  const totalIncome = incomes.reduce((s, i) => s + (i.amount || 0), 0)
+  const totalIncome = incomes.reduce((s, i) => s + computeNetAmount(i), 0)
   const totalPurchase = purchases.reduce((s, p) => s + (p.amount || 0), 0)
   const totalExpense = expenses.reduce((s, e) => s + (e.amount || 0), 0)
 
   const incomeByType = {}
-  incomes.forEach(i => { incomeByType[i.type] = (incomeByType[i.type] || 0) + (i.amount || 0) })
+  incomes.forEach(i => { incomeByType[i.type] = (incomeByType[i.type] || 0) + computeNetAmount(i) })
 
   const purchaseByCategory = {}
   purchases.forEach(p => { purchaseByCategory[p.category] = (purchaseByCategory[p.category] || 0) + (p.amount || 0) })
@@ -97,7 +109,7 @@ async function periodReport(event) {
     fetchAll('expense', { createdAt: _.gte(new Date(startDate + 'T00:00:00')).and(_.lte(new Date(endDate + 'T23:59:59'))) })
   ])
 
-  const totalIncome = incomes.reduce((s, i) => s + (i.amount || 0), 0)
+  const totalIncome = incomes.reduce((s, i) => s + computeNetAmount(i), 0)
   const totalPurchase = purchases.reduce((s, p) => s + (p.amount || 0), 0)
   const totalExpense = expenses.reduce((s, e) => s + (e.amount || 0), 0)
 
@@ -124,7 +136,7 @@ async function customerReport(event) {
   const reservations = await fetchAll('reservation', { customerName })
   const incomes = await fetchAll('income', { source: customerName })
 
-  const totalSpending = incomes.reduce((s, i) => s + (i.amount || 0), 0)
+  const totalSpending = incomes.reduce((s, i) => s + computeNetAmount(i), 0)
 
   const roomCount = {}
   reservations.forEach(r => {

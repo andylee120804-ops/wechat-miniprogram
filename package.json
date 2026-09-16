@@ -32,6 +32,7 @@
     "release": "node ci/release.js"
   },
   "devDependencies": {
+    "@cloudbase/node-sdk": "^3.18.3",
     "@jest/globals": "^29.7.0",
     "jest": "^29.7.0",
     "miniprogram-automator": "^0.12.1",

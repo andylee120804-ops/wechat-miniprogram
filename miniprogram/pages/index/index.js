@@ -12,12 +12,14 @@ var db = require('../../utils/db')
 var _ff = require('../../utils/feature-flags')
 var AI_ENABLED = _ff.AI_ENABLED
 var reservationChange = require('../../utils/reservation-change')
+var incomeCalc = require('../../utils/incomeCalc')
 
 Page({
   data: {
     theme: {},
     statusBarHeight: 44,
     loading: true,
+    loadError: false,
     todayDate: '',
     announcements: [],
     currentAnnouncementIndex: 0,
@@ -44,7 +46,11 @@ Page({
     venueName: ''
   },
 
-  onShow() {
+  async onShow() {
+    // Ensure cloud SDK is initialized before any data operation
+    if (app._cloudReady) {
+      await app._cloudReady
+    }
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setActiveByPage('/pages/index/index')
     }
@@ -86,19 +92,24 @@ Page({
     this.checkAISupport()
   },
 
+  onRetryLoad() {
+    this.setData({ loadError: false })
+    this.loadData()
+  },
+
   async loadData() {
-    this.setData({ loading: true })
+    this.setData({ loading: true, loadError: false })
 
     if (this._loadTimeoutId) clearTimeout(this._loadTimeoutId)
 
-    // Timeout protection - fail fast if page doesn't respond
+    // Timeout protection — covers cloud init + data loading total time
     this._loadTimeoutId = setTimeout(() => {
       this._loadTimeoutId = null
       if (this.data.loading) {
         console.warn('首页加载超时，强制结束加载状态')
-        this.setData({ loading: false })
+        this.setData({ loading: false, loadError: true })
       }
-    }, 8000)
+    }, 15000)
 
     try {
       const dbInst = db.getDb()
@@ -169,7 +180,7 @@ Page({
       // 整数分运算避免浮点精度丢失
       var toCents = function(a) { var n = Number(a); return Math.round(n ? n * 100 : 0) }
       var fromCents = function(c) { return (c / 100).toFixed(2) }
-      var incomeCents = (todayIncomeRes.data || []).reduce(function(s, item) { return s + toCents(item.amount) }, 0)
+      var incomeCents = (todayIncomeRes.data || []).reduce(function(s, item) { return s + toCents(incomeCalc.computeNetAmount(item)) }, 0)
       var expenseCents = (todayExpenseRes.data || []).reduce(function(s, item) { return s + toCents(item.amount) }, 0)
       expenseCents += (todayPurchaseRes.data || []).filter(function(p) { return !p.status || p.status === 'reimbursed' }).reduce(function(s, item) { return s + toCents(item.amount) }, 0)
 
@@ -206,7 +217,7 @@ Page({
       this.showReservationChangeReminder()
     } catch (err) {
       console.error('加载首页数据失败:', err)
-      this.setData({ loading: false })
+      this.setData({ loading: false, loadError: true })
     } finally {
       if (this._loadTimeoutId) { clearTimeout(this._loadTimeoutId); this._loadTimeoutId = null }
     }

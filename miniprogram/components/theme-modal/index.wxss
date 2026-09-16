@@ -27,8 +27,10 @@
 .modal-container {
   position: relative;
   width: 85%;
+  max-width: 85%;
   max-height: 80vh;
   padding: 32rpx;
+  box-sizing: border-box;
   animation: modalIn 0.3s ease-out;
 }
 
@@ -38,8 +40,37 @@
   left: 0;
   right: 0;
   width: 100%;
-  max-height: 85vh;
+  max-width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 32rpx 32rpx 0;
+  box-sizing: border-box;
   animation: slideUp 0.3s ease-out;
+}
+
+.modal-container.bottom .modal-handle {
+  flex-shrink: 0;
+}
+
+.modal-container.bottom .modal-title {
+  flex-shrink: 0;
+}
+
+.modal-container.bottom .modal-body {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  padding-bottom: 16rpx;
+}
+
+.modal-container.bottom .modal-footer {
+  flex-shrink: 0;
+  margin-top: 20rpx;
+  margin-bottom: calc(40rpx + constant(safe-area-inset-bottom));
+  margin-bottom: calc(40rpx + env(safe-area-inset-bottom));
 }
 
 .modal-handle {

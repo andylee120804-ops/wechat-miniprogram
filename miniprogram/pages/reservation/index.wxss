@@ -127,9 +127,27 @@
   gap: 8rpx;
 }
 
+.customer-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  flex-wrap: wrap;
+}
+
 .customer-name {
   font-size: 30rpx;
   font-weight: 600;
+}
+
+.stored-value-marker {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 12rpx;
+  border: 1rpx solid;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 .card-meta {

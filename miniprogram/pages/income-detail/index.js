@@ -57,6 +57,7 @@ Page({
         formattedDeductedAmount: formatAmount(res.deductedAmount),
         formattedOriginalAmount: formatAmount(res.originalAmount),
         hasStoredPartialTrace: res.settlementMode === 'stored_partial' && res.deductedAmount !== undefined && res.deductedAmount !== null,
+        hasStoredFullTrace: res.settlementMode === 'stored_full' && res.deductedAmount !== undefined && res.deductedAmount !== null,
         hasOriginalAmountTrace,
         hasStoredRechargeTrace: res.settlementMode === 'stored_value_recharge'
       }
@@ -133,13 +134,19 @@ Page({
   async onConfirmDelete() {
     this.setData({ showDeleteModal: false })
     const income = this.data.income
+    if (!checkPermission('income', ACTIONS.DELETE)) {
+      wx.showToast({ title: '无权限', icon: 'none' })
+      return
+    }
+
     if (isStoredValueLinkedIncome(income)) {
       wx.showToast({ title: '储值关联收入不可直接删除', icon: 'none' })
       return
     }
+
     try {
       await db.deleteDoc(COLLECTIONS.INCOME, this.data.id)
-      if (income.reservationId && !isStoredValueLinkedIncome(income)) {
+      if (income.reservationId) {
         await db.updateDoc(COLLECTIONS.RESERVATION, income.reservationId, { hasIncome: false })
       }
       log('INCOME_DELETE', { type: income.type, amount: income.amount })

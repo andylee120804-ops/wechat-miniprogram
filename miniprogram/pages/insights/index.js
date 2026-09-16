@@ -4,6 +4,7 @@ const { handleCloudError } = require('../../utils/error-handler')
 const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
+const { sumNetIncome } = require('../../utils/incomeCalc')
 
 Page({
   data: {
@@ -61,7 +62,7 @@ Page({
         date: _.gte(monthRange.start).and(_.lte(monthRange.end))
       })
 
-      const totalMonthIncome = (monthIncome.data || []).reduce((s, i) => s + (i.amount || 0), 0)
+      const totalMonthIncome = sumNetIncome(monthIncome.data || [])
       const daysInMonth = now.getDate()
       const avgDaily = daysInMonth > 0 ? totalMonthIncome / daysInMonth : 0
 

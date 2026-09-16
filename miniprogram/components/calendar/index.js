@@ -167,7 +167,9 @@ Component({
 
     onDayTap: function(e) {
       const info = e.currentTarget.dataset.info;
-      if (!info || !info.isCurrentMonth) return;
+      if (!info) return;
+      // Allow tapping dates from adjacent months so users can quickly
+      // check reservations without first switching the calendar panel.
       this.triggerEvent('daytap', {
         date: info.dateStr,
         year: this.data.currentYear,

@@ -29,7 +29,8 @@ Page({
     statusBarHeight: 44,
     loading: true,
     staffList: [],
-    _loaded: false
+    _loaded: false,
+    showResigned: false
   },
 
   onLoad() {
@@ -53,8 +54,13 @@ Page({
   async loadData() {
     this.setData({ loading: true })
     try {
+      const dbInst = db.getDb()
+      const cmd = dbInst.command
+      const statusFilter = this.data.showResigned
+        ? { status: cmd.in(['active', 'resigned']) }
+        : { status: 'active' }
       const [staffRes, permRes] = await Promise.all([
-        db.queryAll(COLLECTIONS.STAFF, { status: 'active' }),
+        db.queryAll(COLLECTIONS.STAFF, statusFilter),
         db.queryAll(COLLECTIONS.PERMISSIONS, {})
       ])
 
@@ -65,14 +71,29 @@ Page({
         ...s,
         roleName: getRoleName(s.role),
         nameInitial: (s.name || '?').charAt(0),
+        isResigned: s.status === 'resigned',
+        isLoginRevoked: s.status === 'active' && !!s.loginRevoked,
         permissionModules: (s.role === 'admin' || s.role === 'boss') ? ['全部权限'] : getPermissionModules(permMap[s._id] || [])
       }))
+
+      staffList.sort(function (a, b) {
+        if (a.isResigned !== b.isResigned) return a.isResigned ? 1 : -1
+        const aTime = a.hireDate || ''
+        const bTime = b.hireDate || ''
+        return bTime.localeCompare(aTime)
+      })
 
       this.setData({ loading: false, staffList, _loaded: true })
     } catch (err) {
       handleCloudError(err, '加载员工列表')
       this.setData({ loading: false })
     }
+  },
+
+  onToggleResigned() {
+    this.setData({ showResigned: !this.data.showResigned }, () => {
+      this.loadData()
+    })
   },
 
   onAddStaff() {

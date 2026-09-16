@@ -5,7 +5,10 @@
  */
 
 
-const CLOUD_ENV = 'cloud1-d9gwvttcr864f8021'
+// ⚡ 切换云环境：测试用 TEST，上线改回 PROD — 只改这一行
+const ENV_TEST = 'development-d7gyfut1f9c6c0838'
+const ENV_PROD = 'cloud1-d9gwvttcr864f8021'
+const CLOUD_ENV = ENV_PROD // ← 改 ENV_TEST / ENV_PROD 即切换
 const PAGE_SIZE = 20
 
 // Standardized collection names — use these instead of hardcoded strings
@@ -30,7 +33,10 @@ const COLLECTIONS = {
 }
 
 /**
- * Get a cloud database instance
+ * Get a cloud database instance.
+ * IMPORTANT: Callers must ensure `app._cloudReady` has resolved
+ * (via `await app._cloudReady` in onShow/onLoad) before calling
+ * this function, otherwise cloud SDK may not be initialized yet.
  * @returns {Object} WeChat cloud database instance
  */
 function getDb() {

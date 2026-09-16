@@ -20,7 +20,8 @@ function loadFunction(options) {
   const db = {
     command: {
       gte: jest.fn((value) => ({ and: jest.fn(() => ({ op: 'range', value })) })),
-      lte: jest.fn((value) => ({ op: 'lte', value }))
+      lte: jest.fn((value) => ({ op: 'lte', value })),
+      in: jest.fn((values) => ({ op: 'in', values }))
     },
     collection: jest.fn((name) => {
       if (name === 'staff') return createChain({ data: staffData.length ? staffData : (collections.staff || []) })

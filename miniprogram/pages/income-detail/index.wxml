@@ -38,7 +38,7 @@
         </view>
         <view class="detail-row" wx:if="{{income.calcMode === 'dishPrice'}}">
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">计算方式</text>
-          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx;">菜价+服务费</text>
+          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx;">{{income.dishPrice > 0 ? '菜价+服务费' : '服务费'}}</text>
         </view>
         <view class="detail-row" wx:if="{{income.calcMode === 'dishPrice' && income.dishPrice > 0}}">
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">预定菜价</text>
@@ -55,6 +55,13 @@
         <view class="detail-row" wx:if="{{income.hasStoredPartialTrace}}">
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">储值抵扣</text>
           <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx;">¥{{income.formattedDeductedAmount}}</text>
+        </view>
+        <view class="detail-row" wx:if="{{income.hasStoredFullTrace}}">
+          <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">储值抵扣</text>
+          <view style="display: flex; align-items: center; gap: 8rpx;">
+            <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 28rpx;">全额抵扣</text>
+            <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">(¥{{income.formattedDeductedAmount}})</text>
+          </view>
         </view>
         <view class="detail-row" wx:if="{{income.hasOriginalAmountTrace}}">
           <text class="detail-label" style="color: {{theme.textMuted || '#5C5C72'}};">原消费金额</text>
@@ -132,7 +139,15 @@
     <!-- Delete Modal -->
     <theme-modal theme="{{theme}}" visible="{{showDeleteModal}}" title="删除收入" confirmText="确认删除" cancelText="返回" bind:confirm="onConfirmDelete" bind:close="onCloseDelete">
       <view style="padding: 16rpx 0;">
-        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">确定要删除此收入记录吗？删除后无法恢复。</text>
+        <block wx:if="{{income.hasStoredRechargeTrace}}">
+          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 26rpx; display: block; margin-bottom: 8rpx;">⚠️ 此为储值充值记录</text>
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">删除后将从储值余额中扣回 ¥{{income.formattedAmount}}，并保留撤销流水日志。</text>
+        </block>
+        <block wx:elif="{{income.hasStoredFullTrace || income.hasStoredPartialTrace}}">
+          <text style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 26rpx; display: block; margin-bottom: 8rpx;">⚠️ 此为储值结算记录</text>
+          <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 26rpx;">删除后将退回储值余额 ¥{{income.formattedDeductedAmount}}，归档原消费流水，并允许重新结算预约。</text>
+        </block>
+        <text wx:else style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">确定要删除此收入记录吗？删除后无法恢复。</text>
       </view>
     </theme-modal>
   </block>

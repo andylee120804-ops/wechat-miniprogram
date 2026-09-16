@@ -7,6 +7,15 @@ const _ = db.command
 const ADMIN_ONLY_MODULES = ['staff', 'venueSettings', 'minAmount']
 const MAX_CHANGE_ACK_IDS = 20
 const CHANGE_ID_PATTERN = /^[a-zA-Z0-9_-]{8,128}$/
+const DEFAULT_VENUE_ID = 'legacy-default'
+
+function normalizeVenueId(venueId) {
+  return venueId || DEFAULT_VENUE_ID
+}
+
+function sameVenue(a, b) {
+  return normalizeVenueId(a) === normalizeVenueId(b)
+}
 
 async function findStaffByCaller(OPENID, callerWechatId) {
   if (!callerWechatId) return null
@@ -54,6 +63,10 @@ exports.main = async (event, context) => {
 
   try {
     switch (action) {
+      case 'createVenue':
+        return { success: false, message: '创建场地需要可信身份验证后再启用，当前已安全禁用' }
+      case 'getVenueInfo':
+        return await getVenueInfo(event)
       case 'createAnnouncement':
         return await createAnnouncement(event)
       case 'getAnnouncements':
@@ -90,6 +103,8 @@ exports.main = async (event, context) => {
         return await deleteReservationWithChange(event)
       case 'updateReservationAmountWithChange':
         return await updateReservationAmountWithChange(event)
+      case 'cleanupReservationChanges':
+        return await cleanupReservationChanges(event)
       default:
         return { success: false, message: '未知操作: ' + action }
     }
@@ -97,6 +112,28 @@ exports.main = async (event, context) => {
     console.error('sendMessage错误:', err)
     return { success: false, message: '操作失败: ' + err.message }
   }
+}
+
+async function getVenueInfo(event) {
+  const venueId = normalizeVenueId(event.venueId)
+  if (venueId === DEFAULT_VENUE_ID) {
+    const settingsRes = await db.collection('settings').where({ key: 'venue_info' }).limit(1).get()
+    const data = settingsRes.data && settingsRes.data.length > 0 ? settingsRes.data[0] : {}
+    return {
+      success: true,
+      data: {
+        _id: DEFAULT_VENUE_ID,
+        name: data.venueName || '我们的小食堂',
+        address: data.venueAddress || '',
+        logo: data.logo || '',
+        inviteCode: '',
+        status: 'active'
+      }
+    }
+  }
+  const res = await db.collection('venues').doc(venueId).get()
+  if (!res.data) return { success: false, message: '场地不存在' }
+  return { success: true, data: res.data }
 }
 
 async function createAnnouncement(event) {
@@ -116,6 +153,7 @@ async function createAnnouncement(event) {
 
   const result = await db.collection('announcement').add({
     data: {
+      venueId: normalizeVenueId(caller.venueId),
       title,
       content,
       priority: priority || 'normal',
@@ -141,15 +179,17 @@ async function getAnnouncements(event) {
     return { success: false, message: '无权限查看公告' }
   }
 
+  const venueId = normalizeVenueId(caller.venueId)
+
   const result = await db.collection('announcement')
-    .where({ active: true })
+    .where({ active: true, venueId })
     .orderBy('createdAt', 'desc')
     .skip(skip)
     .limit(limit)
     .get()
 
   const total = (await db.collection('announcement')
-    .where({ active: true })
+    .where({ active: true, venueId })
     .count()).total
 
   return { success: true, data: result.data, total }
@@ -164,13 +204,16 @@ async function markRead(event) {
   }
 
   const caller = await findStaffByOpenid(OPENID)
-  if (!caller) {
+  if (!caller || !(await hasPermission(caller, 'announcement', 'view'))) {
     return { success: false, message: '无权限操作' }
   }
 
   const annRes = await db.collection('announcement').doc(announcementId).get()
   if (!annRes.data) {
     return { success: false, message: '公告不存在' }
+  }
+  if (!sameVenue(annRes.data.venueId, caller.venueId)) {
+    return { success: false, message: '无权限操作其他场地公告' }
   }
   if ((annRes.data.readBy || []).includes(caller._id)) {
     return { success: true }
@@ -183,6 +226,37 @@ async function markRead(event) {
   })
 
   return { success: true }
+}
+
+async function cleanupReservationChanges(event) {
+  var { OPENID } = cloud.getWXContext()
+  var caller = await findStaffByOpenid(OPENID)
+  if (!caller || !(await hasPermission(caller, 'admin', 'write'))) {
+    return { success: false, message: '仅管理员可执行清理操作' }
+  }
+
+  var today = getToday()
+  var tomorrow = getTomorrow(today)
+
+  // 查找所有 reservationDate 不在今日/明日范围内的 important 记录
+  var result = await db.collection('reservation_change_log')
+    .where(_.or([
+      { important: true, reservationDate: _.lt(today) },
+      { important: true, reservationDate: _.gt(tomorrow) }
+    ]))
+    .get()
+
+  var records = result.data || []
+  if (records.length === 0) {
+    return { success: true, message: '没有需要清理的记录', cleaned: 0 }
+  }
+
+  // 批量删除这些记录
+  for (var i = 0; i < records.length; i++) {
+    await db.collection('reservation_change_log').doc(records[i]._id).remove()
+  }
+
+  return { success: true, message: '清理完成', cleaned: records.length }
 }
 
 async function deleteAnnouncement(event) {
@@ -200,6 +274,9 @@ async function deleteAnnouncement(event) {
   const annRes = await db.collection('announcement').doc(announcementId).get()
   if (!annRes.data) {
     return { success: false, message: '公告不存在' }
+  }
+  if (!sameVenue(annRes.data.venueId, caller.venueId)) {
+    return { success: false, message: '无权限删除其他场地公告' }
   }
   var isCreator = annRes.data.createdBy === caller._id
   if (!isCreator && !(await hasPermission(caller, 'announcement', 'delete'))) {
@@ -233,6 +310,9 @@ async function updateAnnouncement(event) {
   if (!annRes.data) {
     return { success: false, message: '公告不存在' }
   }
+  if (!sameVenue(annRes.data.venueId, caller.venueId)) {
+    return { success: false, message: '无权限修改其他场地公告' }
+  }
   var isCreator = annRes.data.createdBy === caller._id
   if (!isCreator && !(await hasPermission(caller, 'announcement', 'edit'))) {
     return { success: false, message: '只有公告发布者或有权限者才能修改' }
@@ -263,37 +343,26 @@ async function resolveCreator(event) {
     return { success: false, message: '无权限查看公告' }
   }
 
-  // First try to find by createdBy as staff _id or wechatId
-  if (createdBy) {
-    var staffRes = await db.collection('staff').where({ _id: createdBy }).get()
-    if (staffRes.data && staffRes.data.length > 0) {
-      return { success: true, name: staffRes.data[0].name || '未知' }
-    }
-    staffRes = await db.collection('staff').where({ wechatId: createdBy }).get()
-    if (staffRes.data && staffRes.data.length > 0) {
-      return { success: true, name: staffRes.data[0].name || '未知' }
-    }
-  }
-
-  // Fallback: read announcement's _openid and createdByName
   if (announcementId) {
     try {
       var annRes = await db.collection('announcement').doc(announcementId).get()
-      if (annRes.data) {
-        // If the announcement has a valid createdByName that's not an _id, use it
-        if (annRes.data.createdByName && !annRes.data.createdByName.match(/^[0-9a-f]{10,}$/)) {
-          return { success: true, name: annRes.data.createdByName }
-        }
-        // Try matching by _openid, but need wechatId to disambiguate
-        if (annRes.data._openid) {
-          staffRes = await db.collection('staff').where({ _openid: annRes.data._openid }).get()
-          if (staffRes.data && staffRes.data.length === 1) {
-            return { success: true, name: staffRes.data[0].name || '未知' }
-          }
-          // Multiple staff share same _openid, cannot determine which one
-        }
+      if (!annRes.data) return { success: false, message: '公告不存在' }
+      if (!sameVenue(annRes.data.venueId, caller.venueId)) {
+        return { success: false, message: '无权限查看其他场地公告' }
+      }
+      if (annRes.data.createdByName && !annRes.data.createdByName.match(/^[0-9a-f]{10,}$/)) {
+        return { success: true, name: annRes.data.createdByName }
       }
     } catch (e) { /* ignore */ }
+  }
+
+  if (createdBy) {
+    var staffRes = await db.collection('staff')
+      .where({ _id: createdBy, venueId: normalizeVenueId(caller.venueId) })
+      .get()
+    if (staffRes.data && staffRes.data.length > 0) {
+      return { success: true, name: staffRes.data[0].name || '未知' }
+    }
   }
 
   return { success: true, name: '未知' }
@@ -532,6 +601,11 @@ function buildReservationChange(type, oldReservation, newReservation, caller) {
   var customerName = getCustomerName(target)
   var roomName = getRoomName(target)
 
+  // 只记录今日/明日预约的变动，更远期预约的变动不记录，避免后续日期错误展示提醒
+  var today = getToday()
+  var tomorrow = getTomorrow(today)
+  if (reservationDate < today || reservationDate > tomorrow) return null
+
   if (type === 'created') {
     return {
       reservationId: target._id || '',
@@ -608,9 +682,10 @@ async function logReservationCreated(event) {
   if (!reservationId || !docData) return { success: false, message: '缺少预约数据' }
 
   var newReservation = Object.assign({}, docData, { _id: reservationId })
-  await db.collection('reservation_change_log').add({
-    data: buildReservationChange('created', null, newReservation, caller)
-  })
+  var change = buildReservationChange('created', null, newReservation, caller)
+  if (change) {
+    await db.collection('reservation_change_log').add({ data: change })
+  }
   return { success: true }
 }
 
@@ -630,9 +705,10 @@ async function cancelReservationWithChange(event) {
     await transaction.collection('reservation').doc(event.reservationId).update({
       data: { status: 'cancelled', updatedAt: db.serverDate() }
     })
-    await transaction.collection('reservation_change_log').add({
-      data: buildReservationChange('cancelled', before, after, caller)
-    })
+    var change = buildReservationChange('cancelled', before, after, caller)
+    if (change) {
+      await transaction.collection('reservation_change_log').add({ data: change })
+    }
     return { before: before }
   })
   refreshCustomerNameTopLater()
@@ -670,9 +746,10 @@ async function deleteReservationWithChange(event) {
       await transaction.collection('income').doc(incomeIds[j]).remove()
     }
     await transaction.collection('reservation').doc(event.reservationId).remove()
-    await transaction.collection('reservation_change_log').add({
-      data: buildReservationChange('cancelled', before, after, caller)
-    })
+    var change = buildReservationChange('cancelled', before, after, caller)
+    if (change) {
+      await transaction.collection('reservation_change_log').add({ data: change })
+    }
     return { before: before }
   })
   refreshCustomerNameTopLater()
@@ -730,9 +807,10 @@ async function updateReservationAmountWithChange(event) {
   await db.runTransaction(async function(transaction) {
     await transaction.collection('reservation').doc(event.reservationId).update({ data: updateData })
     if (shouldLogAmountChange) {
-      await transaction.collection('reservation_change_log').add({
-        data: buildReservationChange('amount_changed', before, after, caller)
-      })
+      var change = buildReservationChange('amount_changed', before, after, caller)
+      if (change) {
+        await transaction.collection('reservation_change_log').add({ data: change })
+      }
     }
   })
   return { success: true, before: before }
@@ -774,7 +852,9 @@ async function createReservationChange(event) {
   }
 
   var change = buildReservationChange(type, oldReservation, newReservation, caller)
-  await db.collection('reservation_change_log').add({ data: change })
+  if (change) {
+    await db.collection('reservation_change_log').add({ data: change })
+  }
   return { success: true }
 }
 
@@ -837,11 +917,18 @@ async function getApprovalSettings(event) {
   var result = await db.collection('settings').where({ key: 'approval_rules' }).get()
   var data = result.data && result.data.length > 0 ? result.data[0] : {}
 
+  // autoSyncMode 兼容转换：优先使用 autoSyncMode；否则从老字段 autoPurchaseEnabled 推导
+  var autoSyncMode = data.autoSyncMode
+  if (!autoSyncMode) {
+    autoSyncMode = data.autoPurchaseEnabled === false ? 'none' : 'purchase_and_income'
+  }
+
   return {
     success: true,
     data: {
       enabled: data.enabled !== undefined ? data.enabled : true,
       autoPurchaseEnabled: data.autoPurchaseEnabled !== undefined ? data.autoPurchaseEnabled : true,
+      autoSyncMode: autoSyncMode,
       categories: data.categories || {},
       amountThreshold: data.amountThreshold || 0,
       defaultApproverId: data.defaultApproverId || '',
@@ -866,9 +953,16 @@ async function updateApprovalSettings(event) {
     return { success: false, message: '无权限修改审批设置' }
   }
 
+  // 校验 autoSyncMode 取值范围
+  var VALID_MODES = ['none', 'income_only', 'purchase_and_income', 'purchase_only']
+  var autoSyncMode = VALID_MODES.indexOf(approvalRules.autoSyncMode) >= 0
+    ? approvalRules.autoSyncMode
+    : 'purchase_and_income'
+
   var updateData = {
     enabled: !!approvalRules.enabled,
     autoPurchaseEnabled: approvalRules.autoPurchaseEnabled !== undefined ? !!approvalRules.autoPurchaseEnabled : true,
+    autoSyncMode: autoSyncMode,
     categories: approvalRules.categories || {},
     amountThreshold: Number(approvalRules.amountThreshold) || 0,
     defaultApproverId: approvalRules.defaultApproverId || '',

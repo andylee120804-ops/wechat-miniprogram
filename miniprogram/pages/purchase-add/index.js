@@ -214,14 +214,37 @@ Page({
               reservationId: data.sourceReservationId
             })
           } else {
-            // 原关联预约不再可选（已被其他采购占用）
+            // 原关联预约不在可选列表中 —— 保留 sourceReservationId 以维持关联
+            // 区分两种情况：被其他采购占用 vs 不在日期范围/状态不匹配
             that.setData({
               selectedReservation: null,
-              pickerIndex: -1,
-              reservationId: '',
-              sourceReservationId: ''
+              pickerIndex: -1
+              // 不清除 reservationId 和 sourceReservationId，保留原关联
             })
-            wx.showToast({ title: '原关联预约已被占用，请重新选择', icon: 'none', duration: 2500 })
+            // 尝试直接加载原预约信息用于显示
+            db.getDoc(COLLECTIONS.RESERVATION, data.sourceReservationId).then(function(resvData) {
+              if (resvData) {
+                var reason = ''
+                var todayStr = getChinaToday()
+                if (resvData.status !== 'confirmed') {
+                  reason = '预约状态已变更（当前: ' + resvData.status + '）'
+                } else {
+                  var resvDateStr = formatDate(resvData.date)
+                  if (resvDateStr < todayStr) {
+                    reason = '预约日期已过期'
+                  } else {
+                    reason = '预约不在当前可选范围内'
+                  }
+                }
+                wx.showToast({ title: '原关联预约不可选: ' + reason, icon: 'none', duration: 3000 })
+              } else {
+                wx.showToast({ title: '原关联预约不存在，请重新选择', icon: 'none', duration: 2500 })
+                // 预约已被删除，才清除关联
+                that.setData({ sourceReservationId: '', reservationId: '' })
+              }
+            }).catch(function() {
+              wx.showToast({ title: '原关联预约不可选，关联已保留', icon: 'none', duration: 2500 })
+            })
           }
         }).catch(function() {
           wx.showToast({ title: '加载预约列表失败', icon: 'none' })
@@ -387,7 +410,7 @@ Page({
       errors.item = '请输入采购项目名称'
     }
 
-    // 宴会菜价必须关联预约
+    // 宴会菜价必须关联预约（编辑模式下保留原关联即可，不强制必须选中预约选项）
     if (this.data.category === 'banquet' && !this.data.sourceReservationId) {
       errors.reservation = '宴会菜价必须关联预约'
     }
@@ -414,6 +437,13 @@ Page({
       if (!reservationData && data.sourceReservationId) {
         reservationData = await db.getDoc(COLLECTIONS.RESERVATION, data.sourceReservationId)
       }
+      console.log('[purchase-add] syncIncomeFromPurchase called:', {
+        purchaseId: purchaseId,
+        purchaseAmount: data.amount,
+        reservationId: data.sourceReservationId,
+        hasReservationData: !!reservationData,
+        reservationDate: reservationData && reservationData.date
+      })
       await syncIncomeFromPurchase({
         purchaseId: purchaseId,
         purchaseAmount: data.amount,
@@ -422,8 +452,9 @@ Page({
         settings: settings,
         userInfo: userInfo
       })
+      console.log('[purchase-add] syncIncomeFromPurchase completed successfully')
     } catch (e) {
-      console.warn('[purchase-add] 从采购生成收入失败:', e)
+      console.warn('[purchase-add] 从采购生成收入失败:', e && e.message, e)
     }
   },
 

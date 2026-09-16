@@ -10,6 +10,35 @@
     </view>
   </view>
   <view style="padding: 32rpx; padding-top: {{statusBarHeight + 44}}px;">
+    <!-- 离职提示 -->
+    <view wx:if="{{isEdit && staffStatus === 'resigned'}}" class="status-banner status-banner-danger">
+      <view class="status-banner-dot status-banner-dot-danger"></view>
+      <text class="status-banner-text status-banner-text-danger">该员工已于 {{resignDate}} 离职，无法登录，工资按在职天数计入统计</text>
+    </view>
+    <!-- 禁登提示 -->
+    <view wx:if="{{isEdit && isLoginRevoked}}" class="status-banner status-banner-warning">
+      <view class="status-banner-dot status-banner-dot-warning"></view>
+      <text class="status-banner-text status-banner-text-warning">该员工已退出登录，当前无法登录系统</text>
+      <view class="status-banner-action status-banner-action-warning" bindtap="onReEnableLogin">重新启用</view>
+    </view>
+    <!-- 微信绑定状态卡片 -->
+    <view wx:if="{{isEdit && isBoundOpenid && staffStatus !== 'resigned'}}" class="wechat-bind-card">
+      <view class="wechat-bind-header">
+        <view class="wechat-bind-icon-wrap">
+          <text class="wechat-bind-icon">✓</text>
+        </view>
+        <view class="wechat-bind-info">
+          <text class="wechat-bind-title">微信已绑定</text>
+          <text class="wechat-bind-desc">该员工可通过微信登录系统</text>
+        </view>
+      </view>
+      <view class="wechat-bind-footer">
+        <text class="wechat-bind-hint">更换手机登录需先解绑当前微信</text>
+        <view class="wechat-unbind-btn" bindtap="onUnbindWechat">
+          <text class="wechat-unbind-btn-text">解绑</text>
+        </view>
+      </view>
+    </view>
     <!-- Basic Info -->
     <theme-card theme="{{theme}}" padding="32rpx">
       <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; font-weight: 500; display: block; margin-bottom: 20rpx;">基本信息</text>
@@ -60,15 +89,32 @@
 
   <!-- Bottom Bar -->
   <view class="bottom-bar safe-bottom">
-    <view class="bottom-bar-inner {{isEdit ? 'two-btns' : 'single-btn'}}">
-      <view wx:if="{{isEdit}}" class="bar-btn bar-btn-danger" bindtap="onDelete">删除员工</view>
+    <view class="bottom-bar-inner {{isEdit && staffStatus !== 'resigned' && !isLoginRevoked ? 'four-btns' : (isEdit && staffStatus !== 'resigned' ? 'three-btns' : (isEdit ? 'two-btns' : 'single-btn'))}}">
+      <view wx:if="{{isEdit}}" class="bar-btn bar-btn-danger" bindtap="onDelete">删除</view>
+      <view wx:if="{{isEdit && staffStatus !== 'resigned' && !isLoginRevoked}}" class="bar-btn bar-btn-outline" bindtap="onResign">离职</view>
+      <view wx:if="{{isEdit && staffStatus !== 'resigned' && !isLoginRevoked}}" class="bar-btn bar-btn-outline" bindtap="onRevokeLogin" style="color: #FBBF24; border-color: rgba(251, 191, 36, 0.4);">禁登</view>
+      <view wx:if="{{isEdit && isLoginRevoked}}" class="bar-btn bar-btn-outline" bindtap="onReEnableLogin" style="color: #34D399; border-color: rgba(52, 211, 153, 0.4);">启用</view>
       <view class="bar-btn bar-btn-primary bar-btn-primary-wide" bindtap="onSubmit">{{isEdit ? '保存修改' : '添加员工'}}</view>
     </view>
   </view>
 
   <theme-modal theme="{{theme}}" visible="{{showDeleteModal}}" title="删除员工" confirmText="确认删除" cancelText="返回" bind:confirm="onConfirmDelete" bind:close="onCloseDelete">
     <view style="padding: 16rpx 0;">
-      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">确定要删除 {{name}} 吗？删除后员工将无法登录。</text>
+      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx;">确定要删除 {{name}} 吗？删除后员工将无法登录，且工资不计入统计（适用于测试/误建账号）。</text>
+    </view>
+  </theme-modal>
+
+  <theme-modal theme="{{theme}}" visible="{{showResignModal}}" title="员工离职" confirmText="确认离职" cancelText="返回" bind:confirm="onConfirmResign" bind:close="onCloseResign">
+    <view style="padding: 16rpx 0;">
+      <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 28rpx; display: block; margin-bottom: 20rpx;">离职后 {{name}} 将无法登录，但离职前的工资仍按实际在职天数计入报表统计。</text>
+      <view style="background: {{theme.elevated || '#252540'}}; border-radius: 16rpx; padding: 20rpx;">
+        <text style="color: {{theme.textSecondary || '#9A9AB0'}}; font-size: 24rpx; display: block; margin-bottom: 12rpx;">离职日期</text>
+        <picker mode="date" value="{{resignDate}}" bindchange="onResignDateChange">
+          <view style="color: {{resignDate ? (theme.textPrimary || '#F0F0F5') : (theme.textMuted || '#5C5C72')}}; font-size: 28rpx;">
+            {{resignDate || '请选择离职日期'}}
+          </view>
+        </picker>
+      </view>
     </view>
   </theme-modal>
 </view>

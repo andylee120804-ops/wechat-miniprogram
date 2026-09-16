@@ -35,7 +35,10 @@
           {{item.nameInitial}}
         </view>
         <view class="customer-info" style="flex: 1;">
-          <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 32rpx; font-weight: 600; display: block;">{{item.name}}</text>
+          <view class="customer-name-row">
+            <text style="color: {{theme.textPrimary || '#F0F0F5'}}; font-size: 32rpx; font-weight: 600;">{{item.name}}</text>
+            <text wx:if="{{item.storedValueLabel}}" class="stored-value-tag" style="background: {{theme.accentBg || 'rgba(201,169,110,0.15)'}}; color: {{theme.accentColor || '#C9A96E'}}; border-color: {{theme.accentColor || '#C9A96E'}};">{{item.storedValueLabel}}</text>
+          </view>
           <view style="display: flex; align-items: center; gap: 16rpx; margin-top: 8rpx;">
             <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.preferredRoom || '未知房间'}}</text>
           </view>

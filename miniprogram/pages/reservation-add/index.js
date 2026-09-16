@@ -10,7 +10,7 @@ const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 const reservationConfig = require('../../utils/reservationConfig')
 const { createSettingsCache } = require('./helpers/settings-cache')
-const { syncBanquetPurchase, deleteBanquetPurchase } = require('./helpers/sync')
+const { syncReservationRecords, deleteBanquetPurchase } = require('./helpers/sync')
 const { checkReservationConflict } = require('./helpers/conflict-check')
 const { validateReservationForm } = require('./helpers/validation')
 
@@ -476,14 +476,25 @@ Page({
   },
 
   async isAutoPurchaseEnabled() {
+    // 兼容旧调用方：返回是否启用任意自动同步（非 none 模式）
     try {
-      const settings = await this._settingsCache.get()
-      const rules = settings.approval_rules
-      if (!rules) return true
-      return rules.autoPurchaseEnabled !== false
+      const mode = await this.getAutoSyncMode()
+      return mode !== 'none'
     } catch (err) {
       console.warn('[isAutoPurchaseEnabled] 检查失败:', err)
       return true
+    }
+  },
+
+  async getAutoSyncMode() {
+    try {
+      const settings = await this._settingsCache.get()
+      const rules = settings.approval_rules || {}
+      if (rules.autoSyncMode) return rules.autoSyncMode
+      return rules.autoPurchaseEnabled === false ? 'none' : 'purchase_and_income'
+    } catch (err) {
+      console.warn('[getAutoSyncMode] 检查失败:', err)
+      return 'purchase_and_income'
     }
   },
 
@@ -670,10 +681,9 @@ Page({
 
     if (isToday && await this.shouldSync(dateStr)) {
       const settings = await this._settingsCache.get()
-      const autoPurchaseEnabled = await this.isAutoPurchaseEnabled()
-      if (autoPurchaseEnabled) {
-        // syncBanquetPurchase now also generates income from the purchase + service charge
-        await syncBanquetPurchase({
+      const mode = await this.getAutoSyncMode()
+      if (mode !== 'none') {
+        await syncReservationRecords({
           docData: docData, reservationId: result._id, isCreate: true,
           roomConfig: this.data.currentRoomConfig, settings: settings, userInfo: userInfo
         })
@@ -717,10 +727,9 @@ Page({
         const isTodayOrPast = dateStr <= getChinaToday()
         if (isTodayOrPast) {
           const settings = await this._settingsCache.get()
-          const autoPurchaseEnabled = await this.isAutoPurchaseEnabled()
-          if (autoPurchaseEnabled) {
-            // syncBanquetPurchase now also generates income from the purchase + service charge
-            await syncBanquetPurchase({
+          const mode = await this.getAutoSyncMode()
+          if (mode !== 'none') {
+            await syncReservationRecords({
               docData: docData, reservationId: this.data.id, isCreate: false,
               roomConfig: this.data.currentRoomConfig, settings: settings, userInfo: userInfo
             })

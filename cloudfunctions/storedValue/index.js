@@ -16,6 +16,20 @@ const COLLECTIONS = {
 const MAX_CUSTOMER_BATCH_SIZE = 50
 const RECENT_TRANSACTION_LIMIT = 20
 const CHINA_TIME_OFFSET_MS = 8 * 60 * 60 * 1000
+const DEFAULT_VENUE_ID = 'legacy-default'
+
+function normalizeVenueId(venueId) {
+  return venueId || DEFAULT_VENUE_ID
+}
+
+// Backward-compatible venue match: legacy docs (no venueId) belong to the
+// original venue and are visible to any caller; once docs are tagged, they
+// are scoped to their venue. The cloud function is the trust boundary, so
+// filtering in memory before returning to the client is sufficient.
+function isItemInVenue(item, venueId) {
+  if (!item) return false
+  return !item.venueId || item.venueId === venueId
+}
 
 function loadCloud() {
   try {
@@ -217,6 +231,8 @@ async function authorize(requiredModule, requiredAction) {
     throw new Error('无权限')
   }
 
+  staff.venueId = normalizeVenueId(staff.venueId)
+
   if (staff.role === 'admin' || staff.role === 'boss') {
     return staff
   }
@@ -237,7 +253,7 @@ async function authorize(requiredModule, requiredAction) {
 }
 
 async function queryAccountByCustomer(event = {}) {
-  await authorize('customer', 'view')
+  const staff = await authorize('income', 'add')
 
   const customerKey = getCustomerKey(event)
   if (!customerKey) {
@@ -252,6 +268,10 @@ async function queryAccountByCustomer(event = {}) {
   if (!match.account) {
     return ok({ account: null, transactions: [] })
   }
+  // 场地隔离：忽略明确属于其他场地的账户（legacy 无 venueId 账户仍可访问）
+  if (match.account.venueId && match.account.venueId !== staff.venueId) {
+    return ok({ account: null, transactions: [] })
+  }
 
   const transactions = await findRecentTransactions(db, match.account._id)
   return ok({
@@ -261,7 +281,7 @@ async function queryAccountByCustomer(event = {}) {
 }
 
 async function queryAccountsByCustomers(event = {}) {
-  await authorize('income', 'add')
+  const staff = await authorize('income', 'add')
 
   const normalized = normalizeCustomerInputs(event.customers)
   if (normalized.isTooMany) {
@@ -284,11 +304,124 @@ async function queryAccountsByCustomers(event = {}) {
     if (!match || !match.account || seenIds[match.account._id]) {
       return
     }
+    // 场地隔离：跳过明确属于其他场地的账户
+    if (match.account.venueId && match.account.venueId !== staff.venueId) {
+      return
+    }
     seenIds[match.account._id] = true
     accounts.push(minimizeAccount(match.account))
   })
 
   return ok(accounts)
+}
+
+function normalizeMarkerPermissionModule(permissionModule) {
+  const moduleName = String(permissionModule || '').trim()
+  return moduleName === 'customer' || moduleName === 'reservation' ? moduleName : ''
+}
+
+function buildRequestMatchKeys(normalizedCustomer = {}, key = '') {
+  const phone = String(normalizedCustomer.phone || '').trim()
+  const customerName = String(normalizedCustomer.customerName || normalizedCustomer.name || '').trim()
+  const keys = []
+
+  if (key) keys.push(key)
+  if (phone) keys.push(phone)
+  if (customerName) {
+    keys.push(`name:${customerName}`)
+    keys.push(customerName)
+  }
+
+  return keys.filter((matchKey, index) => matchKey && keys.indexOf(matchKey) === index)
+}
+
+function minimizePositiveBalanceMarker(customer = {}) {
+  return {
+    matchKeys: buildRequestMatchKeys(customer.customer, customer.key),
+    hasPositiveBalance: true
+  }
+}
+
+async function queryPositiveBalanceMarkers(event = {}) {
+  const permissionModule = normalizeMarkerPermissionModule(event.permissionModule)
+  if (!permissionModule) {
+    throw new Error('无权限')
+  }
+
+  const staff = await authorize(permissionModule, 'view')
+
+  const normalized = normalizeCustomerInputs(event.customers)
+  if (normalized.isTooMany) {
+    return fail(`一次最多查询${MAX_CUSTOMER_BATCH_SIZE}个客户`)
+  }
+
+  if (normalized.customers.length === 0) {
+    return ok([])
+  }
+
+  const db = cloud.database()
+  // 一次性加载所有 active 账户到内存，避免对每个客户串行发起 1~3 次数据库查询。
+  // stored_value_account 通常账户数量级较小（百级以内），全量加载远比 N 次 where 查询快。
+  const allAccounts = await fetchAll(db, COLLECTIONS.STORED_VALUE_ACCOUNT, { status: 'active' })
+
+  // 建立内存索引：customerKey / phone / customerName
+  // 语义与 findAccountByCustomerInCollection 保持一致（key 优先 → phone → 同名唯一）
+  const accountByCustomerKey = {}
+  const accountByPhone = {}
+  const accountsByName = {}
+  allAccounts.forEach((account) => {
+    // 场地隔离：跳过明确属于其他场地的账户
+    if (account.venueId && account.venueId !== staff.venueId) {
+      return
+    }
+    const customerKey = String(account.customerKey || '').trim()
+    if (customerKey) accountByCustomerKey[customerKey] = account
+    const phone = String(account.phone || '').trim()
+    if (phone) accountByPhone[phone] = account
+    const name = String(account.customerName || account.name || '').trim()
+    if (name) {
+      if (!accountsByName[name]) accountsByName[name] = []
+      accountsByName[name].push(account)
+    }
+  })
+
+  const markers = []
+  const seenIds = {}
+  normalized.customers.forEach((entry) => {
+    const key = entry.key
+    const phone = String((entry.customer && entry.customer.phone) || '').trim()
+    const customerName = String(
+      (entry.customer && (entry.customer.customerName || entry.customer.name)) || ''
+    ).trim()
+
+    let account = null
+
+    // 1. 按 customerKey 精确匹配
+    if (key && accountByCustomerKey[key]) {
+      account = accountByCustomerKey[key]
+    }
+
+    // 2. 按 phone 匹配（legacy 兼容）
+    if (!account && phone && accountByPhone[phone]) {
+      account = accountByPhone[phone]
+    }
+
+    // 3. 无 phone 时按 name 匹配（同名多账户视为冲突，跳过）
+    if (!account && !phone && customerName && accountsByName[customerName]) {
+      if (accountsByName[customerName].length === 1) {
+        account = accountsByName[customerName][0]
+      }
+    }
+
+    if (!account) return
+    if (seenIds[account._id]) return
+    if (toAmount(account.balance) <= 0) return
+
+    seenIds[account._id] = true
+    markers.push(minimizePositiveBalanceMarker(entry))
+  })
+
+  return ok(markers)
 }
 
 async function findSingleAccount(customerKey) {
@@ -408,8 +541,11 @@ async function findRecentTransactions(collectionProvider, accountId) {
     return []
   }
 
+  // Fetch both 'active' and 'reversed' transactions so the customer detail
+  // page can show the full audit trail. We query by accountId only and filter
+  // in memory to avoid depending on db.command inside transactions.
   let query = collectionProvider.collection(COLLECTIONS.STORED_VALUE_TRANSACTION)
-    .where({ accountId, status: 'active' })
+    .where({ accountId })
   if (typeof query.orderBy === 'function') {
     query = query.orderBy('createTime', 'desc')
   }
@@ -417,7 +553,12 @@ async function findRecentTransactions(collectionProvider, accountId) {
     query = query.limit(RECENT_TRANSACTION_LIMIT)
   }
   const result = await query.get()
-  return Array.isArray(result.data) ? result.data.slice(0, RECENT_TRANSACTION_LIMIT) : []
+  const allData = Array.isArray(result.data) ? result.data : []
+  const filtered = allData.filter(function (item) {
+    const status = item.status || 'active'
+    return status === 'active' || status === 'reversed'
+  })
+  return filtered.slice(0, RECENT_TRANSACTION_LIMIT)
 }
 
 async function findRechargeByRequestId(collectionProvider, requestId) {
@@ -523,6 +664,7 @@ function buildRechargeIncomeData(event, account, staff) {
     remark: remark ? `储值充值：${remark}` : '储值充值',
     collectedBy: staff._id,
     collectedByName: staff.name || '',
+    venueId: staff.venueId,
     date: formatDateString(now),
     createTime: now,
     updateTime: now,
@@ -537,7 +679,7 @@ function buildSettlementRemark(baseRemark, originalAmount, deductedAmount, incom
 
 function pickIncomeMetadata(incomeData) {
   const metadata = {}
-  const allowedFields = ['guestCount', 'standard', 'roomName', 'calcMode', 'dishPrice', 'serviceCharge']
+  const allowedFields = ['guestCount', 'standard', 'roomName', 'calcMode', 'dishPrice', 'serviceCharge', 'autoGenerated', 'purchaseId']
 
   allowedFields.forEach((field) => {
     if (Object.prototype.hasOwnProperty.call(incomeData, field)) {
@@ -552,7 +694,6 @@ function buildSettlementIncomeData(incomeData, account, transaction, settlement,
   const now = new Date()
   const originalAmount = toAmount(incomeData.amount)
   const deductedAmount = toAmount(settlement.deductedAmount)
-  const incomeAmount = toAmount(settlement.incomeAmount)
 
   return Object.assign({}, pickIncomeMetadata(incomeData), {
     type: incomeData.type || 'dining',
@@ -563,15 +704,21 @@ function buildSettlementIncomeData(incomeData, account, transaction, settlement,
     reservationId: incomeData.reservationId || '',
     originalAmount,
     deductedAmount,
-    amount: incomeAmount,
+    amount: toAmount(settlement.incomeAmount),
     source: String(incomeData.source || incomeData.customerName || '').trim(),
     paymentMethod: incomeData.paymentMethod || '',
-    remark: buildSettlementRemark(incomeData.remark, originalAmount, deductedAmount, incomeAmount),
+    remark: buildSettlementRemark(incomeData.remark, originalAmount, deductedAmount, settlement.incomeAmount),
     collectedBy: staff._id,
     collectedByName: staff.name || '',
+    venueId: staff.venueId,
     date: incomeData.date || formatDateString(now),
     createTime: now,
     updateTime: now,
+    // Mirror to createdAt/updatedAt — client-side db.addDoc uses these names,
+    // and income list page sorts by createdAt. Without them, stored-value
+    // settlement records would be sorted to the end or skipped.
+    createdAt: now,
+    updatedAt: now,
     status: 'active'
   })
 }
@@ -647,9 +794,15 @@ function buildNormalIncomeData(incomeData, settlementMode, staff, account) {
     remark: String(incomeData.remark || '').trim(),
     collectedBy: staff._id,
     collectedByName: staff.name || '',
+    venueId: staff.venueId,
     date: incomeData.date || formatDateString(now),
     createTime: now,
     updateTime: now,
+    // Mirror to createdAt/updatedAt — client-side db.addDoc uses these names,
+    // and income list page sorts by createdAt. Without them, stored-value
+    // settlement records would be sorted to the end or skipped.
+    createdAt: now,
+    updatedAt: now,
     status: 'active'
   })
 }
@@ -789,6 +942,7 @@ async function recharge(event = {}) {
         customerName: existingAccount.customerName || customerName,
         phone: existingAccount.phone || phone,
         customerKey,
+        venueId: existingAccount.venueId || staff.venueId,
         balance: toAmount(balanceBefore + amount),
         totalRecharge: toAmount(toAmount(existingAccount.totalRecharge) + amount),
         updatedBy: staff._id,
@@ -806,6 +960,7 @@ async function recharge(event = {}) {
         customerName,
         phone,
         customerKey,
+        venueId: staff.venueId,
         balance: amount,
         totalRecharge: amount,
         totalConsume: 0,
@@ -839,6 +994,7 @@ async function recharge(event = {}) {
       status: 'active',
       requestId,
       accountId: account._id,
+      venueId: staff.venueId,
       amount,
       balanceBefore,
       balanceAfter: toAmount(balanceBefore + amount),
@@ -950,6 +1106,7 @@ async function settleIncomeWithStoredValue(event = {}) {
 
     const currentVersion = Number(currentAccount._version || 0)
     const accountUpdate = {
+      venueId: currentAccount.venueId || staff.venueId,
       balance: freshSettlement.balanceAfter,
       totalConsume: toAmount(toAmount(currentAccount.totalConsume) + freshSettlement.deductedAmount),
       updatedBy: staff._id,
@@ -966,6 +1123,7 @@ async function settleIncomeWithStoredValue(event = {}) {
       type: 'consume',
       status: 'active',
       accountId: currentAccount._id,
+      venueId: staff.venueId,
       amount: freshSettlement.deductedAmount,
       balanceBefore: freshBalanceBefore,
       balanceAfter: freshSettlement.balanceAfter,
@@ -1019,8 +1177,242 @@ async function settleIncomeWithStoredValue(event = {}) {
   return ok(result)
 }
 
+/**
+ * Reverse a stored-value settlement: refund the deducted balance, archive the
+ * consume transaction (keep it as an audit trail with status=reversed), delete
+ * the income record, and reset reservation's hasIncome flag.
+ *
+ * Handles three settlement modes:
+ * - stored_full: refund full deductedAmount, no cash income to worry about
+ * - stored_partial: refund deductedAmount, the partial cash income is deleted too
+ * - stored_value_recharge: reverse a recharge — deduct balance back, archive recharge tx
+ * - stored_empty: just delete the income (nothing was deducted)
+ */
+function validateReverseTransaction(transaction, expected) {
+  if (!transaction || transaction.status !== 'active') {
+    throw new Error('储值流水已撤销或不存在')
+  }
+  if (expected.type && transaction.type !== expected.type) {
+    throw new Error('储值流水类型不匹配')
+  }
+  if (expected.accountId && transaction.accountId !== expected.accountId) {
+    throw new Error('储值流水账户不匹配')
+  }
+  if (expected.incomeId && transaction.incomeId !== expected.incomeId) {
+    throw new Error('储值流水收入不匹配')
+  }
+  if (expected.reservationId && transaction.reservationId !== expected.reservationId) {
+    throw new Error('储值流水预约不匹配')
+  }
+}
+
+function getValidatedReverseAmount(transaction, expectedAmount) {
+  const transactionAmount = toAmount(transaction && transaction.amount)
+  if (transactionAmount !== toAmount(expectedAmount)) {
+    throw new Error('储值流水金额不匹配')
+  }
+  return transactionAmount
+}
+
+function validateStoredFullTransactionOnly(transaction, fallbackReservationId) {
+  if (!transaction || transaction.status !== 'active') {
+    throw new Error('储值流水已撤销或不存在')
+  }
+  if (transaction.type !== 'consume') {
+    throw new Error('储值流水类型不匹配')
+  }
+  if (transaction.incomeId) {
+    throw new Error('储值流水收入不匹配')
+  }
+  if (!transaction.accountId || !(transaction.reservationId || fallbackReservationId)) {
+    throw new Error('储值流水不存在')
+  }
+}
+
+function buildStoredFullIncomeFromTransaction(storedValueTransaction, fallbackReservationId) {
+  validateStoredFullTransactionOnly(storedValueTransaction, fallbackReservationId)
+  const reservationId = storedValueTransaction.reservationId || fallbackReservationId || ''
+  return {
+    settlementMode: 'stored_full',
+    storedValueAccountId: storedValueTransaction.accountId || '',
+    storedValueTransactionId: storedValueTransaction._id || '',
+    reservationId,
+    deductedAmount: toAmount(storedValueTransaction.amount),
+    amount: 0
+  }
+}
+
+async function reverseSettlement(event = {}) {
+  const staff = await authorize('income', 'delete')
+  const incomeId = String(event.incomeId || '').trim()
+  const requestedTransactionId = String(event.transactionId || '').trim()
+  if (!incomeId && !requestedTransactionId) {
+    return fail('缺少收入记录ID')
+  }
+
+  const db = cloud.database()
+  const now = new Date()
+
+  let income = null
+  if (incomeId) {
+    const incomeDoc = await db.collection(COLLECTIONS.INCOME).doc(incomeId).get()
+    income = incomeDoc && incomeDoc.data
+    if (!income) {
+      return fail('收入记录不存在')
+    }
+  } else {
+    try {
+      const transactionDoc = await db.collection(COLLECTIONS.STORED_VALUE_TRANSACTION).doc(requestedTransactionId).get()
+      income = buildStoredFullIncomeFromTransaction(transactionDoc && transactionDoc.data, String(event.reservationId || '').trim())
+    } catch (error) {
+      return fail(error.message || '储值流水不存在')
+    }
+  }
+  const settlementMode = String(income.settlementMode || '')
+  if (settlementMode.indexOf('stored_') !== 0) {
+    return fail('该收入记录非储值关联，无法反向结算')
+  }
+
+  const accountId = income.storedValueAccountId || ''
+  const linkedTransactionId = income.storedValueTransactionId || ''
+  if (incomeId && requestedTransactionId && requestedTransactionId !== linkedTransactionId) {
+    return fail('储值流水不属于该收入')
+  }
+  const transactionId = linkedTransactionId || requestedTransactionId
+  const deductedAmount = toAmount(income.deductedAmount)
+  const reservationId = income.reservationId || ''
+
+  const result = await db.runTransaction(async (transaction) => {
+    let account = null
+    if (accountId && (deductedAmount > 0 || settlementMode === 'stored_value_recharge')) {
+      account = await getDocumentById(transaction, COLLECTIONS.STORED_VALUE_ACCOUNT, accountId)
+      if (!account) {
+        throw new Error('储值账户不存在')
+      }
+    }
+    const storedValueTransaction = transactionId
+      ? await getDocumentById(transaction, COLLECTIONS.STORED_VALUE_TRANSACTION, transactionId)
+      : null
+
+    if (settlementMode === 'stored_value_recharge') {
+      validateReverseTransaction(storedValueTransaction, { type: 'recharge', accountId, incomeId })
+      const rechargeAmount = getValidatedReverseAmount(storedValueTransaction, income.amount)
+      const currentBalance = toAmount(account.balance)
+      const rawBalanceAfterReverse = currentBalance - rechargeAmount
+      if (rawBalanceAfterReverse < 0) {
+        throw new Error('储值余额不足，无法撤销充值（可能已被消费）')
+      }
+      const newBalance = toAmount(rawBalanceAfterReverse)
+      const currentVersion = Number(account._version || 0)
+      await transaction.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
+        .doc(accountId)
+        .update({ data: {
+          balance: newBalance,
+          totalRecharge: toAmount(toAmount(account.totalRecharge) - rechargeAmount),
+          updatedBy: staff._id,
+          updatedByName: staff.name || '',
+          updateTime: now,
+          _version: currentVersion + 1
+        } })
+
+      // Archive the original recharge transaction
+      if (transactionId) {
+        await transaction.collection(COLLECTIONS.STORED_VALUE_TRANSACTION)
+          .doc(transactionId)
+          .update({ data: {
+            status: 'reversed',
+            reversedBy: staff._id,
+            reversedByName: staff.name || '',
+            reversedAt: now,
+            reverseRemark: String(event.remark || '撤销充值').trim()
+          } })
+      }
+
+      // Delete the income record (recharge income)
+      await transaction.collection(COLLECTIONS.INCOME).doc(incomeId).remove()
+
+      return {
+        settlementMode,
+        accountId,
+        transactionId,
+        incomeId,
+        reversedAmount: rechargeAmount,
+        balanceAfter: newBalance
+      }
+    }
+
+    // For stored_full / stored_partial / stored_empty
+    // 3a. Refund the balance if there was a deduction
+    let reversedAmount = 0
+    if (accountId && deductedAmount > 0) {
+      validateReverseTransaction(storedValueTransaction, { type: 'consume', accountId, incomeId, reservationId })
+      reversedAmount = getValidatedReverseAmount(storedValueTransaction, deductedAmount)
+      const newBalance = toAmount(toAmount(account.balance) + reversedAmount)
+      const currentVersion = Number(account._version || 0)
+      await transaction.collection(COLLECTIONS.STORED_VALUE_ACCOUNT)
+        .doc(accountId)
+        .update({ data: {
+          balance: newBalance,
+          totalConsume: toAmount(toAmount(account.totalConsume) - reversedAmount),
+          updatedBy: staff._id,
+          updatedByName: staff.name || '',
+          updateTime: now,
+          _version: currentVersion + 1
+        } })
+    }
+
+    // 3b. Archive the consume transaction (keep as audit trail)
+    if (transactionId) {
+      await transaction.collection(COLLECTIONS.STORED_VALUE_TRANSACTION)
+        .doc(transactionId)
+        .update({ data: {
+          status: 'reversed',
+          reversedBy: staff._id,
+          reversedByName: staff.name || '',
+          reversedAt: now,
+          reverseRemark: String(event.remark || '撤销储值结算').trim()
+        } })
+    }
+
+    if (incomeId) {
+      await transaction.collection(COLLECTIONS.INCOME).doc(incomeId).remove()
+    }
+
+    // 3d. Reset reservation's hasIncome flag so it can be re-settled
+    if (reservationId) {
+      await transaction.collection(COLLECTIONS.RESERVATION)
+        .doc(reservationId)
+        .update({ data: {
+          hasIncome: false,
+          settlementMode: '',
+          storedValueAccountId: '',
+          storedValueTransactionId: '',
+          incomeId: '',
+          originalAmount: 0,
+          deductedAmount: 0,
+          incomeAmount: 0,
+          settledBy: '',
+          settledByName: '',
+          settledAt: null,
+          updateTime: now
+        } })
+    }
+
+    return {
+      settlementMode,
+      accountId,
+      transactionId,
+      incomeId,
+      reversedAmount,
+      reservationId
+    }
+  })
+
+  return ok(result)
+}
+
 async function getStats(event = {}) {
-  await authorize('dashboard', 'view')
+  const staff = await authorize('dashboard', 'view')
 
   const start = normalizeDateString(event.start)
   const end = normalizeDateString(event.end)
@@ -1030,8 +1422,10 @@ async function getStats(event = {}) {
   }
 
   const db = cloud.database()
-  const transactions = await fetchAll(db, COLLECTIONS.STORED_VALUE_TRANSACTION, { status: 'active' })
-  const accounts = await fetchAll(db, COLLECTIONS.STORED_VALUE_ACCOUNT, { status: 'active' })
+  const venueId = staff.venueId
+  // 全量加载后在内存按场地过滤（向后兼容：无 venueId 的 legacy 数据视为本场地）
+  const transactions = (await fetchAll(db, COLLECTIONS.STORED_VALUE_TRANSACTION, { status: 'active' })).filter((transaction) => isItemInVenue(transaction, venueId))
+  const accounts = (await fetchAll(db, COLLECTIONS.STORED_VALUE_ACCOUNT, { status: 'active' })).filter((account) => isItemInVenue(account, venueId))
   const activeTransactions = transactions.filter((transaction) => transaction.status === 'active')
   const activeAccounts = accounts.filter((account) => account.status === 'active')
   const periodTransactions = activeTransactions.filter((transaction) => isDateInRange(transaction.createTime || transaction.date, start, end))
@@ -1046,8 +1440,10 @@ exports.main = async (event = {}) => {
   const actionHandlers = {
     queryAccountByCustomer,
     queryAccountsByCustomers,
+    queryPositiveBalanceMarkers,
     recharge,
     settleIncomeWithStoredValue,
+    reverseSettlement,
     getStats
   }
 
@@ -1070,6 +1466,8 @@ exports.__test__ = {
   getCustomerKey,
   buildStoredValueAccountId,
   normalizeCustomerInputs,
+  normalizeMarkerPermissionModule,
+  minimizePositiveBalanceMarker,
   authorize,
   buildRechargeIncomeData,
   pickIncomeMetadata,

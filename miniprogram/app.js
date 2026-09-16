@@ -12,8 +12,15 @@ App({
     prefetchData: null
   },
 
+  // Cloud init readiness promise — all cloud calls must wait for this
+  _cloudReady: null,
+
   onLaunch() {
     wx.cloud.init({ env: CLOUD_ENV, traceUser: true })
+    // wx.cloud.init is synchronous in invocation but the SDK needs a
+    // microtask to finish internal setup. Wrap in a promise that resolves
+    // after the next tick so all downstream cloud calls can safely await.
+    this._cloudReady = new Promise(resolve => setTimeout(resolve, 0))
     // Get status bar height - use new API if available, fallback otherwise
     try {
       if (typeof wx.getWindowInfo === 'function') {
@@ -31,8 +38,9 @@ App({
     // Don't set isLogin=true until initial check completes.
     // Login page watches this flag to show loading state.
     this._initialLoginChecked = false
-    this._loginPromise = this.checkLogin()
-    this.loadVenueName()
+    // Chain cloud-dependent calls after init completes
+    this._loginPromise = this._cloudReady.then(() => this.checkLogin())
+    this._cloudReady.then(() => this.loadVenueName())
 
     // 读取预拉取数据（冷启动时微信已提前拉好）
     this._readPrefetchData()
@@ -106,6 +114,10 @@ App({
   _publicPages: ['/pages/login/index', '/pages/reservation-share/index'],
 
   async onShow() {
+    // Wait for cloud init — once resolved, subsequent awaits return immediately
+    if (this._cloudReady) {
+      await this._cloudReady
+    }
     // Wait for initial login check (auto-login) before guarding auth,
     // prevents flashing the login page while auto-login is in progress
     if (this._loginPromise) {

@@ -87,6 +87,10 @@ function getRoomName(reservation) {
 
 function buildCancelledChange(reservation, operator) {
   const reservationDate = formatDate(reservation.date)
+  // 只记录今日/明日预约的变动
+  const today = getChinaToday()
+  const tomorrow = getTomorrow(today)
+  if (reservationDate < today || reservationDate > tomorrow) return null
   const customerName = getCustomerName(reservation)
   const roomName = getRoomName(reservation)
   return {
@@ -109,6 +113,10 @@ function buildCancelledChange(reservation, operator) {
 
 function buildCreatedChange(reservation, operator) {
   const reservationDate = formatDate(reservation.date)
+  // 只记录今日/明日预约的变动
+  const today = getChinaToday()
+  const tomorrow = getTomorrow(today)
+  if (reservationDate < today || reservationDate > tomorrow) return null
   const customerName = getCustomerName(reservation)
   const roomName = getRoomName(reservation)
   return {
@@ -131,6 +139,10 @@ function buildCreatedChange(reservation, operator) {
 
 function buildAmountChangedChange(oldReservation, newReservation, operator) {
   const reservationDate = formatDate(newReservation.date)
+  // 只记录今日/明日预约的变动
+  const today = getChinaToday()
+  const tomorrow = getTomorrow(today)
+  if (reservationDate < today || reservationDate > tomorrow) return null
   const customerName = getCustomerName(newReservation)
   const roomName = getRoomName(newReservation)
   const oldStandard = Number(oldReservation.standard) || 0

@@ -3,6 +3,18 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const BEIJING_OFFSET = 8 * 60 * 60 * 1000
 
+// 统一收入净额计算：储值结算记录需扣除 deductedAmount 避免重复计算
+function computeNetAmount(item) {
+  if (!item) return 0
+  var amount = Number(item.amount) || 0
+  var settlementMode = item.settlementMode || ''
+  var deductedAmount = Number(item.deductedAmount) || 0
+  if (settlementMode.indexOf('stored_') === 0 && deductedAmount > 0) {
+    amount -= deductedAmount
+  }
+  return amount
+}
+
 // ===== 北京时间工具函数（与 autoSyncReservation、getInsights 保持同步） =====
 
 // 将 Date 对象转为北京时间日期字符串 YYYY-MM-DD
@@ -111,7 +123,7 @@ exports.main = async (event, context) => {
         date: db.command.gte(monthStartStr).and(db.command.lte(todayStr))
       })
       incomeStats.count = incomeAll.length
-      incomeStats.total = incomeAll.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+      incomeStats.total = incomeAll.reduce((sum, p) => sum + computeNetAmount(p), 0)
     } catch (e) { /* ignore */ }
 
     return {

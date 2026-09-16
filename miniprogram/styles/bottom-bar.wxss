@@ -93,6 +93,16 @@
   justify-content: space-between;
 }
 
+/* Four buttons - space between */
+.bottom-bar-inner.four-btns {
+  justify-content: space-between;
+}
+
+.bottom-bar-inner.four-btns .bar-btn {
+  font-size: 26rpx;
+  padding: 20rpx 16rpx;
+}
+
 /* Outline button - subtle border only, for secondary actions */
 .bar-btn-outline {
   background: transparent;

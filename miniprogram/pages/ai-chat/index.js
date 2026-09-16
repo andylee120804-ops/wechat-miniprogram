@@ -4,6 +4,7 @@ const { COLLECTIONS } = require('../../utils/db')
 const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { AI_ENABLED } = require('../../utils/feature-flags')
 const db = require('../../utils/db')
+const { computeNetAmount, sumNetIncome } = require('../../utils/incomeCalc')
 
 const ROOM_MAP = { '大包': 'big', '大包厢': 'big', '小包': 'small', '小包厢': 'small', '棋牌': 'chess', '棋牌室': 'chess' }
 const TIME_MAP = { '中午': '中午', '晚上': '晚上', '午': '中午', '晚': '晚上' }
@@ -417,11 +418,11 @@ Page({
             date: _.gte(monthRange.start).and(_.lte(monthRange.end))
           })
           const incomeList = (monthIncome.data || [])
-          const totalIncome = incomeList.reduce((s, i) => s + (i.amount || 0), 0)
+          const totalIncome = sumNetIncome(incomeList)
           const byType = {}
           incomeList.forEach(i => {
             const type = i.type || '其他'
-            byType[type] = (byType[type] || 0) + (i.amount || 0)
+            byType[type] = (byType[type] || 0) + computeNetAmount(i)
           })
           const typeBreakdown = Object.entries(byType).map(([t, a]) => `${t}: ${formatAmount(a)}元`).join(', ')
           contextParts.push(`【本月收入（降级数据）】总计 ${formatAmount(totalIncome)}元\n分类: ${typeBreakdown || '暂无'}`)
@@ -429,7 +430,7 @@ Page({
 
         // 今日收入单独查询（云函数月度数据不含今日拆分，需本地补充）
         const todayIncome = await db.queryAll(COLLECTIONS.INCOME, { date: today })
-        const todayTotal = (todayIncome.data || []).reduce((s, i) => s + (i.amount || 0), 0)
+        const todayTotal = sumNetIncome(todayIncome.data || [])
         contextParts.push(`【今日收入】${formatAmount(todayTotal)}元`)
       }
 

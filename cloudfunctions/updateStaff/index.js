@@ -1,6 +1,9 @@
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
+const DEFAULT_VENUE_ID = 'legacy-default'
+function normalizeVenueId(venueId) { return venueId || DEFAULT_VENUE_ID }
+
 exports.main = async (event, context) => {
   const { OPENID } = cloud.getWXContext()
   const { staffId, staffData, permissions } = event
@@ -20,6 +23,7 @@ exports.main = async (event, context) => {
     if (!caller || caller.role !== 'admin') {
       return { success: false, message: '只有管理员可以操作员工' }
     }
+    const callerVenueId = normalizeVenueId(caller.venueId)
 
     // Update staff record
     await db.collection('staff').doc(staffId).update({
@@ -43,11 +47,16 @@ exports.main = async (event, context) => {
           actions: Object.entries(actions).filter(([, v]) => v).map(([a]) => a)
         }))
 
-      const existingPerm = await db.collection('permissions').where({ staffId }).get()
+      let existingPerm = await db.collection('permissions').where({ staffId, venueId: callerVenueId }).get()
+      // Fallback for legacy records without venueId
+      if (existingPerm.data.length === 0) {
+        existingPerm = await db.collection('permissions').where({ staffId }).get()
+      }
       if (existingPerm.data && existingPerm.data.length > 0) {
         await db.collection('permissions').doc(existingPerm.data[0]._id).update({
           data: {
             permissions: permArray,
+            venueId: callerVenueId,
             updatedAt: db.serverDate()
           }
         })
@@ -55,6 +64,7 @@ exports.main = async (event, context) => {
         await db.collection('permissions').add({
           data: {
             staffId,
+            venueId: callerVenueId,
             permissions: permArray,
             updatedAt: db.serverDate()
           }

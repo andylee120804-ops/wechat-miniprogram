@@ -215,16 +215,33 @@ function getYearRange(offset) {
 // ==================== Amount Formatting ====================
 
 /**
- * Format amount with locale zh-CN and 2 decimal places
+ * Format amount with 2 decimal places and thousand separators.
+ *
+ * Does NOT rely on Number.prototype.toLocaleString, because its locale
+ * parameter and options (minimumFractionDigits / maximumFractionDigits)
+ * are unsupported on WeChat Mini Program real-device JS engines
+ * (iOS JavaScriptCore / some Android runtimes). On those engines
+ * toLocaleString degrades to toString() and exposes full IEEE-754
+ * precision, e.g. 0.1+0.2 -> "0.30000000000000004".
+ *
+ * Instead we round away float drift with Math.round(num*100)/100, then
+ * fix to 2 decimals and insert thousand separators manually.
  */
 function formatAmount(amount) {
   if (amount === null || amount === undefined || amount === '') return '0.00'
   var num = Number(amount)
   if (isNaN(num)) return '0.00'
-  return num.toLocaleString('zh-CN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })
+  // Round to 2 decimal places to eliminate float drift from summation
+  var rounded = Math.round(num * 100) / 100
+  // toFixed(2) guarantees exactly 2 decimal digits
+  var fixed = rounded.toFixed(2)
+  var parts = fixed.split('.')
+  var intPart = parts[0]
+  var decPart = parts[1]
+  // Insert thousand separators; \B matches non-word-boundary so the
+  // leading '-' sign is never preceded by a comma.
+  intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  return intPart + '.' + decPart
 }
 
 // ==================== Name Mappings ====================

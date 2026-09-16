@@ -57,7 +57,11 @@
     <view class="income-item stagger-item" wx:for="{{filteredIncomes}}" wx:key="_id" bindtap="onItemTap" data-id="{{item._id}}" style="background: {{theme.cardBg || 'rgba(26,26,46,0.85)'}}; border: 1rpx solid {{theme.border || 'rgba(255,255,255,0.06)'}}; border-radius: 16rpx; margin: 0 24rpx 10rpx; padding: 16rpx;">
       <view class="item-header">
         <theme-badge theme="{{theme}}" status="{{item.type}}" type="status" text="{{item.typeText}}" />
-        <text class="item-amount" style="color: {{theme.amountPositive || '#4ADE80'}}; font-size: 30rpx; font-weight: 700; font-family: 'DIN Alternate', monospace;">+¥{{item.amountText}}</text>
+        <view style="display: flex; align-items: center; gap: 6rpx;">
+          <text wx:if="{{item.settlementMode === 'stored_full'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 20rpx; background: rgba(201,169,110,0.15); padding: 2rpx 10rpx; border-radius: 6rpx;">储值全额</text>
+          <text wx:elif="{{item.settlementMode === 'stored_partial'}}" style="color: {{theme.accentColor || '#C9A96E'}}; font-size: 20rpx; background: rgba(201,169,110,0.15); padding: 2rpx 10rpx; border-radius: 6rpx;">储值部分</text>
+          <text class="item-amount" style="color: {{theme.amountPositive || '#4ADE80'}}; font-size: 30rpx; font-weight: 700; font-family: 'DIN Alternate', monospace;">+¥{{item.amountText}}</text>
+        </view>
       </view>
       <view class="item-meta flex-row flex-between" style="margin-top: 8rpx;">
         <view class="flex-row" style="align-items: center; min-width: 0; flex:1">
@@ -71,7 +75,7 @@
         </view>
       </view>
       <view class="item-remark" wx:if="{{item.remark}}" style="margin-top: 6rpx;">
-        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 24rpx;">{{item.remark}}</text>
+        <text style="color: {{theme.textMuted || '#5C5C72'}}; font-size: 20rpx;">{{item.remark}}</text>
       </view>
     </view>
 

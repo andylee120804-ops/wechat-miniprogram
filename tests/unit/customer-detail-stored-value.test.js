@@ -194,6 +194,26 @@ describe('customer detail stored-value recharge UI', () => {
     expect(page.data.storedValueTransactions).toEqual([])
   })
 
+  test('shows permission error and keeps account hidden when user lacks income add permission', async () => {
+    const page = loadCustomerDetailPage({ canAddIncome: false })
+    page.data.customerName = '张三'
+    page.data.storedValueAccount = { _id: 'old-account', balance: 999 }
+    page.data.storedValueTransactions = [{ _id: 'old-tx', amount: 999 }]
+    mockCallFunction.mockResolvedValue({
+      result: {
+        success: false,
+        message: '无权限'
+      }
+    })
+
+    await page.loadData()
+
+    expect(page.data.canRecharge).toBe(false)
+    expect(page.data.storedValueErrorMessage).toBe('无权限')
+    expect(page.data.storedValueAccount).toBeNull()
+    expect(page.data.storedValueTransactions).toEqual([])
+  })
+
   test('shows generic stored-value load failure when cloud function rejects', async () => {
     const page = loadCustomerDetailPage({ canAddIncome: true })
     page.data.customerName = '张三'

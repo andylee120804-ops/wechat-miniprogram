@@ -25,7 +25,8 @@ function loadFunction(options) {
 
   const command = {
     gte: jest.fn((value) => ({ and: jest.fn(() => ({ op: 'range', start: value })) })),
-    lte: jest.fn((value) => ({ op: 'lte', value }))
+    lte: jest.fn((value) => ({ op: 'lte', value })),
+    in: jest.fn((values) => ({ op: 'in', values }))
   }
 
   const db = {

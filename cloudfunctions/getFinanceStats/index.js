@@ -33,6 +33,19 @@ const ADMIN_ONLY_MODULES = ['staff', 'venueSettings', 'minAmount']
 const CHINA_TIME_OFFSET_MS = 8 * 60 * 60 * 1000
 const MAX_DATE_RANGE_DAYS = 366
 const ALLOWED_PERIOD_TYPES = ['week', 'month', 'year', 'custom']
+const DEFAULT_VENUE_ID = 'legacy-default'
+
+function normalizeVenueId(venueId) {
+  return venueId || DEFAULT_VENUE_ID
+}
+
+// Backward-compatible venue match: legacy docs (no venueId) belong to the
+// original venue; tagged docs are scoped to their venue. The cloud function
+// is the trust boundary, so filtering in memory before returning is safe.
+function isItemInVenue(item, venueId) {
+  if (!item) return false
+  return !item.venueId || item.venueId === venueId
+}
 
 exports.main = async (event, context) => {
   const { startDate, endDate, periodType } = event
@@ -44,7 +57,7 @@ exports.main = async (event, context) => {
     const auth = await authorizeDashboardView()
     if (!auth.success) return auth
 
-    const data = await computeFinanceStats(startDate, endDate, periodType || 'month')
+    const data = await computeFinanceStats(startDate, endDate, periodType || 'month', auth.venueId)
     return { success: true, data: data }
   } catch (err) {
     console.error('getFinanceStats错误:', err)
@@ -99,14 +112,15 @@ async function authorizeDashboardView() {
     .get()
   const staff = staffRes.data && staffRes.data[0]
   if (!staff) return { success: false, message: '无权限访问财务统计' }
-  if (staff.role === 'admin') return { success: true, staff: staff }
-  if (staff.role === 'boss' && !ADMIN_ONLY_MODULES.includes('dashboard')) return { success: true, staff: staff }
+  const venueId = normalizeVenueId(staff.venueId)
+  if (staff.role === 'admin') return { success: true, staff: staff, venueId: venueId }
+  if (staff.role === 'boss' && !ADMIN_ONLY_MODULES.includes('dashboard')) return { success: true, staff: staff, venueId: venueId }
 
   const permRes = await db.collection(COLLECTIONS.PERMISSIONS).where({ staffId: staff._id }).get()
   const permissions = permRes.data && permRes.data[0] && permRes.data[0].permissions ? permRes.data[0].permissions : []
   const dashboardPerm = permissions.find(function(perm) { return perm.module === 'dashboard' })
   const actions = dashboardPerm && dashboardPerm.actions ? dashboardPerm.actions : []
-  if (actions.includes('view') || actions.includes('*')) return { success: true, staff: staff }
+  if (actions.includes('view') || actions.includes('*')) return { success: true, staff: staff, venueId: venueId }
 
   return { success: false, message: '无权限访问财务统计' }
 }
@@ -114,28 +128,44 @@ async function authorizeDashboardView() {
 /**
  * 计算指定周期的财务统计。口径与经营报表页面完全一致。
  */
-async function computeFinanceStats(startDate, endDate, periodType) {
+async function computeFinanceStats(startDate, endDate, periodType, venueId) {
   const dateFilter = { date: _.gte(startDate).and(_.lte(endDate)) }
   const storedValueTransactionFilter = {
     status: 'active',
     createTime: _.gte(getChinaBusinessDayStart(startDate)).and(_.lte(getChinaBusinessDayEnd(endDate)))
   }
 
-  const [incomeData, purchaseData, expenseData, fixedData, staffData, storedValueTransactions, storedValueAccounts] = await Promise.all([
+  const results = await Promise.all([
     fetchAll(COLLECTIONS.INCOME, dateFilter),
     fetchAll(COLLECTIONS.PURCHASE, dateFilter),
     fetchAll(COLLECTIONS.EXPENSE, dateFilter),
     fetchAll(COLLECTIONS.FIXED_EXPENSE, { active: true }),
-    fetchAll(COLLECTIONS.STAFF, { status: 'active' }),
+    fetchAll(COLLECTIONS.STAFF, { status: _.in(['active', 'resigned']) }),
     fetchAll(COLLECTIONS.STORED_VALUE_TRANSACTION, storedValueTransactionFilter),
     fetchAll(COLLECTIONS.STORED_VALUE_ACCOUNT, { status: 'active' })
   ])
+  // 场地隔离：全量加载后在内存按场地过滤（向后兼容：无 venueId 的 legacy 数据视为本场地）
+  const inVenue = function (item) { return isItemInVenue(item, venueId) }
+  const incomeData = results[0].filter(inVenue)
+  const purchaseData = results[1].filter(inVenue)
+  const expenseData = results[2].filter(inVenue)
+  const fixedData = results[3].filter(inVenue)
+  const staffData = results[4].filter(inVenue)
+  const storedValueTransactions = results[5].filter(inVenue)
+  const storedValueAccounts = results[6].filter(inVenue)
 
   // ===== 收入 =====
+  // 储值结算记录（stored_full / stored_partial）的 amount=原金额，
+  // deductedAmount 部分已在 stored_value_transaction 中独立统计，
+  // 此处减去避免重复计算营收。
   let totalIncome = 0
   const incomeByType = {}
   incomeData.forEach(function (item) {
-    const amount = Number(item.amount) || 0
+    let amount = Number(item.amount) || 0
+    const settlementMode = String(item.settlementMode || '')
+    if (settlementMode.indexOf('stored_') === 0) {
+      amount -= Number(item.deductedAmount) || 0
+    }
     totalIncome += amount
     const type = item.type || 'other'
     incomeByType[type] = (incomeByType[type] || 0) + amount
@@ -194,11 +224,13 @@ async function computeFinanceStats(startDate, endDate, periodType) {
     }
   })
 
-  // ===== 员工工资：按 hireDate 折算 =====
+  // ===== 员工工资：按 hireDate / resignDate 折算 =====
   let totalSalary = 0
   staffData.forEach(function (item) {
     if (item.hireDate && item.hireDate > endDate) return
-    const proratedMonths = calcProratedMonths(item.hireDate, null, startDate, endDate, periodMonths)
+    if (item.status === 'resigned' && !item.resignDate) return
+    const effectiveEnd = item.status === 'resigned' ? item.resignDate : null
+    const proratedMonths = calcProratedMonths(item.hireDate, effectiveEnd, startDate, endDate, periodMonths)
     totalSalary += Math.ceil((Number(item.salary) || 0) * proratedMonths)
   })
 

@@ -22,6 +22,7 @@ Page({
       equipment: '🔧 设备', banquet: '🍽 宴会菜价', other: '📦 其他'
     },
     autoPurchaseEnabled: true,
+    autoSyncMode: 'purchase_and_income',
     defaultApproverId: '',
     defaultApproverName: '',
     defaultReimburserId: '',
@@ -67,6 +68,7 @@ Page({
         that.setData({
           enabled: d.enabled !== false,
           autoPurchaseEnabled: d.autoPurchaseEnabled !== false,
+          autoSyncMode: d.autoSyncMode || (d.autoPurchaseEnabled === false ? 'none' : 'purchase_and_income'),
           categories: that._mergeCategories(d.categories),
           amountThreshold: d.amountThreshold || 0,
           defaultApproverId: d.defaultApproverId || '',
@@ -172,7 +174,17 @@ Page({
 
   onToggleEnabled: function(e) { this.setData({ enabled: !!e.detail.value }) },
 
-  onToggleAutoPurchase: function(e) { this.setData({ autoPurchaseEnabled: !!e.detail.value }) },
+  onToggleIncomeOnly: function(e) {
+    this.setData({ autoSyncMode: !!e.detail.value ? 'income_only' : 'none' })
+  },
+
+  onTogglePurchaseAndIncome: function(e) {
+    this.setData({ autoSyncMode: !!e.detail.value ? 'purchase_and_income' : 'none' })
+  },
+
+  onTogglePurchaseOnly: function(e) {
+    this.setData({ autoSyncMode: !!e.detail.value ? 'purchase_only' : 'none' })
+  },
 
   onCategoryToggle: function(e) {
     var key = e.currentTarget.dataset.key
@@ -221,7 +233,8 @@ Page({
           callerWechatId: (app.globalData.userInfo || {}).wechatId || '',
           approvalRules: {
             enabled: that.data.enabled,
-            autoPurchaseEnabled: that.data.autoPurchaseEnabled,
+            autoPurchaseEnabled: that.data.autoSyncMode === 'purchase_and_income' || that.data.autoSyncMode === 'purchase_only',
+            autoSyncMode: that.data.autoSyncMode,
             categories: that.data.categories,
             amountThreshold: that.data.amountThreshold,
             defaultApproverId: that.data.defaultApproverId,

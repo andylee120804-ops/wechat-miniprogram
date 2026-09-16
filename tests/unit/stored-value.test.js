@@ -25,6 +25,7 @@ function createDocChain(id, hooks) {
       if (hooks && hooks.onUpdate) hooks.onUpdate(id, payload)
       return Promise.resolve({ stats: { updated: 1 } })
     }),
+    remove: jest.fn(() => Promise.resolve({ stats: { removed: 1 } })),
     set: jest.fn((payload) => {
       if (hooks && hooks.onSet) hooks.onSet(id, payload)
       if (hooks && hooks.shouldRejectSet && hooks.shouldRejectSet(id, payload)) {
@@ -1304,11 +1305,296 @@ describe('stored value recharge action', () => {
   })
 })
 
+describe('stored value reverse settlement action', () => {
+  test('reverses stored full settlement by transaction id when no income record exists', async () => {
+    const { main, updates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      docData: {
+        stored_value_account: {
+          'account-1': {
+            _id: 'account-1',
+            balance: 200,
+            totalRecharge: 1000,
+            totalConsume: 800,
+            status: 'active',
+            _version: 2
+          }
+        },
+        stored_value_transaction: {
+          'tx-1': {
+            _id: 'tx-1',
+            type: 'consume',
+            status: 'active',
+            accountId: 'account-1',
+            incomeId: null,
+            reservationId: 'res-1',
+            amount: 800,
+            balanceBefore: 1000,
+            balanceAfter: 200
+          }
+        }
+      }
+    })
+
+    const result = await main({ action: 'reverseSettlement', transactionId: 'tx-1', reservationId: 'res-1' })
+
+    expect(result).toEqual({
+      success: true,
+      data: expect.objectContaining({
+        settlementMode: 'stored_full',
+        accountId: 'account-1',
+        transactionId: 'tx-1',
+        incomeId: '',
+        reversedAmount: 800,
+        reservationId: 'res-1'
+      })
+    })
+    expect(updates).toEqual(expect.arrayContaining([
+      { id: 'account-1', payload: { data: expect.objectContaining({ balance: 1000, totalConsume: 0, _version: 3 }) } },
+      { id: 'tx-1', payload: { data: expect.objectContaining({ status: 'reversed', reversedBy: 'staff-1' }) } },
+      { id: 'res-1', payload: { data: expect.objectContaining({ hasIncome: false, storedValueTransactionId: '', incomeId: '' }) } }
+    ]))
+  })
+
+  test('rejects transaction-only reversal for partial settlement transaction with income link', async () => {
+    const { main, updates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      docData: {
+        stored_value_account: {
+          'account-1': { _id: 'account-1', balance: 200, totalRecharge: 1000, totalConsume: 800, status: 'active', _version: 2 }
+        },
+        stored_value_transaction: {
+          'tx-1': {
+            _id: 'tx-1',
+            type: 'consume',
+            status: 'active',
+            accountId: 'account-1',
+            incomeId: 'income-1',
+            reservationId: 'res-1',
+            amount: 800
+          }
+        }
+      }
+    })
+
+    const result = await main({ action: 'reverseSettlement', transactionId: 'tx-1', reservationId: 'res-1' })
+
+    expect(result).toEqual({ success: false, message: '储值流水收入不匹配' })
+    expect(updates).toEqual([])
+  })
+
+  test('rejects stored empty reversal when an unrelated transaction id is supplied', async () => {
+    const { main, updates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      docData: {
+        income: {
+          'income-empty': {
+            _id: 'income-empty',
+            amount: 800,
+            settlementMode: 'stored_empty',
+            storedValueAccountId: 'account-1',
+            storedValueTransactionId: '',
+            reservationId: 'res-1',
+            deductedAmount: 0
+          }
+        },
+        stored_value_transaction: {
+          'tx-evil': {
+            _id: 'tx-evil',
+            type: 'consume',
+            status: 'active',
+            accountId: 'account-1',
+            incomeId: null,
+            reservationId: 'res-2',
+            amount: 500
+          }
+        }
+      }
+    })
+
+    const result = await main({ action: 'reverseSettlement', incomeId: 'income-empty', transactionId: 'tx-evil' })
+
+    expect(result).toEqual({ success: false, message: '储值流水不属于该收入' })
+    expect(updates).toEqual([])
+  })
+
+  test('rejects recharge reversal when income amount differs from original transaction amount', async () => {
+    const { main, updates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      docData: {
+        income: {
+          'income-1': {
+            _id: 'income-1',
+            amount: 900,
+            settlementMode: 'stored_value_recharge',
+            storedValueAccountId: 'account-1',
+            storedValueTransactionId: 'tx-1'
+          }
+        },
+        stored_value_account: {
+          'account-1': {
+            _id: 'account-1',
+            balance: 1200,
+            totalRecharge: 1000,
+            totalConsume: 0,
+            status: 'active',
+            _version: 1
+          }
+        },
+        stored_value_transaction: {
+          'tx-1': {
+            _id: 'tx-1',
+            type: 'recharge',
+            status: 'active',
+            accountId: 'account-1',
+            incomeId: 'income-1',
+            amount: 1000
+          }
+        }
+      }
+    })
+
+    const result = await main({ action: 'reverseSettlement', incomeId: 'income-1' })
+
+    expect(result).toEqual({ success: false, message: '储值流水金额不匹配' })
+    expect(updates).toEqual([])
+  })
+
+  test('rejects consume reversal when income deducted amount differs from original transaction amount', async () => {
+    const { main, updates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      docData: {
+        income: {
+          'income-1': {
+            _id: 'income-1',
+            amount: 300,
+            settlementMode: 'stored_partial',
+            storedValueAccountId: 'account-1',
+            storedValueTransactionId: 'tx-1',
+            reservationId: 'res-1',
+            deductedAmount: 700
+          }
+        },
+        stored_value_account: {
+          'account-1': {
+            _id: 'account-1',
+            balance: 200,
+            totalRecharge: 1000,
+            totalConsume: 800,
+            status: 'active',
+            _version: 2
+          }
+        },
+        stored_value_transaction: {
+          'tx-1': {
+            _id: 'tx-1',
+            type: 'consume',
+            status: 'active',
+            accountId: 'account-1',
+            incomeId: 'income-1',
+            reservationId: 'res-1',
+            amount: 800
+          }
+        }
+      }
+    })
+
+    const result = await main({ action: 'reverseSettlement', incomeId: 'income-1' })
+
+    expect(result).toEqual({ success: false, message: '储值流水金额不匹配' })
+    expect(updates).toEqual([])
+  })
+
+  test('rejects recharge reversal when balance has already been consumed', async () => {
+    const { main, updates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      docData: {
+        income: {
+          'income-1': {
+            _id: 'income-1',
+            amount: 1000,
+            settlementMode: 'stored_value_recharge',
+            storedValueAccountId: 'account-1',
+            storedValueTransactionId: 'tx-1'
+          }
+        },
+        stored_value_account: {
+          'account-1': {
+            _id: 'account-1',
+            balance: 200,
+            totalRecharge: 1000,
+            totalConsume: 800,
+            status: 'active',
+            _version: 3
+          }
+        },
+        stored_value_transaction: {
+          'tx-1': {
+            _id: 'tx-1',
+            type: 'recharge',
+            status: 'active',
+            accountId: 'account-1',
+            incomeId: 'income-1',
+            amount: 1000
+          }
+        }
+      }
+    })
+
+    const result = await main({ action: 'reverseSettlement', incomeId: 'income-1' })
+
+    expect(result).toEqual({ success: false, message: '储值余额不足，无法撤销充值（可能已被消费）' })
+    expect(updates).toEqual([])
+  })
+
+  test('rejects recharge reversal when original transaction was already reversed', async () => {
+    const { main, updates } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff-1', name: '管理员', role: 'admin', status: 'active', boundOpenid: 'openid-user' }],
+      docData: {
+        income: {
+          'income-1': {
+            _id: 'income-1',
+            amount: 1000,
+            settlementMode: 'stored_value_recharge',
+            storedValueAccountId: 'account-1',
+            storedValueTransactionId: 'tx-1'
+          }
+        },
+        stored_value_account: {
+          'account-1': {
+            _id: 'account-1',
+            balance: 1200,
+            totalRecharge: 1000,
+            totalConsume: 0,
+            status: 'active',
+            _version: 1
+          }
+        },
+        stored_value_transaction: {
+          'tx-1': {
+            _id: 'tx-1',
+            type: 'recharge',
+            status: 'reversed',
+            accountId: 'account-1',
+            incomeId: 'income-1',
+            amount: 1000
+          }
+        }
+      }
+    })
+
+    const result = await main({ action: 'reverseSettlement', incomeId: 'income-1' })
+
+    expect(result).toEqual({ success: false, message: '储值流水已撤销或不存在' })
+    expect(updates).toEqual([])
+  })
+})
+
 describe('stored value query matching and minimized responses', () => {
   test('queryAccountByCustomer falls back from name to a unique active account and returns recent minimized transactions', async () => {
     const { main, accountReads } = loadStoredValueFunction({
-      staffData: [{ _id: 'staff-1', name: '客服', role: 'waiter', status: 'active', boundOpenid: 'openid-user' }],
-      permissionsData: [{ staffId: 'staff-1', permissions: [{ module: 'customer', actions: ['view'] }] }],
+      staffData: [{ _id: 'staff-1', name: '收银', role: 'waiter', status: 'active', boundOpenid: 'openid-user' }],
+      permissionsData: [{ staffId: 'staff-1', permissions: [{ module: 'income', actions: ['add'] }] }],
       accountDataSequence: [[], [{
         _id: 'account-1',
         customerName: '张三',
@@ -1348,8 +1634,8 @@ describe('stored value query matching and minimized responses', () => {
 
   test('queryAccountByCustomer rejects ambiguous same-name active accounts when phone is missing', async () => {
     const { main } = loadStoredValueFunction({
-      staffData: [{ _id: 'staff-1', name: '客服', role: 'waiter', status: 'active', boundOpenid: 'openid-user' }],
-      permissionsData: [{ staffId: 'staff-1', permissions: [{ module: 'customer', actions: ['view'] }] }],
+      staffData: [{ _id: 'staff-1', name: '收银', role: 'waiter', status: 'active', boundOpenid: 'openid-user' }],
+      permissionsData: [{ staffId: 'staff-1', permissions: [{ module: 'income', actions: ['add'] }] }],
       accountDataSequence: [[], [
         { _id: 'account-1', customerName: '张三', phone: '13800000000', customerKey: 'phone:13800000000', status: 'active' },
         { _id: 'account-2', customerName: '张三', phone: '13900000000', customerKey: 'phone:13900000000', status: 'active' }
@@ -1464,6 +1750,37 @@ describe('stored value query authorization', () => {
     })
   })
 
+  test('rejects queryAccountByCustomer when staff only has customer view permission', async () => {
+    const { main, accountReads, whereCalls } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff1', role: 'waiter', status: 'active', boundOpenid: 'openid-user' }],
+      permissionsData: [{ staffId: 'staff1', permissions: [{ module: 'customer', actions: ['view'] }] }]
+    })
+
+    const result = await main({ action: 'queryAccountByCustomer', customerName: '张三' })
+
+    expect(result).toEqual({ success: false, message: '无权限' })
+    expect(accountReads).toEqual([])
+    expect(whereCalls).toContainEqual({ name: 'permissions', where: { staffId: 'staff1' } })
+  })
+
+  test('allows queryAccountByCustomer when staff has income add permission', async () => {
+    const { main, accountReads, whereCalls } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff1', role: 'waiter', status: 'active', boundOpenid: 'openid-user' }],
+      permissionsData: [{ staffId: 'staff1', permissions: [{ module: 'income', actions: ['add'] }] }],
+      accountDataSequence: [[{ _id: 'account-1', customerName: '张三', customerKey: 'name:张三', balance: 100, status: 'active' }], [{ _id: 'account-1', customerName: '张三', customerKey: 'name:张三', balance: 100, status: 'active' }]]
+    })
+
+    const result = await main({ action: 'queryAccountByCustomer', customerName: '张三' })
+
+    expect(result.success).toBe(true)
+    expect(result.data.account).toEqual(expect.objectContaining({ _id: 'account-1', balance: 100 }))
+    expect(accountReads).toEqual([
+      { customerKey: 'name:张三', status: 'active' },
+      { customerName: '张三', status: 'active' }
+    ])
+    expect(whereCalls).toContainEqual({ name: 'permissions', where: { staffId: 'staff1' } })
+  })
+
   test('rejects queryAccountsByCustomers when newest bound staff lacks permission despite older privileged staff', async () => {
     const { main, accountReads, whereCalls } = loadStoredValueFunction({
       staffData: [
@@ -1536,6 +1853,89 @@ describe('stored value query authorization', () => {
     const result = await main({ action: 'queryAccountsByCustomers', customers })
 
     expect(result).toEqual({ success: false, message: '一次最多查询50个客户' })
+    expect(accountReads).toEqual([])
+  })
+
+  test('allows customer:view to query positive-balance markers with request-side keys only', async () => {
+    const { main } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff1', role: 'waiter', status: 'active', boundOpenid: 'openid-user' }],
+      permissionsData: [{ staffId: 'staff1', permissions: [{ module: 'customer', actions: ['view'] }] }],
+      accountData: [{
+        _id: 'account-1',
+        customerName: '张三',
+        phone: '13800000000',
+        customerKey: 'phone:13800000000',
+        balance: 500,
+        totalRecharge: 1000,
+        totalConsume: 500,
+        status: 'active',
+        createdBy: 'secret-staff'
+      }]
+    })
+
+    const result = await main({
+      action: 'queryPositiveBalanceMarkers',
+      permissionModule: 'customer',
+      customers: [
+        { customerName: '张三' }
+      ]
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.data).toEqual([
+      { matchKeys: ['name:张三', '张三'], hasPositiveBalance: true }
+    ])
+    expect(JSON.stringify(result.data)).not.toContain('13800000000')
+    expect(JSON.stringify(result.data)).not.toContain('phone:13800000000')
+    expect(result.data[0]).not.toHaveProperty('balance')
+    expect(result.data[0]).not.toHaveProperty('totalRecharge')
+    expect(result.data[0]).not.toHaveProperty('_id')
+  })
+
+  test('allows reservation:view to query positive-balance markers', async () => {
+    const { main } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff1', role: 'waiter', status: 'active', boundOpenid: 'openid-user' }],
+      permissionsData: [{ staffId: 'staff1', permissions: [{ module: 'reservation', actions: ['view'] }] }],
+      accountData: [{
+        _id: 'account-1',
+        customerName: '王五',
+        customerKey: 'name:王五',
+        balance: 1,
+        status: 'active'
+      }]
+    })
+
+    const result = await main({
+      action: 'queryPositiveBalanceMarkers',
+      permissionModule: 'reservation',
+      customers: [{ customerName: '王五' }]
+    })
+
+    expect(result).toEqual({
+      success: true,
+      data: [{ matchKeys: ['name:王五', '王五'], hasPositiveBalance: true }]
+    })
+  })
+
+  test('rejects marker query without matching view permission or with unsupported permission module', async () => {
+    const { main, accountReads } = loadStoredValueFunction({
+      staffData: [{ _id: 'staff1', role: 'waiter', status: 'active', boundOpenid: 'openid-user' }],
+      permissionsData: [{ staffId: 'staff1', permissions: [{ module: 'customer', actions: ['view'] }] }]
+    })
+
+    const unsupportedModuleResult = await main({
+      action: 'queryPositiveBalanceMarkers',
+      permissionModule: 'income',
+      customers: [{ customerName: '张三' }]
+    })
+    const missingPermissionResult = await main({
+      action: 'queryPositiveBalanceMarkers',
+      permissionModule: 'reservation',
+      customers: [{ customerName: '张三' }]
+    })
+
+    expect(unsupportedModuleResult).toEqual({ success: false, message: '无权限' })
+    expect(missingPermissionResult).toEqual({ success: false, message: '无权限' })
     expect(accountReads).toEqual([])
   })
 })

@@ -36,6 +36,7 @@ Page({
     serviceChargeEnabledDate: '',
     serviceChargeNoon: 0,
     serviceChargeNight: 0,
+    autoSyncMode: 'purchase_and_income',
     isStoredValueIncome: false,
     showNoDishPriceModal: false,
     submitting: false,
@@ -72,6 +73,10 @@ Page({
         if (s.key === 'serviceChargeEnabledDate') data.serviceChargeEnabledDate = String(s.value || '')
         if (s.key === 'serviceChargeNoon') data.serviceChargeNoon = Number(s.value) || 0
         if (s.key === 'serviceChargeNight') data.serviceChargeNight = Number(s.value) || 0
+        if (s.key === 'approval_rules') {
+          const rules = s.value || s
+          data.autoSyncMode = rules.autoSyncMode || 'purchase_and_income'
+        }
       })
       this.setData(data)
     } catch (err) {
@@ -413,10 +418,21 @@ Page({
       && resDateStr >= this.data.serviceChargeEnabledDate
 
     if (useNewMode) {
-      // New mode: dishPrice + serviceCharge
-      if (res.dishPrice > 0) {
-        const charge = (res.time === '中午') ? this.data.serviceChargeNoon : this.data.serviceChargeNight
-        const amount = res.dishPrice + charge
+      // 服务费模式下，根据 autoSyncMode 决定收入金额
+      const charge = (res.time === '中午') ? this.data.serviceChargeNoon : this.data.serviceChargeNight
+      const mode = this.data.autoSyncMode || 'purchase_and_income'
+      let amount = 0
+      if (mode === 'income_only') {
+        // 仅收入模式：收入 = 仅服务费
+        amount = charge
+      } else if (mode === 'purchase_and_income') {
+        // 采购+收入模式：收入 = 菜价 + 服务费
+        amount = (res.dishPrice || 0) + charge
+      } else {
+        // purchase_only 或其他：不自动填入收入
+        amount = 0
+      }
+      if (amount > 0) {
         this.setData({
           reservationId: res._id,
           selectedReservation: res,
@@ -425,7 +441,7 @@ Page({
         })
         this.updateStoredValuePreview()
       } else {
-        // No dish price, prompt manual input
+        // 无法自动计算，手动输入
         this.setData({
           reservationId: res._id,
           selectedReservation: res,
@@ -587,7 +603,14 @@ Page({
 
         if (useNewMode) {
           data.calcMode = 'dishPrice'
-          data.dishPrice = selRes.dishPrice || 0
+          const mode = this.data.autoSyncMode || 'purchase_and_income'
+          if (mode === 'income_only') {
+            // 仅收入模式：收入不含菜价
+            data.dishPrice = 0
+          } else {
+            // purchase_and_income / purchase_only：收入含菜价
+            data.dishPrice = selRes.dishPrice || 0
+          }
           const charge = (selRes.time === '中午') ? this.data.serviceChargeNoon : this.data.serviceChargeNight
           data.serviceCharge = charge
         }

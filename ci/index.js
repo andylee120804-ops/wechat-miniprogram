@@ -146,18 +146,27 @@ async function cmdCheck() {
   }
 }
 
-async function cmdCloudUpload(name) {
+async function cmdCloudUpload(name, prodFlag) {
   if (!name) {
-    console.error('[CI] 用法: node ci/index.js cloud-upload <云函数名>')
+    console.error('[CI] 用法: node ci/index.js cloud-upload <云函数名> [--prod]')
     process.exit(1)
   }
-  const env = 'cloud1-d9gwvttcr864f8021'
-  console.log(`[CI] 上传云函数 ${name} → 环境 ${env}`)
-  await ci.cloud.uploadFunctions({
+  // ⚡ 切换云环境：默认 TEST，加 --prod 切到正式环境
+  const ENV_TEST = 'development-d7gyfut1f9c6c0838'
+  const ENV_PROD = 'cloud1-d9gwvttcr864f8021'
+  const env = (prodFlag === '--prod') ? ENV_PROD : ENV_TEST
+  const funcRoot = path.join(PROJECT_ROOT, 'cloudfunctions')
+  const funcPath = path.join(funcRoot, name)
+  if (!fs.existsSync(funcPath)) {
+    console.error(`[CI] 错误: 云函数目录不存在: ${funcPath}`)
+    process.exit(1)
+  }
+  console.log(`[CI] 上传云函数 ${name} → 环境 ${env} (路径: ${funcPath})`)
+  await ci.cloud.uploadFunction({
     project,
     env,
-    names: [name],
-    functionRoot: path.join(PROJECT_ROOT, 'cloudfunctions'),
+    name,
+    path: funcPath,
     remoteNpmInstall: true,
   })
   console.log('[CI] 云函数上传完成')
@@ -172,7 +181,7 @@ async function cmdCloudUpload(name) {
       case 'sourcemap': return await cmdSourcemap(rest[0], rest[1])
       case 'package':   return await cmdPackageNpm()
       case 'check':     return await cmdCheck()
-      case 'cloud-upload': return await cmdCloudUpload(rest[0])
+      case 'cloud-upload': return await cmdCloudUpload(rest[0], rest[1])
       default:
         console.log('用法:')
         console.log('  node ci/index.js upload [version] [desc]')

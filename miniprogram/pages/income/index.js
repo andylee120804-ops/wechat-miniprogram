@@ -4,6 +4,7 @@ const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
+const { sumNetIncome } = require('../../utils/incomeCalc')
 
 const INCOME_TYPES = [
   { id: 'dining', name: '餐饮' },
@@ -97,7 +98,7 @@ Page({
       }))
 
       const allData = (await totalPromise).data || []
-      const total = allData.reduce((s, i) => s + (i.amount || 0), 0)
+      const total = sumNetIncome(allData)
 
       // Sort typeOptions by count descending ("全部" first), only show count on "全部"
       const typeCounts = {}
@@ -153,7 +154,7 @@ Page({
         }
       })
       const allItems = that.data.incomes.concat(newItems)
-      const total = allItems.reduce(function(s, i) { return s + (i.amount || 0) }, 0)
+      const total = sumNetIncome(allItems)
       that.setData({
         incomes: allItems,
         filteredIncomes: allItems,

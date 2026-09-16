@@ -55,7 +55,10 @@
               <theme-badge theme="{{theme}}" status="{{inner.status}}" type="status" text="{{inner.statusText}}" size="sm" />
             </view>
             <view class="card-info">
-              <text class="customer-name" style="color: {{inner.status === 'cancelled' ? '#5C5C72' : theme.textPrimary || '#F5F0E8'}}; {{inner.status === 'cancelled' ? 'text-decoration: line-through;' : ''}}">{{inner.customerName}}</text>
+              <view class="customer-row">
+                <text class="customer-name" style="color: {{inner.status === 'cancelled' ? '#5C5C72' : theme.textPrimary || '#F5F0E8'}}; {{inner.status === 'cancelled' ? 'text-decoration: line-through;' : ''}}">{{inner.customerName}}</text>
+                <text wx:if="{{inner.storedValueLabel}}" class="stored-value-marker {{inner.storedValueLabel === '储值冲突' ? 'stored-value-marker-conflict' : ''}}" style="background: {{inner.storedValueLabel === '储值冲突' ? theme.warningBg || 'rgba(245,158,11,0.15)' : 'rgba(201,169,110,0.18)'}}; color: {{inner.storedValueLabel === '储值冲突' ? theme.warningColor || '#F59E0B' : theme.accentColor || '#C9A96E'}}; border-color: {{inner.storedValueLabel === '储值冲突' ? theme.warningColor || '#F59E0B' : theme.accentColor || '#C9A96E'}};">{{inner.storedValueLabel}}</text>
+              </view>
               <view class="card-meta">
                 <text class="meta-item" style="color: {{inner.status === 'cancelled' ? '#5C5C72' : theme.textSecondary || 'rgba(245,240,232,0.65)'}};">{{inner.guestCount}}人</text>
                 <text class="meta-divider" style="color: {{theme.divider || 'rgba(255,255,255,0.08)'}};">|</text>

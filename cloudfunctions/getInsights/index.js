@@ -3,6 +3,18 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// 统一收入净额计算：储值结算记录需扣除 deductedAmount 避免重复计算
+function computeNetAmount(item) {
+  if (!item) return 0
+  var amount = Number(item.amount) || 0
+  var settlementMode = item.settlementMode || ''
+  var deductedAmount = Number(item.deductedAmount) || 0
+  if (settlementMode.indexOf('stored_') === 0 && deductedAmount > 0) {
+    amount -= deductedAmount
+  }
+  return amount
+}
+
 const BEIJING_OFFSET = 8 * 60 * 60 * 1000
 const ADMIN_ONLY_MODULES = ['staff', 'venueSettings', 'minAmount']
 const ACTION_PERMISSIONS = {
@@ -146,7 +158,7 @@ async function revenueTrend(event) {
     const endStr = endOfM.getFullYear() + '-' + String(endOfM.getMonth() + 1).padStart(2, '0') + '-' + String(endOfM.getDate()).padStart(2, '0')
 
     const incomes = await fetchAll('income', { date: _.gte(startStr).and(_.lte(endStr)) })
-    const total = incomes.reduce((s, inc) => s + (inc.amount || 0), 0)
+    const total = incomes.reduce((s, inc) => s + computeNetAmount(inc), 0)
 
     data.push({ month: monthStr, amount: total })
   }
@@ -164,7 +176,7 @@ async function topIncomeSources(event) {
 
   const byType = {}
   incomes.forEach(i => {
-    byType[i.type] = (byType[i.type] || 0) + (i.amount || 0)
+    byType[i.type] = (byType[i.type] || 0) + computeNetAmount(i)
   })
 
   const sorted = Object.entries(byType)
@@ -219,8 +231,8 @@ async function dashboardSummary(event) {
     fetchAll('reservation', { date: _.gte(monthStart), status: _.neq('cancelled') })
   ])
 
-  const todayIncomeTotal = todayIncome.reduce((s, i) => s + (i.amount || 0), 0)
-  const monthIncomeTotal = monthIncome.reduce((s, i) => s + (i.amount || 0), 0)
+  const todayIncomeTotal = todayIncome.reduce((s, i) => s + computeNetAmount(i), 0)
+  const monthIncomeTotal = monthIncome.reduce((s, i) => s + computeNetAmount(i), 0)
 
   return {
     success: true,

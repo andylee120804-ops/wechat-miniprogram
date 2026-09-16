@@ -3,6 +3,7 @@ const { formatDate, formatDateTime, formatAmount } = require('../../utils/helper
 const { COLLECTIONS } = require('../../utils/db')
 const { hasPermission, ACTIONS } = require('../../utils/permission')
 const db = require('../../utils/db')
+const { sumNetIncome } = require('../../utils/incomeCalc')
 
 const PAYMENT_METHOD_OPTIONS = [
   { value: 'wechat', label: '微信' },
@@ -50,16 +51,22 @@ function buildConsumeTitle(transaction) {
 
 function formatStoredValueTransaction(transaction) {
   const isRecharge = transaction.type === 'recharge'
+  const isReversed = transaction.status === 'reversed'
   const amount = toNumber(transaction.amount || transaction.deductedAmount)
   const balance = toNumber(transaction.balanceAfter)
+  let title = isRecharge ? '储值充值' : buildConsumeTitle(transaction)
+  if (isReversed) {
+    title = (isRecharge ? '【已撤销】充值' : '【已撤销】') + (isRecharge ? '' : title)
+    if (isRecharge) title = '【已撤销】储值充值'
+  }
   return {
     ...transaction,
-    title: isRecharge ? '储值充值' : buildConsumeTitle(transaction),
+    title,
     typeLabel: isRecharge ? '充值' : '消费',
     amountText: (isRecharge ? '+' : '-') + '¥' + formatMoney(amount),
     balanceText: '余额 ¥' + formatMoney(balance),
     formattedTime: formatDateTime(transaction.createTime || transaction.updateTime || transaction.date),
-    amountClass: isRecharge ? 'positive' : 'negative'
+    amountClass: isReversed ? 'reversed' : (isRecharge ? 'positive' : 'negative')
   }
 }
 
@@ -124,7 +131,7 @@ Page({
       ])
 
       const history = resRes.data || []
-      const totalSpending = (incRes.data || []).reduce((s, i) => s + (i.amount || 0), 0)
+      const totalSpending = sumNetIncome(incRes.data || [])
 
       // Preferred room
       const roomCount = {}
@@ -141,7 +148,7 @@ Page({
         totalSpending: formatAmount(totalSpending),
         preferredRoom,
         lastVisit: history[0] ? formatDate(history[0].date) : '-',
-        visitHistory: history.slice(0, 20).map(h => ({
+        visitHistory: history.slice(0, 15).map(h => ({
           ...h, formattedDate: formatDate(h.date)
         })),
         storedValueAccount: storedValueData.account,

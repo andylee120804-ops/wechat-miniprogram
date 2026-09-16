@@ -7,7 +7,8 @@ function buildRangeCommand() {
         return { __op: 'range', start: value, end: other && other.value }
       }
     })),
-    lte: jest.fn((value) => ({ __op: 'lte', value }))
+    lte: jest.fn((value) => ({ __op: 'lte', value })),
+    in: jest.fn((values) => ({ __op: 'in', values }))
   }
 }
 
@@ -49,6 +50,9 @@ function matchesWhere(item, where) {
       const start = expected.start instanceof Date ? expected.start.getTime() : expected.start
       const end = expected.end instanceof Date ? expected.end.getTime() : expected.end
       return actual >= start && actual <= end
+    }
+    if (expected && expected.__op === 'in') {
+      return expected.values.includes(item[key])
     }
     return item[key] === expected
   })
