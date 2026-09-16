@@ -528,8 +528,10 @@ Page({
         date: _.gte(dayStart).and(_.lte(dayEnd)),
         status: _.neq('cancelled')
       })
+      if (this._blockDialogDate !== dateStr) return
       this.setData({ blockExistingCount: (res.data || []).length })
     } catch (err) {
+      if (this._blockDialogDate !== dateStr) return
       this.setData({ blockExistingCount: 0 })
     }
   },
@@ -550,8 +552,18 @@ Page({
       wx.showLoading({ title: '封禁中' })
       await blockDate(date, slots, reason, userInfo)
       if (this.data.blockCancelExisting) {
-        const cancelledCount = await this.cancelReservationsOnDate(date)
-        log(LOG_TYPES.RESERVATION_UPDATE, '封禁 ' + date + ' 并同时取消 ' + cancelledCount + ' 条预约', { date: date, reason: reason })
+        try {
+          const cancelledCount = await this.cancelReservationsOnDate(date)
+          log(LOG_TYPES.RESERVATION_UPDATE, '封禁 ' + date + ' 并同时取消 ' + cancelledCount + ' 条预约', { date: date, reason: reason })
+        } catch (err) {
+          // 封禁已成功提交；取消预约失败是部分/非致命——如实告知并收尾
+          wx.hideLoading()
+          this.setData({ showBlockModal: false })
+          await this.loadMonthBlocked(this.data.currentYear, this.data.currentMonth)
+          this.loadDayReservations(this.data.selectedDate)
+          wx.showToast({ title: '已封禁，但取消预约未完成，请重试', icon: 'none' })
+          return
+        }
       } else {
         log(LOG_TYPES.RESERVATION_UPDATE, '封禁日期 ' + date + '（' + reason + '）', { date: date, reason: reason })
       }
@@ -576,8 +588,11 @@ Page({
       status: _.neq('cancelled')
     })
     const records = res.data || []
-    for (const r of records) {
-      await db.updateDoc(COLLECTIONS.RESERVATION, r._id, { status: 'cancelled' })
+    for (var i = 0; i < records.length; i += 10) {
+      const chunk = records.slice(i, i + 10)
+      await Promise.all(chunk.map(function(r) {
+        return db.updateDoc(COLLECTIONS.RESERVATION, r._id, { status: 'cancelled' })
+      }))
     }
     return records.length
   },
@@ -593,11 +608,12 @@ Page({
 
     try {
       wx.showLoading({ title: '解封中' })
-      const slots = (record.slots || []).filter(function(s) { return s !== slot })
-      if (slots.length === 0) {
+      const dbInstance = db.getDb()
+      const _ = dbInstance.command
+      await db.updateDoc(COLLECTIONS.BLOCKED_DATE, record._id, { slots: _.pull(slot) })
+      const after = await getBlockedRecord(record.date)
+      if (after && (!after.slots || after.slots.length === 0)) {
         await db.deleteDoc(COLLECTIONS.BLOCKED_DATE, record._id)
-      } else {
-        await db.updateDoc(COLLECTIONS.BLOCKED_DATE, record._id, { slots: slots })
       }
       log(LOG_TYPES.RESERVATION_UPDATE, '解封日期 ' + record.date + '（' + slot + '）', { date: record.date, slot: slot })
       wx.hideLoading()
