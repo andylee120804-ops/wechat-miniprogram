@@ -224,6 +224,7 @@ describe('checkReservationConflict blocked-date validation', () => {
     getBlockedRecord.mockResolvedValueOnce({ slots: ['noon'], reason: '国庆放假' })
 
     await expect(checkReservationConflict(baseParams)).rejects.toThrow('该日期已封禁：国庆放假')
+    expect(mockQueryAll).not.toHaveBeenCalled()
   })
 
   test('allows when the slot is not blocked', async () => {

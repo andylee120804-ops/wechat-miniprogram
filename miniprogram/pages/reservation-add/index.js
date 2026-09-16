@@ -311,10 +311,14 @@ Page({
       wx.showToast({ title: '不能选择过去的日期', icon: 'none' })
       return
     }
-    const record = await getBlockedRecord(selected)
-    if (record && isDateFullyBlocked(record)) {
-      wx.showToast({ title: '该日期已封禁：' + (record.reason || '休息'), icon: 'none' })
-      return
+    try {
+      const record = await getBlockedRecord(selected)
+      if (record && isDateFullyBlocked(record)) {
+        wx.showToast({ title: '该日期已封禁：' + (record.reason || '休息'), icon: 'none' })
+        return
+      }
+    } catch (err) {
+      console.warn('[blocked-date] check failed', err) // fail open; submit guard still applies
     }
     this.setData({ date: selected })
     this.clearError('date')
@@ -324,10 +328,14 @@ Page({
   async selectTime(e) {
     wx.vibrateShort({ type: 'light' })
     const value = e.currentTarget.dataset.value
-    const record = await getBlockedRecord(this.data.date)
-    if (record && isSlotBlocked(record, value)) {
-      wx.showToast({ title: '该时段已封禁：' + (record.reason || '休息'), icon: 'none' })
-      return
+    try {
+      const record = await getBlockedRecord(this.data.date)
+      if (record && isSlotBlocked(record, value)) {
+        wx.showToast({ title: '该时段已封禁：' + (record.reason || '休息'), icon: 'none' })
+        return
+      }
+    } catch (err) {
+      console.warn('[blocked-date] check failed', err) // fail open; submit guard still applies
     }
     this.setData({ time: value })
     this.clearError('time')
