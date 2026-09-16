@@ -91,4 +91,51 @@
 
   <!-- Bottom Spacer for tab bar -->
   <view class="tab-bar-safe-bottom"></view>
+
+  <!-- Block Date Modal -->
+  <theme-modal theme="{{theme}}" visible="{{showBlockModal}}" title="封禁该日期" confirmText="确认封禁" bind:close="onCloseBlockModal" bind:confirm="onConfirmBlock">
+    <view class="block-modal-body">
+      <view class="block-modal-section">
+        <text class="block-modal-label" style="color: {{theme.textPrimary || '#F5F0E8'}};">封禁时段</text>
+        <view class="block-scope-row">
+          <view class="block-pill {{blockScope === 'full' ? 'active' : ''}}" data-value="full" bindtap="onSelectBlockScope">全天</view>
+          <view class="block-pill {{blockScope === 'noon' ? 'active' : ''}}" data-value="noon" bindtap="onSelectBlockScope">中午</view>
+          <view class="block-pill {{blockScope === 'night' ? 'active' : ''}}" data-value="night" bindtap="onSelectBlockScope">晚上</view>
+        </view>
+      </view>
+      <view class="block-modal-section">
+        <text class="block-modal-label" style="color: {{theme.textPrimary || '#F5F0E8'}};">封禁原因</text>
+        <input class="block-reason-input" placeholder="必填，如：国庆放假" placeholder-class="block-reason-placeholder" value="{{blockReason}}" bindinput="onBlockReasonInput" style="color: {{theme.textPrimary || '#F5F0E8'}}; background: {{theme.inputBg || 'rgba(255,255,255,0.06)'}};" />
+      </view>
+      <view class="block-modal-section" wx:if="{{blockExistingCount > 0}}">
+        <text class="block-modal-label" style="color: {{theme.textPrimary || '#F5F0E8'}};">该日已有 {{blockExistingCount}} 条预约</text>
+        <view class="block-radio-row">
+          <view class="block-radio {{!blockCancelExisting ? 'active' : ''}}" data-value="false" bindtap="onSelectCancelExisting">保留已有预约</view>
+          <view class="block-radio {{blockCancelExisting ? 'active' : ''}}" data-value="true" bindtap="onSelectCancelExisting">同时取消预约</view>
+        </view>
+      </view>
+    </view>
+  </theme-modal>
+
+  <!-- Blocked Date Info Modal -->
+  <theme-modal theme="{{theme}}" visible="{{showBlockInfoModal}}" title="该日期已封禁" showFooter="{{false}}" bind:close="onCloseBlockInfoModal">
+    <view class="block-modal-body">
+      <view class="block-info-row">
+        <text class="block-info-label" style="color: {{theme.textMuted || '#9A9AB0'}};">时段</text>
+        <text class="block-info-value" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{blockInfoRecord.label}}</text>
+      </view>
+      <view class="block-info-row">
+        <text class="block-info-label" style="color: {{theme.textMuted || '#9A9AB0'}};">原因</text>
+        <text class="block-info-value" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{blockInfoRecord.reason}}</text>
+      </view>
+      <view class="block-info-row">
+        <text class="block-info-label" style="color: {{theme.textMuted || '#9A9AB0'}};">设置人</text>
+        <text class="block-info-value" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{blockInfoRecord.createdByName || '未知'}}</text>
+      </view>
+      <view class="block-unblock-row">
+        <view class="unblock-btn" wx:if="{{blockInfoRecord.hasNoon}}" data-slot="noon" bindtap="onUnblockSlot">取消中午封禁</view>
+        <view class="unblock-btn" wx:if="{{blockInfoRecord.hasNight}}" data-slot="night" bindtap="onUnblockSlot">取消晚上封禁</view>
+      </view>
+    </view>
+  </theme-modal>
 </view>

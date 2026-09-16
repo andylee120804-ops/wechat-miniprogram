@@ -8,7 +8,8 @@ const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 const reservationConfig = require('../../utils/reservationConfig')
-const { buildBlockedBanner, isDateFullyBlocked } = require('../../utils/blocked-date')
+const { buildBlockedBanner, isDateFullyBlocked, getBlockedRecord, blockDate, blockedLabel } = require('../../utils/blocked-date')
+const { log, LOG_TYPES } = require('../../utils/logger')
 
 Page({
   data: {
@@ -23,7 +24,14 @@ Page({
     groupedReservations: {},
     blockedDates: [],
     blockedByDate: {},
-    blockedBanner: ''
+    blockedBanner: '',
+    showBlockModal: false,
+    blockScope: 'full',
+    blockReason: '',
+    blockExistingCount: 0,
+    blockCancelExisting: false,
+    showBlockInfoModal: false,
+    blockInfoRecord: null
   },
 
   onShow() {
@@ -459,6 +467,148 @@ Page({
       blockedBanner: buildBlockedBanner(this.data.blockedByDate[date])
     })
     this.loadDayReservations(date)
+  },
+
+  onDayLongPress(e) {
+    const date = e.detail.date
+    if (!date) return
+    if (!hasPermission('reservation', ACTIONS.ADD)) return
+    const today = getChinaToday()
+    if (date < today) {
+      wx.showToast({ title: '只能封禁今天及未来日期', icon: 'none' })
+      return
+    }
+    this._blockDialogDate = date
+    const record = this.data.blockedByDate[date]
+    if (record) {
+      const slots = record.slots || []
+      this.setData({
+        showBlockInfoModal: true,
+        blockInfoRecord: Object.assign({}, record, {
+          label: blockedLabel(record),
+          hasNoon: slots.indexOf('noon') !== -1,
+          hasNight: slots.indexOf('night') !== -1
+        })
+      })
+    } else {
+      this.setData({
+        showBlockModal: true,
+        blockScope: 'full',
+        blockReason: '',
+        blockCancelExisting: false,
+        blockExistingCount: 0
+      })
+      this.loadBlockExistingCount(date)
+    }
+  },
+
+  onCloseBlockModal() {
+    this.setData({ showBlockModal: false })
+  },
+
+  onSelectBlockScope(e) {
+    this.setData({ blockScope: e.currentTarget.dataset.value })
+  },
+
+  onBlockReasonInput(e) {
+    this.setData({ blockReason: e.detail.value })
+  },
+
+  onSelectCancelExisting(e) {
+    this.setData({ blockCancelExisting: e.currentTarget.dataset.value === 'true' })
+  },
+
+  async loadBlockExistingCount(dateStr) {
+    try {
+      const dbInstance = db.getDb()
+      const _ = dbInstance.command
+      const dayStart = createChinaDate(dateStr)
+      const dayEnd = createChinaDate(dateStr, 23, 59, 59)
+      const res = await db.queryAll(COLLECTIONS.RESERVATION, {
+        date: _.gte(dayStart).and(_.lte(dayEnd)),
+        status: _.neq('cancelled')
+      })
+      this.setData({ blockExistingCount: (res.data || []).length })
+    } catch (err) {
+      this.setData({ blockExistingCount: 0 })
+    }
+  },
+
+  async onConfirmBlock() {
+    const date = this._blockDialogDate
+    const reason = (this.data.blockReason || '').trim()
+    if (!reason) {
+      wx.showToast({ title: '请填写封禁原因', icon: 'none' })
+      return
+    }
+    const scope = this.data.blockScope
+    const slots = scope === 'full' ? ['noon', 'night'] : [scope]
+    const app = getApp()
+    const userInfo = app.globalData.userInfo || {}
+
+    try {
+      wx.showLoading({ title: '封禁中' })
+      await blockDate(date, slots, reason, userInfo)
+      if (this.data.blockCancelExisting) {
+        const cancelledCount = await this.cancelReservationsOnDate(date)
+        log(LOG_TYPES.RESERVATION_UPDATE, '封禁 ' + date + ' 并同时取消 ' + cancelledCount + ' 条预约', { date: date, reason: reason })
+      } else {
+        log(LOG_TYPES.RESERVATION_UPDATE, '封禁日期 ' + date + '（' + reason + '）', { date: date, reason: reason })
+      }
+      wx.hideLoading()
+      this.setData({ showBlockModal: false })
+      await this.loadMonthBlocked(this.data.currentYear, this.data.currentMonth)
+      this.loadDayReservations(this.data.selectedDate)
+      wx.showToast({ title: '已封禁', icon: 'success' })
+    } catch (err) {
+      wx.hideLoading()
+      handleCloudError(err, '封禁日期')
+    }
+  },
+
+  async cancelReservationsOnDate(dateStr) {
+    const dbInstance = db.getDb()
+    const _ = dbInstance.command
+    const dayStart = createChinaDate(dateStr)
+    const dayEnd = createChinaDate(dateStr, 23, 59, 59)
+    const res = await db.queryAll(COLLECTIONS.RESERVATION, {
+      date: _.gte(dayStart).and(_.lte(dayEnd)),
+      status: _.neq('cancelled')
+    })
+    const records = res.data || []
+    for (const r of records) {
+      await db.updateDoc(COLLECTIONS.RESERVATION, r._id, { status: 'cancelled' })
+    }
+    return records.length
+  },
+
+  onCloseBlockInfoModal() {
+    this.setData({ showBlockInfoModal: false })
+  },
+
+  async onUnblockSlot(e) {
+    const slot = e.currentTarget.dataset.slot
+    const record = this.data.blockInfoRecord
+    if (!record || !record._id) return
+
+    try {
+      wx.showLoading({ title: '解封中' })
+      const slots = (record.slots || []).filter(function(s) { return s !== slot })
+      if (slots.length === 0) {
+        await db.deleteDoc(COLLECTIONS.BLOCKED_DATE, record._id)
+      } else {
+        await db.updateDoc(COLLECTIONS.BLOCKED_DATE, record._id, { slots: slots })
+      }
+      log(LOG_TYPES.RESERVATION_UPDATE, '解封日期 ' + record.date + '（' + slot + '）', { date: record.date, slot: slot })
+      wx.hideLoading()
+      this.setData({ showBlockInfoModal: false })
+      await this.loadMonthBlocked(this.data.currentYear, this.data.currentMonth)
+      this.loadDayReservations(this.data.selectedDate)
+      wx.showToast({ title: '已解封', icon: 'success' })
+    } catch (err) {
+      wx.hideLoading()
+      handleCloudError(err, '解封日期')
+    }
   },
 
   onMonthChange(e) {
