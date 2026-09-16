@@ -2,7 +2,8 @@
  * Unit tests for reservation-add/helpers/conflict-check.js
  *
  * Tests the checkReservationConflict function that detects time/room
- * conflicts for reservations based on exclusiveType semantics.
+ * conflicts for reservations based on exclusiveType semantics,
+ * plus blocked-date validation with edit exemption.
  */
 
 const mockQueryAll = jest.fn()
@@ -21,7 +22,8 @@ jest.mock('../../miniprogram/utils/db', () => ({
   getDb: mockGetDb,
   COLLECTIONS: {
     SETTINGS: 'settings',
-    RESERVATION: 'reservation'
+    RESERVATION: 'reservation',
+    BLOCKED_DATE: 'blocked_date'
   }
 }))
 
@@ -33,7 +35,16 @@ jest.mock('../../miniprogram/utils/helpers', () => ({
   createChinaDate: jest.fn((dateStr, hours, minutes, seconds) => ({ dateStr, hours, minutes, seconds }))
 }))
 
+jest.mock('../../miniprogram/utils/blocked-date', () => {
+  const actual = jest.requireActual('../../miniprogram/utils/blocked-date')
+  return {
+    ...actual,
+    getBlockedRecord: jest.fn()
+  }
+})
+
 const { checkReservationConflict } = require('../../miniprogram/pages/reservation-add/helpers/conflict-check')
+const { getBlockedRecord } = require('../../miniprogram/utils/blocked-date')
 
 describe('checkReservationConflict', () => {
   beforeEach(() => {
@@ -192,5 +203,79 @@ describe('checkReservationConflict', () => {
         isEdit: false
       })
     ).rejects.toThrow('预约冲突校验失败，请重试')
+  })
+})
+
+describe('checkReservationConflict blocked-date validation', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockQueryAll.mockResolvedValue({ data: [] })
+  })
+
+  const baseParams = {
+    dateStr: '2026-10-01',
+    time: '中午',
+    room: 'big',
+    exclusiveType: 'none',
+    isEdit: false
+  }
+
+  test('throws when the date+time slot is blocked', async () => {
+    getBlockedRecord.mockResolvedValueOnce({ slots: ['noon'], reason: '国庆放假' })
+
+    await expect(checkReservationConflict(baseParams)).rejects.toThrow('该日期已封禁：国庆放假')
+  })
+
+  test('allows when the slot is not blocked', async () => {
+    getBlockedRecord.mockResolvedValueOnce({ slots: ['night'], reason: '国庆放假' })
+
+    await expect(checkReservationConflict(baseParams)).resolves.toBeUndefined()
+  })
+
+  test('allows when no blocked record exists', async () => {
+    getBlockedRecord.mockResolvedValueOnce(null)
+
+    await expect(checkReservationConflict(baseParams)).resolves.toBeUndefined()
+  })
+
+  test('exempts edit when date and time are unchanged', async () => {
+    getBlockedRecord.mockResolvedValueOnce({ slots: ['noon'], reason: '国庆放假' })
+
+    await expect(checkReservationConflict({
+      ...baseParams,
+      isEdit: true,
+      originalDate: '2026-10-01',
+      originalTime: '中午'
+    })).resolves.toBeUndefined()
+  })
+
+  test('blocks edit when date changes into a blocked date', async () => {
+    getBlockedRecord.mockResolvedValueOnce({ slots: ['noon'], reason: '国庆放假' })
+
+    await expect(checkReservationConflict({
+      ...baseParams,
+      isEdit: true,
+      originalDate: '2026-09-20',
+      originalTime: '中午'
+    })).rejects.toThrow('该日期已封禁：国庆放假')
+  })
+
+  test('blocks edit when time changes into a blocked slot on same date', async () => {
+    getBlockedRecord.mockResolvedValueOnce({ slots: ['night'], reason: '国庆放假' })
+
+    await expect(checkReservationConflict({
+      ...baseParams,
+      time: '晚上',
+      isEdit: true,
+      originalDate: '2026-10-01',
+      originalTime: '中午'
+    })).rejects.toThrow('该日期已封禁：国庆放假')
+  })
+
+  test('still checks reservation conflicts when not blocked', async () => {
+    getBlockedRecord.mockResolvedValueOnce(null)
+    mockQueryAll.mockResolvedValueOnce({ data: [{ _id: 'r1' }] })
+
+    await expect(checkReservationConflict(baseParams)).rejects.toThrow('已有预约')
   })
 })

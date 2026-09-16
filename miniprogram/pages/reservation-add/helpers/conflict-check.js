@@ -13,6 +13,7 @@ const { COLLECTIONS } = require('../../../utils/db')
 var _h = require('../../../utils/helpers')
 var getRoomName = _h.getRoomName
 var createChinaDate = _h.createChinaDate
+var blockedDateUtil = require('../../../utils/blocked-date')
 
 /**
  * Throws an Error with a Chinese message if a conflict is found.
@@ -23,8 +24,10 @@ var createChinaDate = _h.createChinaDate
  * @param {string} params.exclusiveType - none/noon/night/full
  * @param {boolean} params.isEdit - true if editing existing reservation
  * @param {string} [params.id] - reservation id when editing (excluded from conflicts)
+ * @param {string} [params.originalDate] - original YYYY-MM-DD when editing (edit exemption)
+ * @param {string} [params.originalTime] - original 时段 when editing (edit exemption)
  */
-async function checkReservationConflict({ dateStr, time, room, exclusiveType, isEdit, id }) {
+async function checkReservationConflict({ dateStr, time, room, exclusiveType, isEdit, id, originalDate, originalTime }) {
   try {
     const dbInstance = db.getDb()
     const _ = dbInstance.command
@@ -64,6 +67,15 @@ async function checkReservationConflict({ dateStr, time, room, exclusiveType, is
     // 'full': check all non-cancelled reservations on this date (no extra filter)
 
     const where = _.and(conditions)
+
+    // Blocked-date check (holidays/closures). Exempt when editing without
+    // changing date+time so reservations kept on a blocked day stay editable.
+    const blockedRecord = await blockedDateUtil.getBlockedRecord(dateStr)
+    const unchangedEdit = isEdit && originalDate === dateStr && originalTime === time
+    if (blockedRecord && !unchangedEdit && blockedDateUtil.isSlotBlocked(blockedRecord, time)) {
+      throw new Error('该日期已封禁：' + (blockedRecord.reason || '休息'))
+    }
+
     const res = await db.queryAll(COLLECTIONS.RESERVATION, where)
     if (res.data && res.data.length > 0) {
       if (exclusiveType === 'full') {
@@ -76,7 +88,7 @@ async function checkReservationConflict({ dateStr, time, room, exclusiveType, is
       throw new Error('该时段【' + getRoomName(room) + '】已有预约，请更换时间或包厢')
     }
   } catch (err) {
-    if (err.message && (err.message.indexOf('已被包场') !== -1 || err.message.indexOf('已有预约') !== -1)) {
+    if (err.message && (err.message.indexOf('已被包场') !== -1 || err.message.indexOf('已有预约') !== -1 || err.message.indexOf('已封禁') !== -1)) {
       throw err
     }
     throw new Error('预约冲突校验失败，请重试')

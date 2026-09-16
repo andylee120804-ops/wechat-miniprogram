@@ -13,6 +13,7 @@ const { createSettingsCache } = require('./helpers/settings-cache')
 const { syncReservationRecords, deleteBanquetPurchase } = require('./helpers/sync')
 const { checkReservationConflict } = require('./helpers/conflict-check')
 const { validateReservationForm } = require('./helpers/validation')
+const { getBlockedRecord, isDateFullyBlocked, isSlotBlocked } = require('../../utils/blocked-date')
 
 Page({
   data: {
@@ -277,6 +278,8 @@ Page({
 
       this.setData({
         date: formatDate(res.date),
+        originalDate: formatDate(res.date),
+        originalTime: res.time || '中午',
         time: res.time || '中午',
         exclusiveType: res.exclusiveType || (res.isExclusive ? 'full' : 'none'),
         room: room,
@@ -301,11 +304,16 @@ Page({
 
   // ── Field handlers ───────────────────────────────────────────────
 
-  onDateChange(e) {
+  async onDateChange(e) {
     const selected = e.detail.value
     const today = getChinaToday()
     if (selected < today) {
       wx.showToast({ title: '不能选择过去的日期', icon: 'none' })
+      return
+    }
+    const record = await getBlockedRecord(selected)
+    if (record && isDateFullyBlocked(record)) {
+      wx.showToast({ title: '该日期已封禁：' + (record.reason || '休息'), icon: 'none' })
       return
     }
     this.setData({ date: selected })
@@ -313,9 +321,15 @@ Page({
     this.loadDishPriceRequired()
   },
 
-  selectTime(e) {
+  async selectTime(e) {
     wx.vibrateShort({ type: 'light' })
-    this.setData({ time: e.currentTarget.dataset.value })
+    const value = e.currentTarget.dataset.value
+    const record = await getBlockedRecord(this.data.date)
+    if (record && isSlotBlocked(record, value)) {
+      wx.showToast({ title: '该时段已封禁：' + (record.reason || '休息'), icon: 'none' })
+      return
+    }
+    this.setData({ time: value })
     this.clearError('time')
   },
 
@@ -587,7 +601,9 @@ Page({
         room: this.data.room,
         exclusiveType: this.data.exclusiveType,
         isEdit: this.data.isEdit,
-        id: this.data.id
+        id: this.data.id,
+        originalDate: this.data.originalDate,
+        originalTime: this.data.originalTime
       })
 
       const docData = this._buildDocData()
@@ -604,8 +620,8 @@ Page({
     } catch (err) {
       wx.hideLoading()
       this.setData({ submitting: false })
-      if (err.message && (err.message.indexOf('已被包场') !== -1 || err.message.indexOf('已有预约') !== -1)) {
-        wx.showModal({ title: '已被预约！', content: '时间有冲突了哦！', showCancel: false })
+      if (err.message && (err.message.indexOf('已被包场') !== -1 || err.message.indexOf('已有预约') !== -1 || err.message.indexOf('已封禁') !== -1)) {
+        wx.showModal({ title: '无法创建预约', content: err.message, showCancel: false })
       } else {
         handleCloudError(err, '保存预约')
       }
