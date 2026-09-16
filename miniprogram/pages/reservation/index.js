@@ -8,7 +8,7 @@ const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 const reservationConfig = require('../../utils/reservationConfig')
-const { buildBlockedBanner } = require('../../utils/blocked-date')
+const { buildBlockedBanner, isDateFullyBlocked } = require('../../utils/blocked-date')
 
 Page({
   data: {
@@ -160,6 +160,7 @@ Page({
       })
     } catch (err) {
       console.warn('加载封禁日期失败:', err)
+      this.setData({ blockedBanner: '' })
     }
   },
 
@@ -476,7 +477,7 @@ Page({
       return
     }
     const blockedRecord = this.data.blockedByDate[this.data.selectedDate]
-    if (blockedRecord && blockedRecord.slots && blockedRecord.slots.length === 2) {
+    if (blockedRecord && isDateFullyBlocked(blockedRecord)) {
       wx.showModal({
         title: '该日期已封禁',
         content: (blockedRecord.reason || '休息') + '（全天），无法创建预约',

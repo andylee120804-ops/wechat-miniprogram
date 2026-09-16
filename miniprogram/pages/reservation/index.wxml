@@ -30,7 +30,7 @@
 
   <!-- Blocked Date Banner -->
   <view wx:if="{{blockedBanner}}" class="blocked-banner" style="background: rgba(192,57,43,0.14); border: 1rpx solid rgba(192,57,43,0.35);">
-    <text class="blocked-banner-text" style="color: {{theme.dangerColor || '#E74C3C'}};">{{blockedBanner}}</text>
+    <text class="blocked-banner-text" style="color: {{theme.statusDanger || '#F87171'}};">{{blockedBanner}}</text>
   </view>
 
   <!-- Loading Skeleton -->
