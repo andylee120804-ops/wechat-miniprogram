@@ -1,3 +1,5 @@
+const { applyBlockedFlags } = require('./blocked-mark')
+
 Component({
   properties: {
     theme: {
@@ -19,6 +21,10 @@ Component({
     selectedDate: {
       type: String,
       value: ''
+    },
+    blockedDates: {
+      type: Array,
+      value: []
     }
   },
 
@@ -47,6 +53,9 @@ Component({
       this.computeDays();
     },
     'selectedDate': function() {
+      this.computeDays();
+    },
+    'blockedDates': function() {
       this.computeDays();
     },
     'year': function(val) {
@@ -130,7 +139,7 @@ Component({
         });
       }
 
-      this.setData({ days: days });
+      this.setData({ days: applyBlockedFlags(days, this.data.blockedDates || []) });
     },
 
     prevMonth: function() {
@@ -171,6 +180,17 @@ Component({
       // Allow tapping dates from adjacent months so users can quickly
       // check reservations without first switching the calendar panel.
       this.triggerEvent('daytap', {
+        date: info.dateStr,
+        year: this.data.currentYear,
+        month: this.data.currentMonth,
+        day: info.day
+      });
+    },
+
+    onDayLongPress: function(e) {
+      const info = e.currentTarget.dataset.info;
+      if (!info) return;
+      this.triggerEvent('daylongpress', {
         date: info.dateStr,
         year: this.data.currentYear,
         month: this.data.currentMonth,

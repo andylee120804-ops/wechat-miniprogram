@@ -8,9 +8,10 @@
     <text class="weekday" wx:for="{{weekdays}}" wx:key="*this" style="color: {{theme.textMuted || '#5C5C72'}};">{{item}}</text>
   </view>
   <view class="calendar-days">
-    <view class="day-cell {{item.isCurrentMonth ? '' : 'other-month'}} {{item.isToday ? 'today' : ''}} {{item.isSelected ? 'selected' : ''}} {{item.isMarked ? 'marked' : ''}}" wx:for="{{days}}" wx:key="dateStr" data-info="{{item}}" bindtap="onDayTap" style="{{item.isSelected ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : item.isToday ? 'border: 2rpx solid ' + (theme.accentColor || '#C9A96E') + ';' : ''}}">
+    <view class="day-cell {{item.isCurrentMonth ? '' : 'other-month'}} {{item.isToday ? 'today' : ''}} {{item.isSelected ? 'selected' : ''}} {{item.isMarked ? 'marked' : ''}} {{item.isBlocked ? 'blocked' : ''}}" wx:for="{{days}}" wx:key="dateStr" data-info="{{item}}" bindtap="onDayTap" bindlongpress="onDayLongPress" style="{{item.isSelected ? 'background:' + (theme.accentColor || '#C9A96E') + ';color:' + (theme.textInverse || '#0F0F1A') + ';' : item.isToday ? 'border: 2rpx solid ' + (theme.accentColor || '#C9A96E') + ';' : ''}}">
       <text class="day-number">{{item.day || ''}}</text>
       <view class="day-dot" wx:if="{{item.isMarked && !item.isSelected}}" style="background: {{theme.accentColor || '#C9A96E'}};"></view>
+      <view class="day-badge-rest" wx:if="{{item.isBlocked}}">休</view>
     </view>
   </view>
 </view>

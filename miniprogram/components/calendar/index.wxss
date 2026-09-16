@@ -76,3 +76,22 @@
 .selected {
   font-weight: 700;
 }
+
+.day-cell.blocked .day-number {
+  color: #5C5C72;
+}
+
+.day-badge-rest {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 26rpx;
+  height: 26rpx;
+  border-radius: 50%;
+  background: #C0392B;
+  color: #FDF6E3;
+  font-size: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
