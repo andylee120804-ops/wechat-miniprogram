@@ -6,6 +6,7 @@ const { queryAll, addDoc, COLLECTIONS } = require('../../../utils/db')
 const { formatDate, getExclusiveTypeName } = require('../../../utils/helpers')
 const { hasPermission, ACTIONS } = require('../../../utils/permission')
 const { log, LOG_TYPES } = require('../../../utils/logger')
+const blockedDateUtil = require('../../../utils/blocked-date')
 
 const ROOM_MAP = { '大包': 'big', '大包厢': 'big', '小包': 'small', '小包厢': 'small', '棋牌': 'chess', '棋牌室': 'chess' }
 const TIME_MAP = { '中午': '中午', '晚上': '晚上', '午': '中午', '晚': '晚上' }
@@ -76,6 +77,12 @@ async function createReservation({ customerName, date, time, room, guestCount, p
     const today = formatDate(new Date())
     if (date < today) {
       return { isError: true, content: [{ type: 'text', text: '不能创建过去日期的预约' }] }
+    }
+
+    // Blocked-date check (holidays/closures) — mirror reservation-add conflict-check.js
+    const blockedRecord = await blockedDateUtil.getBlockedRecord(date)
+    if (blockedRecord && blockedDateUtil.isSlotBlocked(blockedRecord, normalizedTime)) {
+      return { isError: true, content: [{ type: 'text', text: '该日期已封禁：' + (blockedRecord.reason || '休息') }] }
     }
 
     // Determine effective room and name (exclusive types always use big room)

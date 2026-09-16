@@ -75,6 +75,12 @@ describe('isSlotBlocked', () => {
     expect(isSlotBlocked({ slots: [] }, '中午')).toBe(false)
     expect(isSlotBlocked({}, '中午')).toBe(false)
   })
+
+  test('unknown time maps to neither slot and is not blocked', () => {
+    expect(isSlotBlocked({ slots: ['noon', 'night'] }, '下午')).toBe(false)
+    expect(isSlotBlocked({ slots: ['noon', 'night'] }, '')).toBe(false)
+    expect(isSlotBlocked({ slots: ['noon'] }, '中午')).toBe(true) // 已知时段仍生效
+  })
 })
 
 describe('isDateFullyBlocked', () => {
@@ -131,7 +137,7 @@ describe('blockDate', () => {
     expect(result._id).toBe('new-id')
   })
 
-  test('merges slots into existing record and updates it', async () => {
+  test('merges slots into existing record, preserving the first reason', async () => {
     mockQueryAll.mockResolvedValueOnce({
       data: [{ _id: 'b1', date: '2026-10-01', slots: ['noon'], reason: '旧原因' }]
     })
@@ -141,7 +147,7 @@ describe('blockDate', () => {
 
     expect(mockUpdateDoc).toHaveBeenCalledWith('blocked_date', 'b1', {
       slots: ['noon', 'night'],
-      reason: '新原因'
+      reason: '旧原因'
     })
   })
 })

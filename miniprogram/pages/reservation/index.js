@@ -168,7 +168,7 @@ Page({
       })
     } catch (err) {
       console.warn('加载封禁日期失败:', err)
-      this.setData({ blockedBanner: '' })
+      this.setData({ blockedBanner: '', blockedDates: [], blockedByDate: {} })
     }
   },
 
@@ -551,6 +551,8 @@ Page({
     try {
       wx.showLoading({ title: '封禁中' })
       await blockDate(date, slots, reason, userInfo)
+      // 封禁动作先落日志——即使同时取消预约失败也不丢失封禁记录
+      log(LOG_TYPES.RESERVATION_UPDATE, '封禁日期 ' + date + '（' + reason + '）', { date: date, reason: reason })
       if (this.data.blockCancelExisting) {
         try {
           const cancelledCount = await this.cancelReservationsOnDate(date)
@@ -564,8 +566,6 @@ Page({
           wx.showToast({ title: '已封禁，但取消预约未完成，请重试', icon: 'none' })
           return
         }
-      } else {
-        log(LOG_TYPES.RESERVATION_UPDATE, '封禁日期 ' + date + '（' + reason + '）', { date: date, reason: reason })
       }
       wx.hideLoading()
       this.setData({ showBlockModal: false })

@@ -23,7 +23,9 @@ function mergeSlots(base, extra) {
 
 function isSlotBlocked(record, time) {
   if (!record || !Array.isArray(record.slots)) return false
-  const slot = time === '晚上' ? 'night' : 'noon'
+  // Only 中午/晚上 map to a slot; any other time (e.g. 下午) is not blocked.
+  const slot = time === '中午' ? 'noon' : (time === '晚上' ? 'night' : null)
+  if (!slot) return false
   return record.slots.indexOf(slot) !== -1
 }
 
@@ -55,7 +57,9 @@ async function blockDate(dateStr, slots, reason, userInfo) {
   const mergedSlots = mergeSlots([], slots)
   const existing = await getBlockedRecord(dateStr)
   if (existing) {
-    const data = { slots: mergeSlots(existing.slots, mergedSlots), reason: reason }
+    // Single-reason model: the first reason wins. Merging slots never
+    // overwrites the existing record's reason (only set reason on create).
+    const data = { slots: mergeSlots(existing.slots, mergedSlots), reason: existing.reason || reason }
     await db.updateDoc(COLLECTIONS.BLOCKED_DATE, existing._id, data)
     return Object.assign({}, existing, data)
   }

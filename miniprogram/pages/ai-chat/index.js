@@ -5,6 +5,7 @@ const { hasPermission, ACTIONS } = require('../../utils/permission')
 const { AI_ENABLED } = require('../../utils/feature-flags')
 const db = require('../../utils/db')
 const { computeNetAmount, sumNetIncome } = require('../../utils/incomeCalc')
+const blockedDateUtil = require('../../utils/blocked-date')
 
 const ROOM_MAP = { '大包': 'big', '大包厢': 'big', '小包': 'small', '小包厢': 'small', '棋牌': 'chess', '棋牌室': 'chess' }
 const TIME_MAP = { '中午': '中午', '晚上': '晚上', '午': '中午', '晚': '晚上' }
@@ -253,6 +254,12 @@ Page({
       const today = formatDate(new Date())
       if (booking.date < today) {
         return { success: false, error: '不能创建过去日期的预约' }
+      }
+
+      // Check blocked-date (holidays/closures) — mirror reservation-add conflict-check.js
+      const blockedRecord = await blockedDateUtil.getBlockedRecord(booking.date)
+      if (blockedRecord && blockedDateUtil.isSlotBlocked(blockedRecord, normalizedTime)) {
+        return { success: false, error: '该日期已封禁：' + (blockedRecord.reason || '休息') }
       }
 
       // Check reservation conflict (aligned with reservation-add page logic)
