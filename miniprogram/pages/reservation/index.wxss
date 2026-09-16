@@ -223,3 +223,17 @@
   line-height: 1;
   text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.15);
 }
+
+/* Blocked Date Banner */
+.blocked-banner {
+  margin: 0 24rpx 16rpx;
+  padding: 14rpx 20rpx;
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+}
+
+.blocked-banner-text {
+  font-size: 26rpx;
+  font-weight: 500;
+}

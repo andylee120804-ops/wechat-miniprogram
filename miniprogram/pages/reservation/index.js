@@ -8,6 +8,7 @@ const { handleCloudError } = require('../../utils/error-handler')
 const { COLLECTIONS } = require('../../utils/db')
 const db = require('../../utils/db')
 const reservationConfig = require('../../utils/reservationConfig')
+const { buildBlockedBanner } = require('../../utils/blocked-date')
 
 Page({
   data: {
@@ -19,7 +20,10 @@ Page({
     selectedDate: '',
     reservations: [],
     markDates: [],
-    groupedReservations: {}
+    groupedReservations: {},
+    blockedDates: [],
+    blockedByDate: {},
+    blockedBanner: ''
   },
 
   onShow() {
@@ -96,6 +100,8 @@ Page({
         status: _.neq('cancelled')
       }, 'date', 'asc')
 
+      await this.loadMonthBlocked(year, month)
+
       const rawData = res.data || []
       const markDates = []
       const markDateSet = {}
@@ -114,6 +120,46 @@ Page({
     } catch (err) {
       handleCloudError(err, '加载月预约')
       this.setData({ loading: false })
+    }
+  },
+
+  async loadMonthBlocked(year, month) {
+    try {
+      const dbInstance = db.getDb()
+      const _ = dbInstance.command
+
+      const monthStr = String(month).padStart(2, '0')
+      const monthFirst = createChinaDate(year + '-' + monthStr + '-01')
+      var startDate = new Date(monthFirst.getTime() - 7 * 86400000)
+      var nextMonth = month === 12 ? 1 : month + 1
+      var nextMonthYear = month === 12 ? year + 1 : year
+      var nextMonthStr = String(nextMonth).padStart(2, '0')
+      var nextMonthFirst = createChinaDate(nextMonthYear + '-' + nextMonthStr + '-01')
+      var lastDayDate = new Date(nextMonthFirst.getTime() - 86400000)
+      var lastDay = lastDayDate.getUTCDate()
+      var monthEnd = createChinaDate(year + '-' + monthStr + '-' + String(lastDay).padStart(2, '0'), 23, 59, 59)
+      var endDate = new Date(monthEnd.getTime() + 7 * 86400000)
+
+      const startStr = formatDate(startDate)
+      const endStr = formatDate(endDate)
+      const res = await db.queryAll(COLLECTIONS.BLOCKED_DATE, {
+        date: _.gte(startStr).and(_.lte(endStr))
+      })
+
+      const rawData = res.data || []
+      const blockedDates = rawData.map(function(r) {
+        return { dateStr: r.date, slots: r.slots, reason: r.reason }
+      })
+      const blockedByDate = {}
+      rawData.forEach(function(r) { blockedByDate[r.date] = r })
+
+      this.setData({
+        blockedDates,
+        blockedByDate,
+        blockedBanner: buildBlockedBanner(blockedByDate[this.data.selectedDate])
+      })
+    } catch (err) {
+      console.warn('加载封禁日期失败:', err)
     }
   },
 
@@ -407,7 +453,10 @@ Page({
   onDayTap(e) {
     const date = e.detail.date
     if (!date) return
-    this.setData({ selectedDate: date })
+    this.setData({
+      selectedDate: date,
+      blockedBanner: buildBlockedBanner(this.data.blockedByDate[date])
+    })
     this.loadDayReservations(date)
   },
 
@@ -424,6 +473,15 @@ Page({
   onAddReservation() {
     if (!hasPermission('reservation', ACTIONS.ADD)) {
       wx.showToast({ title: '无权限创建预约', icon: 'none' })
+      return
+    }
+    const blockedRecord = this.data.blockedByDate[this.data.selectedDate]
+    if (blockedRecord && blockedRecord.slots && blockedRecord.slots.length === 2) {
+      wx.showModal({
+        title: '该日期已封禁',
+        content: (blockedRecord.reason || '休息') + '（全天），无法创建预约',
+        showCancel: false
+      })
       return
     }
     const today = getChinaToday()

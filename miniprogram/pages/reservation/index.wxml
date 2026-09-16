@@ -14,8 +14,10 @@
       year="{{currentYear}}"
       month="{{currentMonth}}"
       markDates="{{markDates}}"
+      blockedDates="{{blockedDates}}"
       selectedDate="{{selectedDate}}"
       bind:daytap="onDayTap"
+      bind:daylongpress="onDayLongPress"
       bind:monthchange="onMonthChange"
     />
   </view>
@@ -24,6 +26,11 @@
   <view class="date-label" style="height: 87rpx; display: flex; box-sizing: border-box">
     <text class="date-text" style="color: {{theme.textPrimary || '#F5F0E8'}};">{{selectedDate}}</text>
     <text class="date-count" style="color: {{theme.textMuted || 'rgba(245,240,232,0.40)'}};">{{reservations.length}}个预约</text>
+  </view>
+
+  <!-- Blocked Date Banner -->
+  <view wx:if="{{blockedBanner}}" class="blocked-banner" style="background: rgba(192,57,43,0.14); border: 1rpx solid rgba(192,57,43,0.35);">
+    <text class="blocked-banner-text" style="color: {{theme.dangerColor || '#E74C3C'}};">{{blockedBanner}}</text>
   </view>
 
   <!-- Loading Skeleton -->
