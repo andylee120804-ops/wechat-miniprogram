@@ -612,7 +612,7 @@ Page({
       const _ = dbInstance.command
       await db.updateDoc(COLLECTIONS.BLOCKED_DATE, record._id, { slots: _.pull(slot) })
       const after = await getBlockedRecord(record.date)
-      if (after && (!after.slots || after.slots.length === 0)) {
+      if (after && (!Array.isArray(after.slots) || after.slots.length === 0)) {
         await db.deleteDoc(COLLECTIONS.BLOCKED_DATE, record._id)
       }
       log(LOG_TYPES.RESERVATION_UPDATE, '解封日期 ' + record.date + '（' + slot + '）', { date: record.date, slot: slot })
